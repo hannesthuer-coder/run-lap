@@ -24,16 +24,26 @@ serve(async (req) => {
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
     // Function to generate waypoints with given radius
-    const generateWaypoints = (radius) => {
-      const numWaypoints = 4 // Fewer waypoints for simpler routes
+    const generateWaypoints = (radius, seed = Math.random()) => {
+      const numWaypoints = 3 // Reduced for smoother routes
       const waypoints = []
       
+      // Add randomness to starting angle for route variation
+      const startAngle = seed * 2 * Math.PI
+      
       for (let i = 0; i < numWaypoints; i++) {
-        const angle = (i / numWaypoints) * 2 * Math.PI
-        // Add some variation for natural routes
-        const radiusVariation = radius * (0.8 + Math.random() * 0.4)
-        const lat = startLat + radiusVariation * Math.cos(angle)
-        const lng = startLng + radiusVariation * Math.sin(angle)
+        const angle = startAngle + (i / numWaypoints) * 2 * Math.PI
+        
+        // Create smoother curves by varying radius more gradually
+        const angleOffset = Math.sin((i / numWaypoints) * Math.PI * 2) * 0.3
+        const radiusVariation = radius * (0.9 + angleOffset + (seed - 0.5) * 0.2)
+        
+        // Add slight randomness for natural feel but keep it smooth
+        const smoothVariation = 1 + (Math.sin(angle * 3) * 0.1 * seed)
+        const finalRadius = radiusVariation * smoothVariation
+        
+        const lat = startLat + finalRadius * Math.cos(angle)
+        const lng = startLng + finalRadius * Math.sin(angle)
         waypoints.push([lng, lat])
       }
       
@@ -67,10 +77,15 @@ serve(async (req) => {
     let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009 // Convert meters to degrees
     const maxAttempts = 8
     
-    console.log(`Target distance: ${targetDistanceMeters}m, Starting radius: ${radius}`)
+    // Generate a unique seed for this request to ensure route variation
+    const routeSeed = Math.random()
+    
+    console.log(`Target distance: ${targetDistanceMeters}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const waypoints = generateWaypoints(radius)
+      // Use seed + attempt to create variation between attempts
+      const attemptSeed = (routeSeed + attempt * 0.1) % 1
+      const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
