@@ -17,21 +17,39 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
 
   const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
+  // Parse startLocation coordinates from string format "lat,lng"
+  const parseLocation = (locationStr: string): [number, number] => {
+    try {
+      const [lat, lng] = locationStr.split(',').map(coord => parseFloat(coord.trim()));
+      if (isNaN(lat) || isNaN(lng)) {
+        console.warn('Invalid coordinates, using default location');
+        return [-74.5, 40]; // Default to NYC
+      }
+      return [lng, lat]; // Return as [lng, lat] for Mapbox
+    } catch (error) {
+      console.warn('Error parsing location, using default:', error);
+      return [-74.5, 40];
+    }
+  };
+
   const initializeMap = async () => {
     if (!mapContainer.current) return;
 
     try {
+      // Parse the actual start location
+      const [lng, lat] = parseLocation(startLocation);
+      
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
       
       // Set access token
       mapboxgl.default.accessToken = MAPBOX_TOKEN;
 
-      // Create map instance
+      // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
-        center: [-74.5, 40],
+        center: [lng, lat],
         zoom: 12,
         attributionControl: false
       });
@@ -42,28 +60,28 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
       // Generate real running route using Supabase edge function
       const generateRealRoute = async (center: [number, number], distance: number) => {
         try {
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-route`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
+          const { supabase } = await import('@/integrations/supabase/client');
+          
+          const { data, error } = await supabase.functions.invoke('generate-route', {
+            body: {
               startLng: center[0],
               startLat: center[1],
               distance: distance,
               unit: unit
-            })
-          })
+            }
+          });
           
-          const data = await response.json()
+          if (error) {
+            throw error;
+          }
+          
           if (data.success) {
-            return data.route.geometry.coordinates
+            return data.route.geometry.coordinates;
           } else {
-            throw new Error(data.error)
+            throw new Error(data.error);
           }
         } catch (error) {
-          console.error('Failed to generate real route, falling back to mock:', error)
+          console.error('Failed to generate real route, falling back to mock:', error);
           // Fallback to mock route if API fails
           const points = [];
           const numPoints = 20;
@@ -75,12 +93,12 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
             const lng = center[0] + radius * Math.sin(angle);
             points.push([lng, lat]);
           }
-          return points
+          return points;
         }
       };
 
       mapInstance.on('load', async () => {
-        const routeCoords = await generateRealRoute([-74.5, 40], distance);
+        const routeCoords = await generateRealRoute([lng, lat], distance);
         
         // Add route source and layer
         mapInstance.addSource('route', {

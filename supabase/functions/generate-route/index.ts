@@ -14,20 +14,26 @@ serve(async (req) => {
   try {
     const { startLng, startLat, distance, unit } = await req.json()
     
-    const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"
+    // Get Mapbox token from Supabase secrets
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    if (!MAPBOX_TOKEN) {
+      throw new Error('Mapbox access token not configured')
+    }
     
     // Convert distance to meters
     const distanceInMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Generate waypoints for a loop route
-    const numWaypoints = 4
-    const radius = Math.sqrt(distanceInMeters / (2 * Math.PI)) * 0.01 // Rough conversion to degrees
+    // Generate more varied waypoints for a realistic loop route
+    const numWaypoints = 6
+    const baseRadius = Math.sqrt(distanceInMeters / (2 * Math.PI)) * 0.008 // More precise conversion
     
     const waypoints = []
     for (let i = 0; i < numWaypoints; i++) {
       const angle = (i / numWaypoints) * 2 * Math.PI
-      const lat = startLat + radius * Math.cos(angle)
-      const lng = startLng + radius * Math.sin(angle)
+      // Add some variation to radius for more natural routes
+      const radiusVariation = baseRadius * (0.7 + Math.random() * 0.6)
+      const lat = startLat + radiusVariation * Math.cos(angle)
+      const lng = startLng + radiusVariation * Math.sin(angle)
       waypoints.push([lng, lat])
     }
     
