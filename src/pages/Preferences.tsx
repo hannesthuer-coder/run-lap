@@ -71,12 +71,25 @@ const Preferences = () => {
 
         {/* Distance Input */}
         <div className="space-y-4">
-          <Input type="text" value={distance ? `"I WANT TO RUN ${distance}${isKm ? 'KM' : 'MI'}"` : ''} onChange={e => {
-          const match = e.target.value.match(/(\d+\.?\d*)/);
-          if (match) {
-            setDistance(match[1]);
-          }
-        }} placeholder="SELECT DISTANCE" className="text-center text-lg h-14 rounded-lg border-2" />
+          <div className="relative flex items-center">
+            <Input 
+              type="number" 
+              value={distance} 
+              onChange={e => setDistance(e.target.value)}
+              placeholder="Select Distance" 
+              className="text-center text-lg h-14 rounded-lg border-2 pr-20" 
+              min="0"
+              step="0.1"
+            />
+            <div className="absolute right-3 flex items-center gap-2">
+              <span className="text-sm font-medium">{isKm ? 'KM' : 'MI'}</span>
+              <Switch
+                checked={isKm}
+                onCheckedChange={setIsKm}
+                className="scale-75"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Location Section */}
