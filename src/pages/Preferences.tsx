@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +10,20 @@ import { toast } from "sonner";
 
 const Preferences = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [distance, setDistance] = useState("5");
   const [isKm, setIsKm] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Handle location selection from map
+  useEffect(() => {
+    if (location.state?.selectedLocation) {
+      setSelectedLocation(location.state.selectedLocation);
+      // Clear the state to prevent re-setting on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {

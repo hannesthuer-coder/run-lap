@@ -14,7 +14,7 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
 
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"; // TODO: Move to environment variable
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
