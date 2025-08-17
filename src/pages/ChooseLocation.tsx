@@ -30,44 +30,28 @@ const ChooseLocation = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-card shadow-soft border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </Button>
-            
-            <h1 className="text-xl font-bold text-foreground">Choose Starting Point</h1>
-            
-            <Button
-              onClick={handleDone}
-              disabled={!selectedCoords}
-              className="flex items-center space-x-2"
-            >
-              <Check className="w-5 h-5" />
-              <span>Done</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Instructions */}
-      <div className="bg-secondary/50 border-b px-4 py-3">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-center text-muted-foreground">
-            Click anywhere on the map to place your starting marker
-          </p>
-        </div>
+      <div className="text-center py-8">
+        <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
+          SELECT YOUR STARTING POINT
+        </h1>
       </div>
 
       {/* Map Container */}
-      <div className="flex-1 relative">
-        <MapSelector onLocationSelect={handleLocationSelect} />
+      <div className="flex-1 relative px-4">
+        <div className="bg-card rounded-2xl overflow-hidden shadow-soft h-[400px] mb-8">
+          <MapSelector onLocationSelect={handleLocationSelect} />
+        </div>
+      </div>
+
+      {/* Done Button */}
+      <div className="flex justify-center pb-8">
+        <Button
+          onClick={handleDone}
+          disabled={!selectedCoords}
+          className="px-12 py-3 h-12 rounded-full font-semibold uppercase tracking-wide"
+        >
+          DONE
+        </Button>
       </div>
     </div>
   );

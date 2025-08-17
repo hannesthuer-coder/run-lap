@@ -28,109 +28,49 @@ const Route = () => {
   const elevationGain = Math.round(routeData.distance * 15); // rough estimate
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-card shadow-soft border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
-                <RouteIcon className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Your Running Route</h1>
-                <p className="text-sm text-muted-foreground">
-                  {routeData.distance} {routeData.unit} loop
-                </p>
-              </div>
-            </div>
-          </div>
+      <div className="text-center py-8">
+        <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
+          BEST {routeData.distance} {routeData.unit.toUpperCase()} ROUTE
+        </h1>
+      </div>
+
+      {/* Map Container */}
+      <div className="flex-1 relative px-4">
+        <div className="bg-card rounded-2xl overflow-hidden shadow-soft h-[400px] mb-8">
+          <MapComponent 
+            startLocation={routeData.location}
+            distance={routeData.distance}
+            unit={routeData.unit}
+          />
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Route Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up">
-          <Card className="p-4 shadow-soft">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <RouteIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Distance</p>
-                <p className="text-xl font-bold text-foreground">
-                  {routeData.distance} {routeData.unit}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 shadow-soft">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                <Timer className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Est. Time</p>
-                <p className="text-xl font-bold text-foreground">{estimatedTime} min</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 shadow-soft">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-info" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Elevation</p>
-                <p className="text-xl font-bold text-foreground">{elevationGain}m</p>
-              </div>
-            </div>
-          </Card>
+      {/* Not Satisfied Section */}
+      <div className="space-y-6 pb-8">
+        <div className="text-center">
+          <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">
+            NOT SATISFIED?
+          </h2>
         </div>
 
-        {/* Map Container */}
-        <Card className="shadow-medium overflow-hidden animate-fade-in">
-          <div className="h-96 md:h-[500px] relative">
-            <MapComponent 
-              startLocation={routeData.location}
-              distance={routeData.distance}
-              unit={routeData.unit}
-            />
-          </div>
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
+        <div className="flex gap-4 justify-center px-4">
           <Button
             onClick={handleRegenerateRoute}
             disabled={isRegenerating}
             variant="outline"
-            size="lg"
-            className="h-14 text-lg font-semibold shadow-soft hover:shadow-medium transition-all duration-300"
+            className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
           >
-            {isRegenerating ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span>Regenerating...</span>
-              </div>
-            ) : (
-              <>
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Generate New Route
-              </>
-            )}
+            {isRegenerating ? "GENERATING..." : "GENERATE NEW ROUTE"}
           </Button>
-
+          
           <Button
             onClick={handleChangePreferences}
-            variant="secondary"
-            size="lg"
-            className="h-14 text-lg font-semibold shadow-soft hover:shadow-medium transition-all duration-300"
+            variant="outline"
+            className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
           >
-            <Settings className="w-5 h-5 mr-2" />
-            Change Preferences
+            CHANGE PREFERENCES
           </Button>
         </div>
       </div>
