@@ -23,9 +23,9 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints with given radius
+    // Function to generate waypoints that create a proper loop
     const generateWaypoints = (radius, seed = Math.random()) => {
-      const numWaypoints = 3 // Reduced for smoother routes
+      const numWaypoints = 5 // More waypoints for better loop formation
       const waypoints = []
       
       // Add randomness to starting angle for route variation
@@ -34,21 +34,18 @@ serve(async (req) => {
       for (let i = 0; i < numWaypoints; i++) {
         const angle = startAngle + (i / numWaypoints) * 2 * Math.PI
         
-        // Create smoother curves by varying radius more gradually
-        const angleOffset = Math.sin((i / numWaypoints) * Math.PI * 2) * 0.3
-        const radiusVariation = radius * (0.9 + angleOffset + (seed - 0.5) * 0.2)
+        // Create varied radius to form natural loop shapes
+        const baseRadius = radius * (0.8 + (seed % 0.4))
+        const radiusVariation = 1 + Math.sin(angle * 2 + seed * Math.PI) * 0.3
+        const finalRadius = baseRadius * radiusVariation
         
-        // Add slight randomness for natural feel but keep it smooth
-        const smoothVariation = 1 + (Math.sin(angle * 3) * 0.1 * seed)
-        const finalRadius = radiusVariation * smoothVariation
-        
+        // Calculate waypoint position
         const lat = startLat + finalRadius * Math.cos(angle)
         const lng = startLng + finalRadius * Math.sin(angle)
         waypoints.push([lng, lat])
       }
       
-      // Add start point at the end to complete the loop
-      waypoints.push([startLng, startLat])
+      // Don't add start point at the end - let Mapbox create the return path
       return waypoints
     }
     
