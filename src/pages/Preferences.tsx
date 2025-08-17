@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
-
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,55 +23,44 @@ const Preferences = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
-
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setSelectedLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-          toast.success("Current location detected!");
-        },
-        (error) => {
-          toast.error("Unable to get your location. Please try again or choose on map.");
-        }
-      );
+      navigator.geolocation.getCurrentPosition(position => {
+        setSelectedLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
+        toast.success("Current location detected!");
+      }, error => {
+        toast.error("Unable to get your location. Please try again or choose on map.");
+      });
     } else {
       toast.error("Geolocation is not supported by this browser.");
     }
   };
-
   const handleChooseOnMap = () => {
     navigate("/choose-location");
   };
-
   const handleGenerate = async () => {
     if (!distance || parseFloat(distance) <= 0) {
       toast.error("Please enter a valid distance.");
       return;
     }
-    
     if (!selectedLocation) {
       toast.error("Please select a starting location.");
       return;
     }
-
     setIsGenerating(true);
-    
+
     // Simulate route generation
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
     setIsGenerating(false);
-    navigate("/route", { 
-      state: { 
-        distance: parseFloat(distance), 
-        unit: isKm ? "km" : "miles", 
-        location: selectedLocation 
-      } 
+    navigate("/route", {
+      state: {
+        distance: parseFloat(distance),
+        unit: isKm ? "km" : "miles",
+        location: selectedLocation
+      }
     });
   };
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+  return <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg space-y-8">
         {/* Main Title */}
         <div className="text-center">
@@ -84,18 +71,12 @@ const Preferences = () => {
 
         {/* Distance Input */}
         <div className="space-y-4">
-          <Input
-            type="text"
-            value={distance ? `"I WANT TO RUN ${distance}${isKm ? 'KM' : 'MI'}"` : ''}
-            onChange={(e) => {
-              const match = e.target.value.match(/(\d+\.?\d*)/);
-              if (match) {
-                setDistance(match[1]);
-              }
-            }}
-            placeholder="SELECT DISTANCE"
-            className="text-center text-lg h-14 rounded-lg border-2"
-          />
+          <Input type="text" value={distance ? `"I WANT TO RUN ${distance}${isKm ? 'KM' : 'MI'}"` : ''} onChange={e => {
+          const match = e.target.value.match(/(\d+\.?\d*)/);
+          if (match) {
+            setDistance(match[1]);
+          }
+        }} placeholder="SELECT DISTANCE" className="text-center text-lg h-14 rounded-lg border-2" />
         </div>
 
         {/* Location Section */}
@@ -107,21 +88,11 @@ const Preferences = () => {
           </div>
 
           <div className="flex gap-4 justify-center">
-            <Button
-              variant="outline"
-              onClick={handleUseCurrentLocation}
-              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
-              disabled={isGenerating}
-            >
+            <Button variant="outline" onClick={handleUseCurrentLocation} className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide" disabled={isGenerating}>
               CURRENT LOCATION
             </Button>
             
-            <Button
-              variant="outline"
-              onClick={handleChooseOnMap}
-              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
-              disabled={isGenerating}
-            >
+            <Button variant="outline" onClick={handleChooseOnMap} className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide" disabled={isGenerating}>
               CHOOSE ON MAP
             </Button>
           </div>
@@ -129,36 +100,14 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex justify-center">
-          <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || !distance || !selectedLocation}
-            className="px-8 py-3 h-12 rounded-full font-semibold uppercase tracking-wide"
-            size="lg"
-          >
+          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="px-8 py-3 h-12 rounded-full font-semibold uppercase tracking-wide" size="lg">
             {isGenerating ? "GENERATING..." : "GENERATE RUNNING LAPS"}
           </Button>
         </div>
 
         {/* Other Preferences Section */}
-        <div className="space-y-6 pt-8">
-          <div className="text-center">
-            <h3 className="text-lg font-bold text-foreground uppercase tracking-wide">
-              GENERATE A LAP USING OTHER PREFERENCES?
-            </h3>
-          </div>
-
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
-            >
-              OTHER FILTERS
-            </Button>
-          </div>
-        </div>
+        
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Preferences;
