@@ -26,12 +26,35 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
       // Set access token
       mapboxgl.default.accessToken = MAPBOX_TOKEN;
 
-      // Create map instance
+      // Get user's current location first
+      const getUserLocation = (): Promise<[number, number]> => {
+        return new Promise((resolve, reject) => {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve([position.coords.longitude, position.coords.latitude]);
+              },
+              (error) => {
+                console.warn('Could not get user location:', error);
+                // Default to New York if location fails
+                resolve([-74.5, 40]);
+              }
+            );
+          } else {
+            // Default to New York if geolocation not supported
+            resolve([-74.5, 40]);
+          }
+        });
+      };
+
+      const userLocation = await getUserLocation();
+
+      // Create map instance centered on user's location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
-        center: [-74.5, 40],
-        zoom: 10,
+        center: userLocation,
+        zoom: 14,
         attributionControl: false
       });
 
