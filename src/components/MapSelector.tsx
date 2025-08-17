@@ -65,12 +65,13 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
       mapInstance.on('click', (e) => {
         const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         
-        // Remove existing marker
+        // Always remove existing marker first
         if (marker) {
           marker.remove();
+          setMarker(null);
         }
         
-        // Add new marker
+        // Add new marker (only one at a time)
         const newMarker = new mapboxgl.default.Marker({ 
           color: '#ef4444',
           scale: 1.2 
@@ -81,7 +82,7 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
         setMarker(newMarker);
         onLocationSelect(coords);
         
-        toast.success("Location selected!");
+        toast.success("Starting point selected!");
       });
 
       setMap(mapInstance);
