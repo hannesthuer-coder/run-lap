@@ -82,7 +82,7 @@ const Preferences = () => {
               step="0.1"
             />
             <div className="absolute right-3 flex items-center">
-              <div className="flex border rounded-md overflow-hidden">
+              <div className="flex border rounded-full overflow-hidden">
                 <button
                   onClick={() => setIsKm(true)}
                   className={`px-3 py-1 text-sm font-medium transition-colors ${
