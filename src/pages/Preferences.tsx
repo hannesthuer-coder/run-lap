@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,7 @@ const Preferences = () => {
                 setDistance(match[1]);
               }
             }}
-            placeholder='E.G. "I WANT TO RUN 5KM"'
+            placeholder="SELECT DISTANCE"
             className="text-center text-lg h-14 rounded-lg border-2"
           />
         </div>
