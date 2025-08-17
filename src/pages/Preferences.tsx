@@ -82,12 +82,24 @@ const Preferences = () => {
               step="0.1"
             />
             <div className="absolute right-3 flex items-center">
-              <button
-                onClick={() => setIsKm(!isKm)}
-                className="px-3 py-1 text-sm font-medium border rounded-md bg-background hover:bg-accent transition-colors"
-              >
-                {isKm ? 'KM' : 'MILES'}
-              </button>
+              <div className="flex border rounded-md overflow-hidden">
+                <button
+                  onClick={() => setIsKm(true)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors ${
+                    isKm ? 'bg-gray-200 text-gray-800' : 'bg-background hover:bg-gray-50'
+                  }`}
+                >
+                  KM
+                </button>
+                <button
+                  onClick={() => setIsKm(false)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors border-l ${
+                    !isKm ? 'bg-gray-200 text-gray-800' : 'bg-background hover:bg-gray-50'
+                  }`}
+                >
+                  MILES
+                </button>
+              </div>
             </div>
           </div>
         </div>
