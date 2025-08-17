@@ -39,23 +39,48 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
       // Add navigation controls
       mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
 
-      // Generate mock route coordinates (a loop)
-      const generateRouteLoop = (center: [number, number], distance: number) => {
-        const points = [];
-        const numPoints = 20;
-        const radius = distance * 0.01; // Rough conversion for demo
-        
-        for (let i = 0; i <= numPoints; i++) {
-          const angle = (i / numPoints) * 2 * Math.PI;
-          const lat = center[1] + radius * Math.cos(angle);
-          const lng = center[0] + radius * Math.sin(angle);
-          points.push([lng, lat]);
+      // Generate real running route using Supabase edge function
+      const generateRealRoute = async (center: [number, number], distance: number) => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-route`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              startLng: center[0],
+              startLat: center[1],
+              distance: distance,
+              unit: unit
+            })
+          })
+          
+          const data = await response.json()
+          if (data.success) {
+            return data.route.geometry.coordinates
+          } else {
+            throw new Error(data.error)
+          }
+        } catch (error) {
+          console.error('Failed to generate real route, falling back to mock:', error)
+          // Fallback to mock route if API fails
+          const points = [];
+          const numPoints = 20;
+          const radius = distance * 0.01;
+          
+          for (let i = 0; i <= numPoints; i++) {
+            const angle = (i / numPoints) * 2 * Math.PI;
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
+          }
+          return points
         }
-        return points;
       };
 
-      mapInstance.on('load', () => {
-        const routeCoords = generateRouteLoop([-74.5, 40], distance);
+      mapInstance.on('load', async () => {
+        const routeCoords = await generateRealRoute([-74.5, 40], distance);
         
         // Add route source and layer
         mapInstance.addSource('route', {
