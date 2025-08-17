@@ -81,13 +81,13 @@ const Preferences = () => {
               min="0"
               step="0.1"
             />
-            <div className="absolute right-3 flex items-center gap-2">
-              <span className="text-sm font-medium">{isKm ? 'KM' : 'MI'}</span>
-              <Switch
-                checked={isKm}
-                onCheckedChange={setIsKm}
-                className="scale-75"
-              />
+            <div className="absolute right-3 flex items-center">
+              <button
+                onClick={() => setIsKm(!isKm)}
+                className="px-3 py-1 text-sm font-medium border rounded-md bg-background hover:bg-accent transition-colors"
+              >
+                {isKm ? 'KM' : 'MILES'}
+              </button>
             </div>
           </div>
         </div>
