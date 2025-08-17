@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
