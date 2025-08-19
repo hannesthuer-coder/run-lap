@@ -27,75 +27,125 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints that create true loop circuits (no out-and-back patterns)
-    const generateWaypoints = (baseRadius, seed = Math.random()) => {
-      // Use 4-6 waypoints arranged in a proper circle to ensure a complete loop
-      const numWaypoints = 4 + Math.floor(seed * 3) // 4-6 waypoints
-      const waypoints = []
+    // Function to calculate bearing between two points
+    const calculateBearing = (lat1, lng1, lat2, lng2) => {
+      const dLng = (lng2 - lng1) * Math.PI / 180
+      const lat1Rad = lat1 * Math.PI / 180
+      const lat2Rad = lat2 * Math.PI / 180
       
-      // Ensure waypoints form a complete circle around the starting point
-      const clockwise = seed > 0.5
-      const startAngle = seed * Math.PI * 0.5 // Limit starting angle to quarter circle for better control
+      const y = Math.sin(dLng) * Math.cos(lat2Rad)
+      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
+      
+      let bearing = Math.atan2(y, x) * 180 / Math.PI
+      return (bearing + 360) % 360
+    }
+
+    // Function to calculate turn angle between three points
+    const calculateTurnAngle = (p1, p2, p3) => {
+      const bearing1 = calculateBearing(p1[1], p1[0], p2[1], p2[0])
+      const bearing2 = calculateBearing(p2[1], p2[0], p3[1], p3[0])
+      
+      let turnAngle = Math.abs(bearing2 - bearing1)
+      if (turnAngle > 180) turnAngle = 360 - turnAngle
+      
+      return turnAngle
+    }
+
+    // Function to analyze route quality and detect sharp turns
+    const analyzeRouteQuality = (geometry) => {
+      if (!geometry || !geometry.coordinates || geometry.coordinates.length < 3) {
+        return { quality: 0, maxTurnAngle: 180, sharpTurns: 0 }
+      }
+
+      const coords = geometry.coordinates
+      let maxTurnAngle = 0
+      let sharpTurns = 0
+      let totalTurnAngle = 0
+      let segments = 0
+
+      // Analyze every 5th point to avoid micro-variations
+      for (let i = 0; i < coords.length - 10; i += 5) {
+        const p1 = coords[i]
+        const p2 = coords[i + 5]
+        const p3 = coords[i + 10]
+        
+        const turnAngle = calculateTurnAngle(p1, p2, p3)
+        maxTurnAngle = Math.max(maxTurnAngle, turnAngle)
+        totalTurnAngle += turnAngle
+        segments++
+
+        // Count sharp turns (> 90 degrees)
+        if (turnAngle > 90) {
+          sharpTurns++
+        }
+      }
+
+      const averageTurnAngle = segments > 0 ? totalTurnAngle / segments : 0
+      
+      // Quality score: penalize sharp turns and high average turn angles
+      let quality = 100
+      quality -= (sharpTurns * 20) // -20 points per sharp turn
+      quality -= (maxTurnAngle > 120 ? 30 : 0) // -30 points for very sharp turns
+      quality -= (averageTurnAngle > 45 ? 20 : 0) // -20 points for high average turn angle
+      
+      return {
+        quality: Math.max(0, quality),
+        maxTurnAngle,
+        sharpTurns,
+        averageTurnAngle
+      }
+    }
+
+    // Function to generate smooth waypoints using bearing-based approach
+    const generateSmoothWaypoints = (baseRadius, seed = Math.random()) => {
+      const waypoints = []
+      const numWaypoints = 6 + Math.floor(seed * 3) // 6-8 waypoints for smoother paths
+      
+      // Start with a random cardinal direction
+      let currentBearing = seed * 90 // 0-90 degrees initial bearing
+      const totalRotation = 360 // Complete circle
+      const bearingIncrement = totalRotation / numWaypoints
       
       for (let i = 0; i < numWaypoints; i++) {
-        // Distribute waypoints evenly around a full circle (360 degrees)
-        const progressionFactor = clockwise ? 1 : -1
-        const angle = startAngle + progressionFactor * (i / numWaypoints) * 2 * Math.PI
+        // Add some natural variation to bearing
+        const bearingVariation = (Math.sin(i * Math.PI / 3 + seed * Math.PI) * 15) // ±15 degrees variation
+        const actualBearing = (currentBearing + bearingVariation) % 360
         
-        // Ensure waypoints are far enough from the starting point and each other
-        // This prevents routes that go out and come back on the same path
-        const minDistanceFromStart = baseRadius * 0.7 // At least 70% of radius from start
-        const radiusVariation = 1 + Math.sin(angle * 1.5 + seed * Math.PI) * 0.2 // 20% variation max
-        const finalRadius = Math.max(minDistanceFromStart, baseRadius * radiusVariation)
+        // Vary radius slightly for more natural paths
+        const radiusVariation = 0.8 + (Math.sin(i * Math.PI / 2 + seed * Math.PI * 2) * 0.3) // 0.8-1.1x base radius
+        const actualRadius = baseRadius * radiusVariation
         
-        const lat = startLat + finalRadius * Math.cos(angle)
-        const lng = startLng + finalRadius * Math.sin(angle)
-        
-        // Validate that this waypoint creates a proper circuit
-        if (waypoints.length > 0) {
-          const lastWaypoint = waypoints[waypoints.length - 1]
-          const distanceFromLast = Math.sqrt(Math.pow(lng - lastWaypoint[0], 2) + Math.pow(lat - lastWaypoint[1], 2))
-          const distanceFromStart = Math.sqrt(Math.pow(lng - startLng, 2) + Math.pow(lat - startLat, 2))
-          
-          // Ensure waypoint is not too close to start (prevents out-and-back) 
-          // and maintains good spacing from previous waypoint
-          const minSpacingDegrees = baseRadius * 0.000004 // Minimum spacing in degrees
-          if (distanceFromLast < minSpacingDegrees || distanceFromStart < minDistanceFromStart * 0.000009) {
-            continue
-          }
-        }
+        // Convert bearing to coordinates
+        const bearingRad = actualBearing * Math.PI / 180
+        const lat = startLat + actualRadius * Math.cos(bearingRad)
+        const lng = startLng + actualRadius * Math.sin(bearingRad)
         
         waypoints.push([lng, lat])
-      }
-      
-      // Ensure we have enough waypoints for a proper circuit
-      if (waypoints.length < 3) {
-        // Fallback to simple 4-point square pattern if not enough waypoints
-        return [
-          [startLng + baseRadius * 0.000009, startLat],
-          [startLng, startLat + baseRadius * 0.000009],
-          [startLng - baseRadius * 0.000009, startLat],
-          [startLng, startLat - baseRadius * 0.000009]
-        ]
+        
+        // Update bearing for next waypoint
+        currentBearing = (currentBearing + bearingIncrement) % 360
       }
       
       return waypoints
     }
     
-    // Function to fetch route from Mapbox with anti-backtracking preferences
-    const fetchRoute = async (waypoints) => {
+    // Function to fetch and validate route quality
+    const fetchQualityRoute = async (waypoints) => {
       // Create a loop by adding the start point at the end
       const loopWaypoints = [...waypoints, [startLng, startLat]]
       const coordinates = `${startLng},${startLat};` + loopWaypoints.map(w => `${w[0]},${w[1]}`).join(';')
       
-      // Add routing preferences to prevent backtracking and ensure smooth flow
+      // Enhanced routing preferences for smoother paths
       const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` + 
         `geometries=geojson&` +
         `access_token=${MAPBOX_TOKEN}&` +
         `overview=full&` +
         `steps=true&` +
-        `continue_straight=true&` + // Prefer continuing straight rather than sharp turns
-        `annotations=distance` // Get detailed distance information
+        `continue_straight=true&` + // Prefer continuing straight
+        `alternatives=true&` + // Get alternative routes to choose the best
+        `annotations=distance,duration&` +
+        `approaches=${Array(loopWaypoints.length + 1).fill('unrestricted').join(';')}&` + // Allow flexible approach angles
+        `radiuses=${Array(loopWaypoints.length + 1).fill('100').join(';')}` // 100m radius for road snapping
       
       const response = await fetch(directionsUrl)
       const data = await response.json()
@@ -104,7 +154,28 @@ serve(async (req) => {
         return null
       }
       
-      return data.routes[0]
+      // Analyze all available routes and pick the smoothest one
+      let bestRoute = null
+      let bestQuality = -1
+      
+      for (const route of data.routes) {
+        const quality = analyzeRouteQuality(route.geometry)
+        
+        console.log(`Route quality analysis: Quality=${quality.quality}, MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
+        
+        // Reject routes with very sharp turns (>135°) or too many sharp turns
+        if (quality.maxTurnAngle > 135 || quality.sharpTurns > 3) {
+          console.log(`Rejecting route: MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
+          continue
+        }
+        
+        if (quality.quality > bestQuality) {
+          bestRoute = route
+          bestQuality = quality.quality
+        }
+      }
+      
+      return bestRoute
     }
     
     // Enforce strict 0.2km (200m) tolerance for precise distance matching
@@ -125,8 +196,8 @@ serve(async (req) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Create different seeds for each attempt for variety
       const attemptSeed = (routeSeed + attempt * 0.15) % 1
-      const waypoints = generateWaypoints(radius, attemptSeed)
-      const route = await fetchRoute(waypoints)
+      const waypoints = generateSmoothWaypoints(radius, attemptSeed)
+      const route = await fetchQualityRoute(waypoints)
       
       if (!route) {
         console.log(`Attempt ${attempt + 1}: No route found`)
