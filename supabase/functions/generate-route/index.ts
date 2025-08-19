@@ -190,7 +190,7 @@ serve(async (req) => {
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
     const tolerance = 200 // 200m = 0.2km tolerance as requested
-    const maxAttempts = 15 // More attempts for better precision and road-based routes
+    const maxAttempts = 25 // Increase attempts to find routes within tolerance
     
     // More precise base radius calculation
     let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
@@ -202,13 +202,14 @@ serve(async (req) => {
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Create different seeds for each attempt for variety
-      const attemptSeed = (routeSeed + attempt * 0.15) % 1
+      const attemptSeed = (routeSeed + attempt * 0.1) % 1
       const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
         console.log(`Attempt ${attempt + 1}: No route found`)
-        radius *= 0.9 // Minor adjustment
+        // Smaller radius adjustment to be more precise
+        radius *= (0.95 + Math.random() * 0.1) // Random adjustment between 0.95-1.05
         continue
       }
       
@@ -224,14 +225,14 @@ serve(async (req) => {
         bestDistanceDiff = distanceDiff
       }
       
-      // If we're within strict 200m tolerance, use this route
+      // If we're within strict 200m tolerance, use this route immediately
       if (distanceDiff <= tolerance) {
         console.log(`Found acceptable route within strict ${tolerance}m tolerance on attempt ${attempt + 1}`)
         break
       }
       
       // More precise radius adjustments based on distance difference
-      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.05), 0.3) // Limit adjustment between 5% and 30%
+      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.02), 0.15) // Smaller adjustments
       
       if (routeDistance < targetDistanceMeters) {
         radius *= (1 + adjustmentFactor) // Increase radius proportionally
@@ -240,8 +241,12 @@ serve(async (req) => {
       }
     }
     
-    if (!bestRoute) {
-      throw new Error('Could not generate a suitable route')
+    // Reject routes that exceed tolerance
+    if (!bestRoute || bestDistanceDiff > tolerance) {
+      const errorMsg = bestRoute ? 
+        `Could not generate route within ${tolerance}m tolerance. Best attempt was ${Math.round(bestDistanceDiff)}m off target.` :
+        'Could not generate a suitable route'
+      throw new Error(errorMsg)
     }
     
     console.log(`Final route distance: ${bestRoute.distance}m vs target: ${targetDistanceMeters}m`)
