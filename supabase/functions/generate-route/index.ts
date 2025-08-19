@@ -13,113 +13,65 @@ serve(async (req) => {
   try {
     const { startLat, startLng, distance, unit } = await req.json()
     
-    // Get Google Maps API key from Supabase secrets
-    const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')
-    if (!GOOGLE_MAPS_API_KEY) {
-      throw new Error('Google Maps API key not configured')
+    // Get Mapbox token from Supabase secrets  
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    if (!MAPBOX_TOKEN) {
+      throw new Error('Mapbox access token not configured')
     }
     
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints that create true loop circuits
+    // Function to generate waypoints optimized for running loops
     const generateWaypoints = (baseRadius: number, seed = Math.random()) => {
-      const numWaypoints = 4 + Math.floor(seed * 3) // 4-6 waypoints
+      const numWaypoints = 3 + Math.floor(seed * 4) // 3-6 waypoints
       const waypoints = []
       
       const clockwise = seed > 0.5
-      const startAngle = seed * Math.PI * 0.5
       
       for (let i = 0; i < numWaypoints; i++) {
-        const progressionFactor = clockwise ? 1 : -1
-        const angle = startAngle + progressionFactor * (i / numWaypoints) * 2 * Math.PI
-        
-        const radiusVariation = 1 + Math.sin(angle * 1.5 + seed * Math.PI) * 0.2
+        const angle = (i / numWaypoints) * 2 * Math.PI * (clockwise ? 1 : -1)
+        const radiusVariation = 0.8 + Math.sin(angle * 2 + seed * Math.PI) * 0.4
         const finalRadius = baseRadius * radiusVariation
         
-        // Convert to lat/lng (approximate conversion)
-        const lat = startLat + finalRadius * Math.cos(angle) * 0.000009
-        const lng = startLng + finalRadius * Math.sin(angle) * 0.000009
+        const lat = startLat + finalRadius * Math.cos(angle)
+        const lng = startLng + finalRadius * Math.sin(angle)
         
-        waypoints.push([lat, lng])
+        waypoints.push([lng, lat])
       }
       
       return waypoints
     }
     
-    // Function to fetch route from Google Maps Directions API
+    // Function to fetch route from Mapbox Directions API
     const fetchRoute = async (waypoints: number[][]) => {
-      const origin = `${startLat},${startLng}`
-      const destination = origin // Return to start for loop
-      const waypointsStr = waypoints.map(w => `${w[0]},${w[1]}`).join('|')
+      // Create coordinates string: start -> waypoints -> start (for loop)
+      const allPoints = [[startLng, startLat], ...waypoints, [startLng, startLat]]
+      const coordinates = allPoints.map(point => `${point[0]},${point[1]}`).join(';')
       
-      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?` +
-        `origin=${origin}&` +
-        `destination=${destination}&` +
-        `waypoints=${waypointsStr}&` +
-        `mode=walking&` +
-        `key=${GOOGLE_MAPS_API_KEY}`
+      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` +
+        `geometries=geojson&` +
+        `overview=full&` +
+        `steps=false&` +
+        `access_token=${MAPBOX_TOKEN}`
       
       const response = await fetch(directionsUrl)
       const data = await response.json()
       
-      if (!data.routes || data.routes.length === 0 || data.status !== 'OK') {
+      if (!data.routes || data.routes.length === 0) {
         return null
       }
       
-      const route = data.routes[0]
-      const leg = route.legs[0]
-      
-      // Decode polyline to get coordinates
-      const coordinates = decodePolyline(route.overview_polyline.points)
-      
-      return {
-        geometry: { coordinates },
-        distance: leg.distance.value,
-        duration: leg.duration.value
-      }
-    }
-    
-    // Simple polyline decoder
-    const decodePolyline = (encoded: string) => {
-      const coordinates = []
-      let index = 0
-      let lat = 0
-      let lng = 0
-      
-      while (index < encoded.length) {
-        let b, shift = 0, result = 0
-        do {
-          b = encoded.charCodeAt(index++) - 63
-          result |= (b & 0x1f) << shift
-          shift += 5
-        } while (b >= 0x20)
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1))
-        lat += dlat
-        
-        shift = 0
-        result = 0
-        do {
-          b = encoded.charCodeAt(index++) - 63
-          result |= (b & 0x1f) << shift
-          shift += 5
-        } while (b >= 0x20)
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1))
-        lng += dlng
-        
-        coordinates.push([lng * 1e-5, lat * 1e-5])
-      }
-      
-      return coordinates
+      return data.routes[0]
     }
     
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = 200 // 200m tolerance
-    const maxAttempts = 10
+    const tolerance = 300 // 300m tolerance for better success rate
+    const maxAttempts = 8
     
-    // Base radius calculation
-    let radius = (targetDistanceMeters / (2 * Math.PI))
+    // Calculate base radius more effectively for Mapbox
+    let radius = Math.sqrt(targetDistanceMeters / Math.PI) * 0.0003
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
     
     console.log(`Target distance: ${targetDistanceMeters}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
