@@ -163,8 +163,8 @@ serve(async (req) => {
         
         console.log(`Route quality analysis: Quality=${quality.quality}, MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
         
-        // Reject routes with very sharp turns (>135°) or too many sharp turns
-        if (quality.maxTurnAngle > 135 || quality.sharpTurns > 3) {
+        // More lenient quality check - only reject extremely problematic routes
+        if (quality.maxTurnAngle > 150 || quality.sharpTurns > 5) {
           console.log(`Rejecting route: MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
           continue
         }
@@ -175,18 +175,19 @@ serve(async (req) => {
         }
       }
       
-      return bestRoute
+      // If no route passes quality check, return the best available route
+      return bestRoute || data.routes[0]
     }
     
-    // Enforce strict 0.2km (200m) tolerance for precise distance matching
+    // Enforce more lenient tolerance and better distance targeting
     let bestRoute = null
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
-    const tolerance = 200 // 200m = 0.2km tolerance as requested
-    const maxAttempts = 15 // More attempts for better precision and road-based routes
+    const tolerance = 400 // 400m tolerance instead of 200m for more flexibility
+    const maxAttempts = 20 // More attempts for better results
     
-    // More precise base radius calculation
-    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
+    // Better base radius calculation for target distance
+    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000012 // Increased multiplier for better distance targeting
     
     // Generate a unique seed based on timestamp and random for maximum variation
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
@@ -217,19 +218,19 @@ serve(async (req) => {
         bestDistanceDiff = distanceDiff
       }
       
-      // If we're within strict 200m tolerance, use this route
+      // If we're within tolerance, use this route
       if (distanceDiff <= tolerance) {
-        console.log(`Found acceptable route within strict ${tolerance}m tolerance on attempt ${attempt + 1}`)
+        console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
         break
       }
       
-      // More precise radius adjustments based on distance difference
-      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.05), 0.3) // Limit adjustment between 5% and 30%
+      // Better radius adjustments based on distance difference
+      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.1), 0.4) // Larger adjustments
       
       if (routeDistance < targetDistanceMeters) {
         radius *= (1 + adjustmentFactor) // Increase radius proportionally
       } else {
-        radius *= (1 - adjustmentFactor) // Decrease radius proportionally
+        radius *= (1 - adjustmentFactor * 0.5) // Smaller decreases to avoid overshooting
       }
     }
     
