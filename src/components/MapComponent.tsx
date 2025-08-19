@@ -1,34 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader } from "@googlemaps/js-api-loader";
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
   startLocation: string;
   distance: number;
   unit: string;
-  regenerateKey?: number;
+  regenerateKey?: number; // Add regeneration trigger
 }
 
 const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [map, setMap] = useState<any>(null);
+  const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-  const routeRef = useRef<google.maps.Polyline | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
   // Parse startLocation coordinates from string format "lat,lng"
-  const parseLocation = (locationStr: string): { lat: number; lng: number } => {
+  const parseLocation = (locationStr: string): [number, number] => {
     try {
       const [lat, lng] = locationStr.split(',').map(coord => parseFloat(coord.trim()));
       if (isNaN(lat) || isNaN(lng)) {
         console.warn('Invalid coordinates, using default location');
-        return { lat: 40.7128, lng: -74.0060 }; // Default to NYC
+        return [-74.5, 40]; // Default to NYC
       }
-      return { lat, lng };
+      return [lng, lat]; // Return as [lng, lat] for Mapbox
     } catch (error) {
       console.warn('Error parsing location, using default:', error);
-      return { lat: 40.7128, lng: -74.0060 };
+      return [-74.5, 40];
     }
   };
 
@@ -36,17 +39,17 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
     if (!map) return;
 
     try {
-      const location = parseLocation(startLocation);
+      const [lng, lat] = parseLocation(startLocation);
       
       // Generate real running route using Supabase edge function
-      const generateRealRoute = async (center: { lat: number; lng: number }, distance: number) => {
+      const generateRealRoute = async (center: [number, number], distance: number) => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
           
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
-              startLng: center.lng,
-              startLat: center.lat,
+              startLng: center[0],
+              startLat: center[1],
               distance: distance,
               unit: unit
             }
@@ -57,11 +60,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           }
           
           if (data.success) {
+            // Update actual distance from API response
             setActualDistance(data.route.distance);
-            return data.route.geometry.coordinates.map((coord: [number, number]) => ({
-              lat: coord[1],
-              lng: coord[0]
-            }));
+            return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
@@ -74,40 +75,60 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center.lat + radius * Math.cos(angle);
-            const lng = center.lng + radius * Math.sin(angle);
-            points.push({ lat, lng });
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
           }
           
+          // Estimate distance for mock route
           const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
           setActualDistance(mockDistance);
           return points;
         }
       };
 
-      const routeCoords = await generateRealRoute(location, distance);
+      const routeCoords = await generateRealRoute([lng, lat], distance);
       
-      // Remove existing route
-      if (routeRef.current) {
-        routeRef.current.setMap(null);
+      // Remove existing route and marker
+      if (map.getSource('route')) {
+        map.removeLayer('route');
+        map.removeSource('route');
       }
 
-      // Add new route
-      const newRoute = new google.maps.Polyline({
-        path: routeCoords,
-        geodesic: true,
-        strokeColor: '#22c55e',
-        strokeOpacity: 0.8,
-        strokeWeight: 4,
+      // Add new route source and layer
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: routeCoords
+          }
+        }
       });
 
-      newRoute.setMap(map);
-      routeRef.current = newRoute;
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#22c55e',
+          'line-width': 4,
+          'line-opacity': 0.8
+        }
+      });
 
       // Fit map to new route
-      const bounds = new google.maps.LatLngBounds();
-      routeCoords.forEach(coord => bounds.extend(coord));
-      map.fitBounds(bounds);
+      if (mapboxglRef.current) {
+        const bounds = new mapboxglRef.current.LngLatBounds();
+        routeCoords.forEach(coord => bounds.extend(coord));
+        map.fitBounds(bounds, { padding: 50 });
+      }
 
       toast.success("New route generated!");
 
@@ -121,54 +142,37 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
     if (!mapContainer.current) return;
 
     try {
-      const location = parseLocation(startLocation);
+      // Parse the actual start location
+      const [lng, lat] = parseLocation(startLocation);
       
-      // Load Google Maps with the API key directly
-      const loader = new Loader({
-        apiKey: "AIzaSyAm3IKVxRxms6p1tX5jPg6xzz85IGspT0k",
-        version: "weekly"
-      });
+      // Dynamically import mapbox-gl
+      const mapboxgl = await import('mapbox-gl');
+      mapboxglRef.current = mapboxgl.default;
       
-      const { Map } = await loader.importLibrary("maps");
-      
-      // Create map instance
-      const mapInstance = new Map(mapContainer.current, {
-        center: location,
-        zoom: 14,
-        mapTypeId: "roadmap",
-        styles: [
-          {
-            featureType: "all",
-            elementType: "geometry.fill",
-            stylers: [{ color: "#f8f9fa" }]
-          },
-          {
-            featureType: "water",
-            elementType: "geometry",
-            stylers: [{ color: "#4285f4" }]
-          },
-          {
-            featureType: "road",
-            elementType: "geometry",
-            stylers: [{ color: "#ffffff" }]
-          },
-          {
-            featureType: "poi",
-            elementType: "geometry.fill",
-            stylers: [{ color: "#e8f5e8" }]
-          }
-        ]
+      // Set access token
+      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+
+      // Create map instance centered on actual location
+      const mapInstance = new mapboxgl.default.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [lng, lat],
+        zoom: 12,
+        attributionControl: false
       });
 
-      // Generate initial route
-      const generateRealRoute = async (center: { lat: number; lng: number }, distance: number) => {
+      // Add navigation controls
+      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
+
+      // Generate real running route using Supabase edge function
+      const generateRealRoute = async (center: [number, number], distance: number) => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
           
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
-              startLng: center.lng,
-              startLat: center.lat,
+              startLng: center[0],
+              startLat: center[1],
               distance: distance,
               unit: unit
             }
@@ -179,11 +183,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           }
           
           if (data.success) {
+            // Update actual distance from initial API response
             setActualDistance(data.route.distance);
-            return data.route.geometry.coordinates.map((coord: [number, number]) => ({
-              lat: coord[1],
-              lng: coord[0]
-            }));
+            return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
@@ -196,57 +198,69 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center.lat + radius * Math.cos(angle);
-            const lng = center.lng + radius * Math.sin(angle);
-            points.push({ lat, lng });
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
           }
           
+          // Estimate distance for mock route
           const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
           setActualDistance(mockDistance);
           return points;
         }
       };
 
-      const routeCoords = await generateRealRoute(location, distance);
-      
-      // Add route polyline
-      const route = new google.maps.Polyline({
-        path: routeCoords,
-        geodesic: true,
-        strokeColor: '#22c55e',
-        strokeOpacity: 0.8,
-        strokeWeight: 4,
+      mapInstance.on('load', async () => {
+        const routeCoords = await generateRealRoute([lng, lat], distance);
+        
+        // Add route source and layer
+        mapInstance.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: routeCoords
+            }
+          }
+        });
+
+        mapInstance.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#22c55e',
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+
+        // Add start/end marker
+        new mapboxgl.default.Marker({ 
+          color: '#22c55e',
+          scale: 1.2 
+        })
+          .setLngLat(routeCoords[0])
+          .addTo(mapInstance);
+
+        // Fit map to route
+        const bounds = new mapboxgl.default.LngLatBounds();
+        routeCoords.forEach(coord => bounds.extend(coord));
+        mapInstance.fitBounds(bounds, { padding: 50 });
       });
-
-      route.setMap(mapInstance);
-      routeRef.current = route;
-
-      // Add start marker
-      const marker = new google.maps.Marker({
-        position: routeCoords[0],
-        map: mapInstance,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: "#22c55e",
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#ffffff"
-        }
-      });
-      markerRef.current = marker;
-
-      // Fit map to route
-      const bounds = new google.maps.LatLngBounds();
-      routeCoords.forEach(coord => bounds.extend(coord));
-      mapInstance.fitBounds(bounds);
 
       setMap(mapInstance);
       toast.success("Map loaded successfully!");
 
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please try again.");
+      toast.error("Failed to load map. Please check your token and try again.");
     }
   };
 
