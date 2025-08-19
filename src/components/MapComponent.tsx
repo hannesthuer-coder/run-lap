@@ -18,7 +18,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
 
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q";
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
