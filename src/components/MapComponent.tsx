@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { toast } from "sonner";
+import { loadGoogleMaps } from '@/utils/googleMapsLoader';
 
 interface MapComponentProps {
   startLocation: string;
@@ -15,8 +15,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
   const [actualDistance, setActualDistance] = useState<number | null>(null);
   const routePolylineRef = useRef<google.maps.Polyline | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
-
-  const GOOGLE_MAPS_API_KEY = "AIzaSyAm3IKVxRxms6p1tX5jPg6xzz85IGspT0k";
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -143,13 +141,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
     if (!mapContainer.current) return;
 
     try {
-      const loader = new Loader({
-        apiKey: GOOGLE_MAPS_API_KEY,
-        version: "weekly",
-        libraries: ["geometry"]
-      });
-
-      await loader.load();
+      await loadGoogleMaps();
 
       const [lat, lng] = parseLocation(startLocation);
 

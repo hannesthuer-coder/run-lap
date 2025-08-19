@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { toast } from "sonner";
+import { loadGoogleMaps } from '@/utils/googleMapsLoader';
 
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
@@ -11,19 +11,11 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
 
-  const GOOGLE_MAPS_API_KEY = "AIzaSyAm3IKVxRxms6p1tX5jPg6xzz85IGspT0k";
-
   const initializeMap = async () => {
     if (!mapContainer.current) return;
 
     try {
-      const loader = new Loader({
-        apiKey: GOOGLE_MAPS_API_KEY,
-        version: "weekly",
-        libraries: ["geometry"]
-      });
-
-      await loader.load();
+      await loadGoogleMaps();
 
       // Get user's current location
       const getUserLocation = (): Promise<[number, number]> => {
