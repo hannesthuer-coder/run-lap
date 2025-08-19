@@ -12,7 +12,7 @@ const MapSelector = ({
 }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
-  const [marker, setMarker] = useState<any>(null);
+  const markerRef = useRef<any>(null);
   const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"; // TODO: Move to environment variable
 
   const initializeMap = async () => {
@@ -60,9 +60,9 @@ const MapSelector = ({
         const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
 
         // Always remove existing marker first
-        if (marker) {
-          marker.remove();
-          setMarker(null);
+        if (markerRef.current) {
+          markerRef.current.remove();
+          markerRef.current = null;
         }
 
         // Add new marker (only one at a time)
@@ -70,7 +70,7 @@ const MapSelector = ({
           color: '#ef4444',
           scale: 1.2
         }).setLngLat(coords).addTo(mapInstance);
-        setMarker(newMarker);
+        markerRef.current = newMarker;
         onLocationSelect(coords);
         toast.success("Starting point selected!");
       });
