@@ -90,38 +90,57 @@ serve(async (req) => {
       return data.routes[0]
     }
     
-    // Simplified approach - focus on variety over exact distance
+    // Enforce 200m tolerance as requested
     let bestRoute = null
     let bestWaypoints = null
-    const maxAttempts = 3 // Fewer attempts, more variety
+    let bestDistanceDiff = Infinity
+    const tolerance = 200 // 200m tolerance as requested
+    const maxAttempts = 6 // More attempts to find good distance match
     
-    // Base radius on target distance but allow more flexibility
-    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000012 // Slightly larger base radius
+    // Base radius on target distance
+    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000011
     
     // Generate a unique seed based on timestamp and random for maximum variation
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
     
-    console.log(`Target distance: ${targetDistanceMeters}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
+    console.log(`Target distance: ${targetDistanceMeters}m, Tolerance: ${tolerance}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Create significantly different seeds for each attempt
-      const attemptSeed = (routeSeed + attempt * 0.3333) % 1
+      // Create different seeds for each attempt for variety
+      const attemptSeed = (routeSeed + attempt * 0.2) % 1
       const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
         console.log(`Attempt ${attempt + 1}: No route found`)
-        radius *= 0.9 // Slight adjustment
+        radius *= 0.85 // Adjust radius
         continue
       }
       
       const routeDistance = route.distance
-      console.log(`Attempt ${attempt + 1}: Route distance: ${routeDistance}m, Target: ${targetDistanceMeters}m`)
+      const distanceDiff = Math.abs(routeDistance - targetDistanceMeters)
       
-      // Accept any valid route - prioritize variety over exact distance
-      bestRoute = route
-      bestWaypoints = waypoints
-      break // Take the first valid route to ensure variety
+      console.log(`Attempt ${attempt + 1}: Route distance: ${routeDistance}m, Target: ${targetDistanceMeters}m, Diff: ${distanceDiff}m`)
+      
+      // Keep track of the best route so far
+      if (distanceDiff < bestDistanceDiff) {
+        bestRoute = route
+        bestWaypoints = waypoints
+        bestDistanceDiff = distanceDiff
+      }
+      
+      // If we're within 200m tolerance, use this route
+      if (distanceDiff <= tolerance) {
+        console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
+        break
+      }
+      
+      // Adjust radius based on distance difference
+      if (routeDistance < targetDistanceMeters) {
+        radius *= 1.2 // Increase radius if route is too short
+      } else {
+        radius *= 0.8 // Decrease radius if route is too long
+      }
     }
     
     if (!bestRoute) {

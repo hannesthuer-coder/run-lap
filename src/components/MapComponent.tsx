@@ -15,6 +15,7 @@ interface MapComponentProps {
 const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
+  const mapboxglRef = useRef<any>(null);
 
   const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
@@ -116,9 +117,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
       });
 
       // Fit map to new route
-      const bounds = new (window as any).mapboxgl.LngLatBounds();
-      routeCoords.forEach(coord => bounds.extend(coord));
-      map.fitBounds(bounds, { padding: 50 });
+      if (mapboxglRef.current) {
+        const bounds = new mapboxglRef.current.LngLatBounds();
+        routeCoords.forEach(coord => bounds.extend(coord));
+        map.fitBounds(bounds, { padding: 50 });
+      }
 
       toast.success("New route generated!");
 
@@ -137,6 +140,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
       
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
+      mapboxglRef.current = mapboxgl.default;
       
       // Set access token
       mapboxgl.default.accessToken = MAPBOX_TOKEN;
