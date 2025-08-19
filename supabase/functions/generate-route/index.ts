@@ -23,51 +23,26 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints that create varied, smooth loops
+    // Function to generate smooth, circular waypoints like in the example
     const generateWaypoints = (baseRadius, seed = Math.random()) => {
-      const numWaypoints = 3 + Math.floor(seed * 3) // 3-5 waypoints for smoother routes
+      // Use fewer waypoints for smoother, more circular routes
+      const numWaypoints = 4 // Simple circular pattern
       const waypoints = []
       
-      // Create multiple possible route patterns
-      const patterns = [
-        // Circular with variations
-        (i, total, radius, seedOffset) => {
-          const angle = (seedOffset + i / total) * 2 * Math.PI
-          const radiusVar = radius * (0.7 + (Math.sin(angle * 3 + seedOffset * 10) * 0.4))
-          return [
-            startLng + radiusVar * Math.cos(angle),
-            startLat + radiusVar * Math.sin(angle)
-          ]
-        },
-        // Figure-8 pattern
-        (i, total, radius, seedOffset) => {
-          const t = (i / total) * 2 * Math.PI
-          const scale = radius * (0.8 + seedOffset * 0.4)
-          return [
-            startLng + scale * Math.sin(t),
-            startLat + scale * Math.sin(t) * Math.cos(t)
-          ]
-        },
-        // Irregular polygon
-        (i, total, radius, seedOffset) => {
-          const baseAngle = (i / total) * 2 * Math.PI
-          const angleJitter = (Math.sin(seedOffset * 20 + i) * 0.5)
-          const angle = baseAngle + angleJitter
-          const radiusJitter = radius * (0.6 + Math.abs(Math.sin(seedOffset * 15 + i * 2)) * 0.6)
-          return [
-            startLng + radiusJitter * Math.cos(angle),
-            startLat + radiusJitter * Math.sin(angle)
-          ]
-        }
-      ]
+      // Focus on circular patterns with slight variations for uniqueness
+      const startAngle = seed * 2 * Math.PI // Random starting angle for variety
       
-      // Select random pattern
-      const pattern = patterns[Math.floor(seed * patterns.length)]
-      
-      // Generate waypoints using selected pattern
       for (let i = 0; i < numWaypoints; i++) {
-        const point = pattern(i, numWaypoints, baseRadius, seed)
-        waypoints.push(point)
+        const angle = startAngle + (i / numWaypoints) * 2 * Math.PI
+        
+        // Create smooth circular variation with minimal deviation
+        const radiusVariation = 1 + Math.sin(angle * 2 + seed * Math.PI) * 0.15 // Reduced variation for smoother curves
+        const finalRadius = baseRadius * radiusVariation
+        
+        // Calculate waypoint position
+        const lat = startLat + finalRadius * Math.cos(angle)
+        const lng = startLng + finalRadius * Math.sin(angle)
+        waypoints.push([lng, lat])
       }
       
       return waypoints
@@ -90,30 +65,30 @@ serve(async (req) => {
       return data.routes[0]
     }
     
-    // Enforce 200m tolerance as requested
+    // Enforce strict 0.2km (200m) tolerance for precise distance matching
     let bestRoute = null
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
-    const tolerance = 200 // 200m tolerance as requested
-    const maxAttempts = 6 // More attempts to find good distance match
+    const tolerance = 200 // 200m = 0.2km tolerance as requested
+    const maxAttempts = 10 // More attempts for better precision
     
-    // Base radius on target distance
-    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000011
+    // More precise base radius calculation
+    let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
     
     // Generate a unique seed based on timestamp and random for maximum variation
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
     
-    console.log(`Target distance: ${targetDistanceMeters}m, Tolerance: ${tolerance}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
+    console.log(`Target distance: ${targetDistanceMeters}m, Strict tolerance: ${tolerance}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Create different seeds for each attempt for variety
-      const attemptSeed = (routeSeed + attempt * 0.2) % 1
+      const attemptSeed = (routeSeed + attempt * 0.15) % 1
       const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
         console.log(`Attempt ${attempt + 1}: No route found`)
-        radius *= 0.85 // Adjust radius
+        radius *= 0.9 // Minor adjustment
         continue
       }
       
@@ -129,17 +104,19 @@ serve(async (req) => {
         bestDistanceDiff = distanceDiff
       }
       
-      // If we're within 200m tolerance, use this route
+      // If we're within strict 200m tolerance, use this route
       if (distanceDiff <= tolerance) {
-        console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
+        console.log(`Found acceptable route within strict ${tolerance}m tolerance on attempt ${attempt + 1}`)
         break
       }
       
-      // Adjust radius based on distance difference
+      // More precise radius adjustments based on distance difference
+      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.05), 0.3) // Limit adjustment between 5% and 30%
+      
       if (routeDistance < targetDistanceMeters) {
-        radius *= 1.2 // Increase radius if route is too short
+        radius *= (1 + adjustmentFactor) // Increase radius proportionally
       } else {
-        radius *= 0.8 // Decrease radius if route is too long
+        radius *= (1 - adjustmentFactor) // Decrease radius proportionally
       }
     }
     
