@@ -117,8 +117,18 @@ serve(async (req) => {
       }
       
       // Check for opposite bearings (backtracking detection)
+      // Allow backtracking near start/end (first 20% and last 20% of route)
+      const routeLength = segments.length
+      const startBuffer = Math.floor(routeLength * 0.2) // First 20%
+      const endBuffer = Math.floor(routeLength * 0.8)   // Last 20%
+      
       for (let i = 0; i < segments.length; i++) {
         for (let j = i + 5; j < segments.length; j++) { // Skip nearby segments
+          // Skip if either segment is in start/end buffer zones
+          const iInBuffer = i < startBuffer || i > endBuffer
+          const jInBuffer = j < startBuffer || j > endBuffer
+          if (iInBuffer || jInBuffer) continue
+          
           const bearingDiff = Math.abs(segments[i].bearing - segments[j].bearing)
           const oppositeBearing = bearingDiff > 135 && bearingDiff < 225 // Opposite directions
           
