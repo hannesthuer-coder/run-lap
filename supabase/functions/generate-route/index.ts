@@ -96,34 +96,75 @@ serve(async (req) => {
       }
     }
 
-    // Function to generate smooth waypoints using bearing-based approach
-    const generateSmoothWaypoints = (baseRadius, seed = Math.random()) => {
-      const waypoints = []
-      const numWaypoints = 6 + Math.floor(seed * 3) // 6-8 waypoints for smoother paths
+    // Function to detect backtracking in route geometry
+    const detectBacktracking = (geometry) => {
+      if (!geometry || !geometry.coordinates || geometry.coordinates.length < 10) {
+        return false
+      }
+
+      const coords = geometry.coordinates
+      const threshold = 0.0005 // ~50m proximity threshold
       
-      // Start with a random cardinal direction
-      let currentBearing = seed * 90 // 0-90 degrees initial bearing
-      const totalRotation = 360 // Complete circle
-      const bearingIncrement = totalRotation / numWaypoints
+      // Check for segments that are close to each other but going in opposite directions
+      for (let i = 0; i < coords.length - 5; i += 3) {
+        const p1 = coords[i]
+        const p2 = coords[i + 3]
+        
+        // Check against later segments for proximity
+        for (let j = i + 10; j < coords.length - 3; j += 3) {
+          const p3 = coords[j]
+          const p4 = coords[j + 3]
+          
+          // Calculate distance between segments
+          const dist1 = Math.sqrt(Math.pow(p1[0] - p3[0], 2) + Math.pow(p1[1] - p3[1], 2))
+          const dist2 = Math.sqrt(Math.pow(p2[0] - p4[0], 2) + Math.pow(p2[1] - p4[1], 2))
+          
+          if (dist1 < threshold || dist2 < threshold) {
+            // Calculate bearings to check if going in opposite directions
+            const bearing1 = calculateBearing(p1[1], p1[0], p2[1], p2[0])
+            const bearing2 = calculateBearing(p3[1], p3[0], p4[1], p4[0])
+            
+            let bearingDiff = Math.abs(bearing1 - bearing2)
+            if (bearingDiff > 180) bearingDiff = 360 - bearingDiff
+            
+            // If bearings are opposite (within 45 degrees of 180° apart), it's backtracking
+            if (bearingDiff > 135 && bearingDiff < 225) {
+              console.log(`Backtracking detected: segments ${i}-${i+3} and ${j}-${j+3}, bearing diff: ${bearingDiff}°`)
+              return true
+            }
+          }
+        }
+      }
+      
+      return false
+    }
+
+    // Function to generate strictly progressive waypoints (no backtracking possible)
+    const generateProgressiveWaypoints = (baseRadius, seed = Math.random()) => {
+      const waypoints = []
+      const numWaypoints = 8 // Use more waypoints for smoother progression
+      
+      // Start with random direction and ensure continuous clockwise progression
+      let currentBearing = seed * 360
+      const minBearingIncrement = 30 // Minimum 30° progression between waypoints
+      const maxBearingIncrement = 60 // Maximum 60° progression
       
       for (let i = 0; i < numWaypoints; i++) {
-        // Add some natural variation to bearing
-        const bearingVariation = (Math.sin(i * Math.PI / 3 + seed * Math.PI) * 15) // ±15 degrees variation
-        const actualBearing = (currentBearing + bearingVariation) % 360
+        // Ensure each waypoint progresses the bearing forward
+        const bearingIncrement = minBearingIncrement + (seed * maxBearingIncrement - minBearingIncrement)
+        currentBearing = (currentBearing + bearingIncrement) % 360
         
-        // Vary radius slightly for more natural paths
-        const radiusVariation = 0.8 + (Math.sin(i * Math.PI / 2 + seed * Math.PI * 2) * 0.3) // 0.8-1.1x base radius
-        const actualRadius = baseRadius * radiusVariation
+        // Vary radius for natural path but ensure minimum distance from start
+        const radiusVariation = 0.7 + (Math.sin(i * Math.PI / 3 + seed * Math.PI) * 0.4) // 0.7-1.1x base radius
+        const minRadius = baseRadius * 0.6 // Minimum radius to prevent tight loops
+        const actualRadius = Math.max(minRadius, baseRadius * radiusVariation)
         
         // Convert bearing to coordinates
-        const bearingRad = actualBearing * Math.PI / 180
+        const bearingRad = currentBearing * Math.PI / 180
         const lat = startLat + actualRadius * Math.cos(bearingRad)
         const lng = startLng + actualRadius * Math.sin(bearingRad)
         
         waypoints.push([lng, lat])
-        
-        // Update bearing for next waypoint
-        currentBearing = (currentBearing + bearingIncrement) % 360
       }
       
       return waypoints
@@ -163,7 +204,13 @@ serve(async (req) => {
         
         console.log(`Route quality analysis: Quality=${quality.quality}, MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
         
-        // More lenient quality check - only reject extremely problematic routes
+        // Check for backtracking - this is a hard rejection
+        if (detectBacktracking(route.geometry)) {
+          console.log(`Rejecting route due to backtracking`)
+          continue
+        }
+        
+        // More lenient quality check for turn angles
         if (quality.maxTurnAngle > 150 || quality.sharpTurns > 5) {
           console.log(`Rejecting route: MaxTurn=${quality.maxTurnAngle}°, SharpTurns=${quality.sharpTurns}`)
           continue
@@ -175,8 +222,8 @@ serve(async (req) => {
         }
       }
       
-      // If no route passes quality check, return the best available route
-      return bestRoute || data.routes[0]
+      // If no route passes quality check, return null to force new waypoints
+      return bestRoute
     }
     
     // Enforce more lenient tolerance and better distance targeting
@@ -197,7 +244,7 @@ serve(async (req) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Create different seeds for each attempt for variety
       const attemptSeed = (routeSeed + attempt * 0.15) % 1
-      const waypoints = generateSmoothWaypoints(radius, attemptSeed)
+      const waypoints = generateProgressiveWaypoints(radius, attemptSeed)
       const route = await fetchQualityRoute(waypoints)
       
       if (!route) {
