@@ -13,7 +13,7 @@ const MapSelector = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"; // TODO: Move to environment variable
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q"; // TODO: Move to environment variable
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
