@@ -1,94 +1,111 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Loader } from '@googlemaps/js-api-loader';
 import { toast } from "sonner";
-import 'mapbox-gl/dist/mapbox-gl.css';
+
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
 }
-const MapSelector = ({
-  onLocationSelect
-}: MapSelectorProps) => {
+
+const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"; // TODO: Move to environment variable
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+
+  const GOOGLE_MAPS_API_KEY = "AIzaSyAm3IKVxRxms6p1tX5jPg6xzz85IGspT0k";
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
+
     try {
-      // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
+      const loader = new Loader({
+        apiKey: GOOGLE_MAPS_API_KEY,
+        version: "weekly",
+        libraries: ["geometry"]
+      });
 
-      // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      await loader.load();
 
-      // Get user's current location first
+      // Get user's current location
       const getUserLocation = (): Promise<[number, number]> => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-              resolve([position.coords.longitude, position.coords.latitude]);
-            }, error => {
-              console.warn('Could not get user location:', error);
-              // Default to New York if location fails
-              resolve([-74.5, 40]);
-            });
+            navigator.geolocation.getCurrentPosition(
+              position => {
+                resolve([position.coords.latitude, position.coords.longitude]);
+              },
+              () => {
+                // Default to New York if location fails
+                resolve([40.7128, -74.0060]);
+              }
+            );
           } else {
             // Default to New York if geolocation not supported
-            resolve([-74.5, 40]);
+            resolve([40.7128, -74.0060]);
           }
         });
       };
-      const userLocation = await getUserLocation();
 
-      // Create map instance centered on user's location
-      const mapInstance = new mapboxgl.default.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
-        center: userLocation,
+      const [lat, lng] = await getUserLocation();
+
+      // Create map instance
+      const mapInstance = new google.maps.Map(mapContainer.current, {
+        center: { lat, lng },
         zoom: 14,
-        attributionControl: false
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        gestureHandling: 'cooperative'
       });
-
-      // Add navigation controls
-      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
 
       // Handle map clicks
-      mapInstance.on('click', e => {
-        const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+      mapInstance.addListener('click', (event: google.maps.MapMouseEvent) => {
+        if (event.latLng) {
+          const clickedLat = event.latLng.lat();
+          const clickedLng = event.latLng.lng();
 
-        // Always remove existing marker first
-        if (markerRef.current) {
-          markerRef.current.remove();
-          markerRef.current = null;
+          // Remove existing marker
+          if (markerRef.current) {
+            markerRef.current.setMap(null);
+          }
+
+          // Add new marker
+          const newMarker = new google.maps.Marker({
+            position: { lat: clickedLat, lng: clickedLng },
+            map: mapInstance,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#ef4444',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2
+            }
+          });
+
+          markerRef.current = newMarker;
+          onLocationSelect([clickedLat, clickedLng]);
+          toast.success("Starting point selected!");
         }
-
-        // Add new marker (only one at a time)
-        const newMarker = new mapboxgl.default.Marker({
-          color: '#ef4444',
-          scale: 1.2
-        }).setLngLat(coords).addTo(mapInstance);
-        markerRef.current = newMarker;
-        onLocationSelect(coords);
-        toast.success("Starting point selected!");
       });
+
       setMap(mapInstance);
       toast.success("Map loaded! Click anywhere to select your starting point.");
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please check your token and try again.");
+      toast.error("Failed to load map. Please try again.");
     }
   };
+
   useEffect(() => {
     initializeMap();
   }, []);
-  return <div className="h-full w-full relative">
-      <div ref={mapContainer} className="absolute inset-0" />
-      
-      {/* Instructions Overlay */}
-      
-    </div>;
+
+  return (
+    <div className="h-full w-full relative">
+      <div ref={mapContainer} className="absolute inset-0 rounded-lg" />
+    </div>
+  );
 };
+
 export default MapSelector;
