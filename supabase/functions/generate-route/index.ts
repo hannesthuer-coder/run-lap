@@ -23,37 +23,62 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate smooth, circular waypoints like in the example
+    // Function to generate waypoints that ensure continuous forward progress (no backtracking)
     const generateWaypoints = (baseRadius, seed = Math.random()) => {
-      // Use fewer waypoints for smoother, more circular routes
-      const numWaypoints = 4 // Simple circular pattern
+      // Use 3-4 waypoints strategically placed to ensure smooth progression
+      const numWaypoints = 3 + Math.floor(seed * 2) // 3-4 waypoints
       const waypoints = []
       
-      // Focus on circular patterns with slight variations for uniqueness
-      const startAngle = seed * 2 * Math.PI // Random starting angle for variety
+      // Ensure waypoints are arranged in a logical sequence (clockwise or counterclockwise)
+      const clockwise = seed > 0.5 // Random direction for variety
+      const startAngle = seed * 2 * Math.PI // Random starting angle
       
       for (let i = 0; i < numWaypoints; i++) {
-        const angle = startAngle + (i / numWaypoints) * 2 * Math.PI
+        // Ensure proper sequencing - each waypoint progresses logically around the circle
+        const progressionFactor = clockwise ? 1 : -1
+        const angle = startAngle + progressionFactor * (i / numWaypoints) * 2 * Math.PI
         
-        // Create smooth circular variation with minimal deviation
-        const radiusVariation = 1 + Math.sin(angle * 2 + seed * Math.PI) * 0.15 // Reduced variation for smoother curves
+        // Controlled radius variation to maintain smooth circular flow
+        const radiusVariation = 1 + Math.sin(angle + seed * Math.PI) * 0.1 // Very minimal variation (10%)
         const finalRadius = baseRadius * radiusVariation
         
-        // Calculate waypoint position
+        // Ensure minimum spacing between waypoints to prevent tight turns and backtracking
+        const minSpacing = baseRadius * 0.3 // Minimum 30% of radius between waypoints
+        
         const lat = startLat + finalRadius * Math.cos(angle)
         const lng = startLng + finalRadius * Math.sin(angle)
+        
+        // Check spacing with previous waypoint if not the first
+        if (waypoints.length > 0) {
+          const lastWaypoint = waypoints[waypoints.length - 1]
+          const distance = Math.sqrt(Math.pow(lng - lastWaypoint[0], 2) + Math.pow(lat - lastWaypoint[1], 2))
+          
+          // If too close, skip this waypoint to prevent tight turns
+          if (distance < minSpacing * 0.000009) { // Convert to degrees
+            continue
+          }
+        }
+        
         waypoints.push([lng, lat])
       }
       
       return waypoints
     }
     
-    // Function to fetch route from Mapbox
+    // Function to fetch route from Mapbox with anti-backtracking preferences
     const fetchRoute = async (waypoints) => {
       // Create a loop by adding the start point at the end
       const loopWaypoints = [...waypoints, [startLng, startLat]]
       const coordinates = `${startLng},${startLat};` + loopWaypoints.map(w => `${w[0]},${w[1]}`).join(';')
-      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
+      
+      // Add routing preferences to prevent backtracking and ensure smooth flow
+      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` + 
+        `geometries=geojson&` +
+        `access_token=${MAPBOX_TOKEN}&` +
+        `overview=full&` +
+        `steps=true&` +
+        `continue_straight=true&` + // Prefer continuing straight rather than sharp turns
+        `annotations=distance` // Get detailed distance information
       
       const response = await fetch(directionsUrl)
       const data = await response.json()
