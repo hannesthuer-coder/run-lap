@@ -1,84 +1,113 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { Loader } from "@googlemaps/js-api-loader";
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
 }
-const MapSelector = ({
-  onLocationSelect
-}: MapSelectorProps) => {
+
+const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ"; // TODO: Move to environment variable
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
+    
     try {
-      // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
-
-      // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
-
       // Get user's current location first
-      const getUserLocation = (): Promise<[number, number]> => {
-        return new Promise((resolve, reject) => {
+      const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
+        return new Promise((resolve) => {
           if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-              resolve([position.coords.longitude, position.coords.latitude]);
-            }, error => {
-              console.warn('Could not get user location:', error);
-              // Default to New York if location fails
-              resolve([-74.5, 40]);
-            });
+            navigator.geolocation.getCurrentPosition(
+              position => {
+                resolve({
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                });
+              },
+              error => {
+                console.warn('Could not get user location:', error);
+                // Default to New York if location fails
+                resolve({ lat: 40.7128, lng: -74.0060 });
+              }
+            );
           } else {
             // Default to New York if geolocation not supported
-            resolve([-74.5, 40]);
+            resolve({ lat: 40.7128, lng: -74.0060 });
           }
         });
       };
+      
       const userLocation = await getUserLocation();
-
-      // Create map instance centered on user's location
-      const mapInstance = new mapboxgl.default.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+      
+      // Get Google Maps API key from edge function
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: apiKeyData } = await supabase.functions.invoke('get-google-maps-key');
+      const apiKey = apiKeyData?.key || 'placeholder';
+      
+      // Load Google Maps
+      const loader = new Loader({
+        apiKey: apiKey,
+        version: "weekly"
+      });
+      
+      const { Map } = await loader.importLibrary("maps");
+      
+      // Create map instance
+      const mapInstance = new Map(mapContainer.current, {
         center: userLocation,
         zoom: 14,
-        attributionControl: false
+        mapTypeId: "roadmap",
+        styles: [
+          {
+            featureType: "all",
+            elementType: "geometry.fill",
+            stylers: [{ color: "#f5f5f5" }]
+          },
+          {
+            featureType: "water",
+            elementType: "geometry",
+            stylers: [{ color: "#c9e9ff" }]
+          }
+        ]
       });
-
-      // Add navigation controls
-      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
-
+      
       // Handle map clicks
-      mapInstance.on('click', e => {
-        const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-
-        // Always remove existing marker first
+      mapInstance.addListener("click", (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        
+        const coords: [number, number] = [e.latLng.lng(), e.latLng.lat()];
+        
+        // Remove existing marker
         if (markerRef.current) {
-          markerRef.current.remove();
-          markerRef.current = null;
+          markerRef.current.setMap(null);
         }
-
-        // Add new marker (only one at a time)
-        const newMarker = new mapboxgl.default.Marker({
-          color: '#ef4444',
-          scale: 1.2
-        }).setLngLat(coords).addTo(mapInstance);
+        
+        // Add new marker
+        const newMarker = new google.maps.Marker({
+          position: e.latLng,
+          map: mapInstance,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#ef4444",
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "#ffffff"
+          }
+        });
+        
         markerRef.current = newMarker;
         onLocationSelect(coords);
         toast.success("Starting point selected!");
       });
+      
       setMap(mapInstance);
       toast.success("Map loaded! Click anywhere to select your starting point.");
+      
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please check your token and try again.");
+      toast.error("Failed to load map. Please try again.");
     }
   };
   useEffect(() => {

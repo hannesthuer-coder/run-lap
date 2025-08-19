@@ -14,10 +14,22 @@ serve(async (req) => {
   try {
     const { startLng, startLat, distance, unit } = await req.json()
     
-    // Get Mapbox token from Supabase secrets
-    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
-    if (!MAPBOX_TOKEN) {
-      throw new Error('Mapbox access token not configured')
+    // Get Google Maps API key from Supabase secrets
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+    
+    const { data: secrets } = await supabaseClient
+      .from('vault.decrypted_secrets')
+      .select('name, decrypted_secret')
+      .eq('name', 'GOOGLE_MAPS_API_KEY')
+      .single()
+    
+    const GOOGLE_MAPS_API_KEY = secrets?.decrypted_secret
+    
+    if (!GOOGLE_MAPS_API_KEY) {
+      throw new Error('Google Maps API key not found in secrets')
     }
     
     // Convert distance to meters
@@ -78,29 +90,74 @@ serve(async (req) => {
       return waypoints
     }
     
-    // Function to fetch route from Mapbox with anti-backtracking preferences
+    // Function to fetch route from Google Maps Directions API
     const fetchRoute = async (waypoints) => {
       // Create a loop by adding the start point at the end
       const loopWaypoints = [...waypoints, [startLng, startLat]]
-      const coordinates = `${startLng},${startLat};` + loopWaypoints.map(w => `${w[0]},${w[1]}`).join(';')
+      const origin = `${startLat},${startLng}`
+      const destination = `${startLat},${startLng}`
+      const waypointsParam = loopWaypoints.map(w => `${w[1]},${w[0]}`).join('|')
       
-      // Add routing preferences to prevent backtracking and ensure smooth flow
-      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` + 
-        `geometries=geojson&` +
-        `access_token=${MAPBOX_TOKEN}&` +
-        `overview=full&` +
-        `steps=true&` +
-        `continue_straight=true&` + // Prefer continuing straight rather than sharp turns
-        `annotations=distance` // Get detailed distance information
+      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?` +
+        `origin=${origin}&` +
+        `destination=${destination}&` +
+        `waypoints=${waypointsParam}&` +
+        `mode=walking&` +
+        `key=${GOOGLE_MAPS_API_KEY}`
       
       const response = await fetch(directionsUrl)
       const data = await response.json()
       
-      if (!data.routes || data.routes.length === 0) {
+      if (!data.routes || data.routes.length === 0 || data.status !== 'OK') {
         return null
       }
       
-      return data.routes[0]
+      const route = data.routes[0]
+      
+      // Convert Google Maps polyline to GeoJSON format
+      const decodedPath = decodePolyline(route.overview_polyline.points)
+      
+      return {
+        geometry: {
+          coordinates: decodedPath.map(point => [point[1], point[0]]) // Convert lat,lng to lng,lat
+        },
+        distance: route.legs.reduce((total, leg) => total + leg.distance.value, 0),
+        duration: route.legs.reduce((total, leg) => total + leg.duration.value, 0)
+      }
+    }
+    
+    // Function to decode Google Maps polyline
+    const decodePolyline = (encoded) => {
+      const points = []
+      let index = 0
+      const len = encoded.length
+      let lat = 0
+      let lng = 0
+      
+      while (index < len) {
+        let b, shift = 0, result = 0
+        do {
+          b = encoded.charCodeAt(index++) - 63
+          result |= (b & 0x1f) << shift
+          shift += 5
+        } while (b >= 0x20)
+        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1))
+        lat += dlat
+        
+        shift = 0
+        result = 0
+        do {
+          b = encoded.charCodeAt(index++) - 63
+          result |= (b & 0x1f) << shift
+          shift += 5
+        } while (b >= 0x20)
+        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1))
+        lng += dlng
+        
+        points.push([lat / 1e5, lng / 1e5])
+      }
+      
+      return points
     }
     
     // Enforce strict 0.2km (200m) tolerance for precise distance matching
