@@ -1,22 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
-import 'leaflet/dist/leaflet.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
   startLocation: string;
   distance: number;
   unit: string;
-  regenerateKey?: number;
+  regenerateKey?: number; // Add regeneration trigger
 }
 
 const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
+  const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-  const [routeCoords, setRouteCoords] = useState<number[][]>([]);
-  const leafletRef = useRef<any>(null);
+
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -24,12 +26,12 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
       const [lat, lng] = locationStr.split(',').map(coord => parseFloat(coord.trim()));
       if (isNaN(lat) || isNaN(lng)) {
         console.warn('Invalid coordinates, using default location');
-        return [40, -74.5]; // Default to NYC
+        return [-74.5, 40]; // Default to NYC
       }
-      return [lat, lng]; // Return as [lat, lng] for Leaflet
+      return [lng, lat]; // Return as [lng, lat] for Mapbox
     } catch (error) {
       console.warn('Error parsing location, using default:', error);
-      return [40, -74.5];
+      return [-74.5, 40];
     }
   };
 
@@ -37,7 +39,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
     if (!map) return;
 
     try {
-      const [lat, lng] = parseLocation(startLocation);
+      const [lng, lat] = parseLocation(startLocation);
       
       // Generate real running route using Supabase edge function
       const generateRealRoute = async (center: [number, number], distance: number) => {
@@ -46,8 +48,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
-              startLng: center[1], // lng
-              startLat: center[0], // lat
+              startLng: center[0],
+              startLat: center[1],
               distance: distance,
               unit: unit
             }
@@ -60,8 +62,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           if (data.success) {
             // Update actual distance from API response
             setActualDistance(data.route.distance);
-            // Convert coordinates for Leaflet (swap lng/lat to lat/lng)
-            return data.route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+            return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
@@ -74,9 +75,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center[0] + radius * Math.cos(angle);
-            const lng = center[1] + radius * Math.sin(angle);
-            points.push([lat, lng]); // Leaflet format
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
           }
           
           // Estimate distance for mock route
@@ -86,27 +87,48 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
         }
       };
 
-      const newRouteCoords = await generateRealRoute([lat, lng], distance);
-      setRouteCoords(newRouteCoords);
+      const routeCoords = await generateRealRoute([lng, lat], distance);
       
-      // Clear existing route
-      map.eachLayer((layer: any) => {
-        if (layer.options && layer.options.className === 'route-layer') {
-          map.removeLayer(layer);
+      // Remove existing route and marker
+      if (map.getSource('route')) {
+        map.removeLayer('route');
+        map.removeSource('route');
+      }
+
+      // Add new route source and layer
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: routeCoords
+          }
         }
       });
 
-      // Add new route
-      const routeLine = leafletRef.current.polyline(newRouteCoords, {
-        color: '#22c55e',
-        weight: 4,
-        opacity: 0.8,
-        smoothFactor: 1,
-        className: 'route-layer'
-      }).addTo(map);
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#22c55e',
+          'line-width': 4,
+          'line-opacity': 0.8
+        }
+      });
 
       // Fit map to new route
-      map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+      if (mapboxglRef.current) {
+        const bounds = new mapboxglRef.current.LngLatBounds();
+        routeCoords.forEach(coord => bounds.extend(coord));
+        map.fitBounds(bounds, { padding: 50 });
+      }
 
       toast.success("New route generated!");
 
@@ -116,81 +138,41 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
     }
   };
 
-  const handleStartNavigation = () => {
-    if (routeCoords.length === 0) return;
-    
-    const [startLat, startLng] = parseLocation(startLocation);
-    
-    // Detect user agent and open appropriate app
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /ipad|iphone|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-    
-    if (isIOS) {
-      // Try Apple Maps first, fallback to Google Maps
-      const appleMapsUrl = `http://maps.apple.com/?daddr=${startLat},${startLng}&dirflg=w`;
-      const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${startLat},${startLng}&travelmode=walking`;
-      
-      // Try Apple Maps, if it fails, open Google Maps
-      window.open(appleMapsUrl, '_blank');
-      setTimeout(() => {
-        window.open(googleMapsUrl, '_blank');
-      }, 1000);
-    } else {
-      // Android or desktop - use Google Maps
-      const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${startLat},${startLng}&travelmode=walking`;
-      window.open(googleMapsUrl, '_blank');
-    }
-    
-    toast.success("Opening navigation app...");
-  };
-
   const initializeMap = async () => {
     if (!mapContainer.current) return;
 
     try {
       // Parse the actual start location
-      const [lat, lng] = parseLocation(startLocation);
+      const [lng, lat] = parseLocation(startLocation);
       
-      // Dynamically import Leaflet
-      const L = await import('leaflet');
-      leafletRef.current = L;
+      // Dynamically import mapbox-gl
+      const mapboxgl = await import('mapbox-gl');
+      mapboxglRef.current = mapboxgl.default;
       
-      // Fix default marker icons for Leaflet
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      });
+      // Set access token
+      mapboxgl.default.accessToken = MAPBOX_TOKEN;
 
       // Create map instance centered on actual location
-      const mapInstance = L.map(mapContainer.current, {
-        center: [lat, lng],
-        zoom: 14,
-        zoomControl: true,
+      const mapInstance = new mapboxgl.default.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [lng, lat],
+        zoom: 12,
         attributionControl: false
       });
 
-      // Add beautiful OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-        className: 'map-tiles'
-      }).addTo(mapInstance);
+      // Add navigation controls
+      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
 
-      // Add zoom controls in top-right
-      mapInstance.zoomControl.setPosition('topright');
-
-      // Generate initial route
+      // Generate real running route using Supabase edge function
       const generateRealRoute = async (center: [number, number], distance: number) => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
           
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
-              startLng: center[1], // lng
-              startLat: center[0], // lat
+              startLng: center[0],
+              startLat: center[1],
               distance: distance,
               unit: unit
             }
@@ -203,8 +185,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           if (data.success) {
             // Update actual distance from initial API response
             setActualDistance(data.route.distance);
-            // Convert coordinates for Leaflet (swap lng/lat to lat/lng)
-            return data.route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+            return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
@@ -217,9 +198,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center[0] + radius * Math.cos(angle);
-            const lng = center[1] + radius * Math.sin(angle);
-            points.push([lat, lng]); // Leaflet format
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
           }
           
           // Estimate distance for mock route
@@ -229,58 +210,62 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
         }
       };
 
-      const initialRouteCoords = await generateRealRoute([lat, lng], distance);
-      setRouteCoords(initialRouteCoords);
-      
-      // Add route to map
-      const routeLine = L.polyline(initialRouteCoords, {
-        color: '#22c55e',
-        weight: 4,
-        opacity: 0.8,
-        smoothFactor: 1,
-        className: 'route-layer'
-      }).addTo(mapInstance);
+      mapInstance.on('load', async () => {
+        const routeCoords = await generateRealRoute([lng, lat], distance);
+        
+        // Add route source and layer
+        mapInstance.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: routeCoords
+            }
+          }
+        });
 
-      // Add start/end marker with custom green styling
-      const startIcon = L.divIcon({
-        className: 'custom-start-marker',
-        html: `<div style="
-          background-color: #22c55e;
-          width: 25px;
-          height: 25px;
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-          position: relative;
-          transform: translate(-50%, -50%);
-        "></div>`,
-        iconSize: [25, 25],
-        iconAnchor: [12.5, 12.5]
+        mapInstance.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#22c55e',
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+
+        // Add start/end marker
+        new mapboxgl.default.Marker({ 
+          color: '#22c55e',
+          scale: 1.2 
+        })
+          .setLngLat(routeCoords[0])
+          .addTo(mapInstance);
+
+        // Fit map to route
+        const bounds = new mapboxgl.default.LngLatBounds();
+        routeCoords.forEach(coord => bounds.extend(coord));
+        mapInstance.fitBounds(bounds, { padding: 50 });
       });
-
-      L.marker([lat, lng], { icon: startIcon }).addTo(mapInstance);
-
-      // Fit map to route
-      mapInstance.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
 
       setMap(mapInstance);
       toast.success("Map loaded successfully!");
 
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please try again.");
+      toast.error("Failed to load map. Please check your token and try again.");
     }
   };
 
   useEffect(() => {
     initializeMap();
-    
-    // Cleanup on unmount
-    return () => {
-      if (map) {
-        map.remove();
-      }
-    };
   }, []);
 
   // Regenerate route when regenerateKey changes
@@ -292,7 +277,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
 
   return (
     <div className="h-full w-full relative">
-      <div ref={mapContainer} className="absolute inset-0 rounded-2xl overflow-hidden" />
+      <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Route Info Overlay */}
       <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-medium border">
@@ -307,18 +292,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
             Starting from: {startLocation}
           </p>
         </div>
-      </div>
-
-      {/* Navigation Button */}
-      <div className="absolute top-4 right-4">
-        <Button
-          onClick={handleStartNavigation}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-medium"
-          size="sm"
-        >
-          <ExternalLink className="w-4 h-4 mr-2" />
-          Start Navigation
-        </Button>
       </div>
     </div>
   );
