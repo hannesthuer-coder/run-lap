@@ -95,8 +95,8 @@ serve(async (req) => {
       return (bearing + 360) % 360
     }
 
-    // Function to detect backtracking on the same street/road
-    const detectBacktracking = (coordinates) => {
+    // Function to detect backtracking and parallel segments that are too close
+    const detectInvalidRouteSegments = (coordinates) => {
       if (coordinates.length < 10) return false // Need enough points to detect patterns
       
       const segments = []
@@ -116,8 +116,8 @@ serve(async (req) => {
         }
       }
       
-      // Check for opposite bearings (backtracking detection)
-      // Allow backtracking near start/end (first 20% and last 20% of route)
+      // Check for opposite bearings (backtracking) and parallel segments too close together
+      // Allow issues near start/end (first 20% and last 20% of route)
       const routeLength = segments.length
       const startBuffer = Math.floor(routeLength * 0.2) // First 20%
       const endBuffer = Math.floor(routeLength * 0.8)   // Last 20%
@@ -131,20 +131,26 @@ serve(async (req) => {
           
           const bearingDiff = Math.abs(segments[i].bearing - segments[j].bearing)
           const oppositeBearing = bearingDiff > 135 && bearingDiff < 225 // Opposite directions
+          const parallelBearing = bearingDiff < 45 || bearingDiff > 315 // Same/similar directions
           
-          if (oppositeBearing) {
-            // Check if segments are geographically close (same street)
-            const avgLat1 = segments[i].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[i].coords.length
-            const avgLng1 = segments[i].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[i].coords.length
-            const avgLat2 = segments[j].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[j].coords.length
-            const avgLng2 = segments[j].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[j].coords.length
-            
-            const distance = Math.sqrt(Math.pow((avgLng2 - avgLng1) * 111000, 2) + Math.pow((avgLat2 - avgLat1) * 111000, 2))
-            
-            if (distance < 100) { // Same street if within 100 meters
-              console.log(`Backtracking detected: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, bearing diff: ${bearingDiff}°`)
-              return true
-            }
+          // Calculate average positions of segments
+          const avgLat1 = segments[i].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[i].coords.length
+          const avgLng1 = segments[i].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[i].coords.length
+          const avgLat2 = segments[j].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[j].coords.length
+          const avgLng2 = segments[j].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[j].coords.length
+          
+          const distance = Math.sqrt(Math.pow((avgLng2 - avgLng1) * 111000, 2) + Math.pow((avgLat2 - avgLat1) * 111000, 2))
+          
+          // Check for backtracking (opposite directions on same street)
+          if (oppositeBearing && distance < 100) {
+            console.log(`Backtracking detected: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, bearing diff: ${bearingDiff}°`)
+            return true
+          }
+          
+          // Check for parallel segments too close together (minimum 50m separation)
+          if (parallelBearing && distance < 50) {
+            console.log(`Parallel segments too close: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, distance: ${Math.round(distance)}m`)
+            return true
           }
         }
       }
@@ -152,7 +158,7 @@ serve(async (req) => {
       return false
     }
 
-    // Function to fetch route from Mapbox with backtracking validation
+    // Function to fetch route from Mapbox with validation
     const fetchRoute = async (waypoints) => {
       // Create a loop by adding the start point at the end
       const loopWaypoints = [...waypoints, [startLng, startLat]]
@@ -176,9 +182,9 @@ serve(async (req) => {
       
       const route = data.routes[0]
       
-      // Check for backtracking in the route geometry
-      if (detectBacktracking(route.geometry.coordinates)) {
-        console.log('Rejecting route due to backtracking')
+      // Check for invalid route segments (backtracking and parallel lines too close)
+      if (detectInvalidRouteSegments(route.geometry.coordinates)) {
+        console.log('Rejecting route due to invalid segments')
         return null
       }
       
