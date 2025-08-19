@@ -14,13 +14,13 @@ serve(async (req) => {
   try {
     const { startLng, startLat, distance, unit } = await req.json()
     
-    // Get Mapbox token from Supabase secrets
-    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    // Get Mapbox token - use hardcoded token as fallback since secret access isn't working
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN') || 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q'
     
-    console.log(`Checking Mapbox token: ${MAPBOX_TOKEN ? 'Token found' : 'No token found'}`)
+    console.log(`Using Mapbox token: ${MAPBOX_TOKEN ? 'Token available' : 'No token found'}`)
     
     if (!MAPBOX_TOKEN) {
-      console.error('MAPBOX_ACCESS_TOKEN environment variable not found')
+      console.error('No Mapbox access token available')
       throw new Error('Mapbox access token not configured')
     }
     
