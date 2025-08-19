@@ -67,23 +67,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
             throw new Error(data.error);
           }
         } catch (error) {
-          console.error('Failed to generate real route, falling back to mock:', error);
-          // Fallback to mock route if API fails
-          const points = [];
-          const numPoints = 20;
-          const radius = distance * 0.01;
-          
-          for (let i = 0; i <= numPoints; i++) {
-            const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center[1] + radius * Math.cos(angle);
-            const lng = center[0] + radius * Math.sin(angle);
-            points.push([lng, lat]);
-          }
-          
-          // Estimate distance for mock route
-          const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
-          setActualDistance(mockDistance);
-          return points;
+          console.error('Failed to generate real route:', error);
+          throw new Error('Route generation failed. Please try again.');
         }
       };
 
@@ -190,23 +175,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
             throw new Error(data.error);
           }
         } catch (error) {
-          console.error('Failed to generate real route, falling back to mock:', error);
-          // Fallback to mock route if API fails
-          const points = [];
-          const numPoints = 20;
-          const radius = distance * 0.01;
-          
-          for (let i = 0; i <= numPoints; i++) {
-            const angle = (i / numPoints) * 2 * Math.PI;
-            const lat = center[1] + radius * Math.cos(angle);
-            const lng = center[0] + radius * Math.sin(angle);
-            points.push([lng, lat]);
-          }
-          
-          // Estimate distance for mock route
-          const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
-          setActualDistance(mockDistance);
-          return points;
+          console.error('Failed to generate real route:', error);
+          throw new Error('Route generation failed. Please try again.');
         }
       };
 

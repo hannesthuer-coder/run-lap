@@ -108,7 +108,7 @@ serve(async (req) => {
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
     const tolerance = 200 // 200m = 0.2km tolerance as requested
-    const maxAttempts = 10 // More attempts for better precision
+    const maxAttempts = 15 // More attempts for better precision and road-based routes
     
     // More precise base radius calculation
     let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
