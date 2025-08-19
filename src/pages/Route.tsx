@@ -9,12 +9,15 @@ const Route = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regenerateKey, setRegenerateKey] = useState(0);
   
   const routeData = location.state || { distance: 5, unit: "km", location: "Current Location" };
 
   const handleRegenerateRoute = async () => {
     setIsRegenerating(true);
-    // Simulate route regeneration
+    // Trigger route regeneration by incrementing the key
+    setRegenerateKey(prev => prev + 1);
+    // Simulate loading time
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsRegenerating(false);
   };
@@ -43,6 +46,7 @@ const Route = () => {
             startLocation={routeData.location}
             distance={routeData.distance}
             unit={routeData.unit}
+            regenerateKey={regenerateKey}
           />
         </div>
       </div>

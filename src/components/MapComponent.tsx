@@ -9,9 +9,10 @@ interface MapComponentProps {
   startLocation: string;
   distance: number;
   unit: string;
+  regenerateKey?: number; // Add regeneration trigger
 }
 
-const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
+const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
 
@@ -29,6 +30,101 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
     } catch (error) {
       console.warn('Error parsing location, using default:', error);
       return [-74.5, 40];
+    }
+  };
+
+  const generateNewRoute = async () => {
+    if (!map) return;
+
+    try {
+      const [lng, lat] = parseLocation(startLocation);
+      
+      // Generate real running route using Supabase edge function
+      const generateRealRoute = async (center: [number, number], distance: number) => {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          
+          const { data, error } = await supabase.functions.invoke('generate-route', {
+            body: {
+              startLng: center[0],
+              startLat: center[1],
+              distance: distance,
+              unit: unit
+            }
+          });
+          
+          if (error) {
+            throw error;
+          }
+          
+          if (data.success) {
+            return data.route.geometry.coordinates;
+          } else {
+            throw new Error(data.error);
+          }
+        } catch (error) {
+          console.error('Failed to generate real route, falling back to mock:', error);
+          // Fallback to mock route if API fails
+          const points = [];
+          const numPoints = 20;
+          const radius = distance * 0.01;
+          
+          for (let i = 0; i <= numPoints; i++) {
+            const angle = (i / numPoints) * 2 * Math.PI;
+            const lat = center[1] + radius * Math.cos(angle);
+            const lng = center[0] + radius * Math.sin(angle);
+            points.push([lng, lat]);
+          }
+          return points;
+        }
+      };
+
+      const routeCoords = await generateRealRoute([lng, lat], distance);
+      
+      // Remove existing route and marker
+      if (map.getSource('route')) {
+        map.removeLayer('route');
+        map.removeSource('route');
+      }
+
+      // Add new route source and layer
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: routeCoords
+          }
+        }
+      });
+
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#22c55e',
+          'line-width': 4,
+          'line-opacity': 0.8
+        }
+      });
+
+      // Fit map to new route
+      const bounds = new (window as any).mapboxgl.LngLatBounds();
+      routeCoords.forEach(coord => bounds.extend(coord));
+      map.fitBounds(bounds, { padding: 50 });
+
+      toast.success("New route generated!");
+
+    } catch (error) {
+      console.error('Error generating new route:', error);
+      toast.error("Failed to generate new route. Please try again.");
     }
   };
 
@@ -154,6 +250,13 @@ const MapComponent = ({ startLocation, distance, unit }: MapComponentProps) => {
   useEffect(() => {
     initializeMap();
   }, []);
+
+  // Regenerate route when regenerateKey changes
+  useEffect(() => {
+    if (regenerateKey && regenerateKey > 0) {
+      generateNewRoute();
+    }
+  }, [regenerateKey]);
 
   return (
     <div className="h-full w-full relative">
