@@ -16,7 +16,11 @@ serve(async (req) => {
     
     // Get Mapbox token from Supabase secrets
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    
+    console.log(`Checking Mapbox token: ${MAPBOX_TOKEN ? 'Token found' : 'No token found'}`)
+    
     if (!MAPBOX_TOKEN) {
+      console.error('MAPBOX_ACCESS_TOKEN environment variable not found')
       throw new Error('Mapbox access token not configured')
     }
     
