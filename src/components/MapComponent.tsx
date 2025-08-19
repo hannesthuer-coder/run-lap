@@ -16,6 +16,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
+  const [actualDistance, setActualDistance] = useState<number | null>(null);
 
   const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1ciIsImEiOiJjbWVmaTB3eHMxMHkyMmxzZnUxb3hhM2NuIn0.HXWWHQcsYrtdkiw5cCwNhQ";
 
@@ -59,6 +60,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           }
           
           if (data.success) {
+            // Update actual distance from API response
+            setActualDistance(data.route.distance);
             return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
@@ -76,6 +79,10 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
             const lng = center[0] + radius * Math.sin(angle);
             points.push([lng, lat]);
           }
+          
+          // Estimate distance for mock route
+          const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
+          setActualDistance(mockDistance);
           return points;
         }
       };
@@ -176,6 +183,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
           }
           
           if (data.success) {
+            // Update actual distance from initial API response
+            setActualDistance(data.route.distance);
             return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
@@ -193,6 +202,10 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
             const lng = center[0] + radius * Math.sin(angle);
             points.push([lng, lat]);
           }
+          
+          // Estimate distance for mock route
+          const mockDistance = unit === 'km' ? distance * 1000 : distance * 1609.34;
+          setActualDistance(mockDistance);
           return points;
         }
       };
@@ -270,7 +283,10 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
       <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-medium border">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {distance} {unit} running loop
+            {actualDistance 
+              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} running loop`
+              : `${distance} ${unit} running loop (generating...)`
+            }
           </p>
           <p className="text-xs text-muted-foreground">
             Starting from: {startLocation}
