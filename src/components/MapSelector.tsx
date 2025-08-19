@@ -40,14 +40,9 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
       
       const userLocation = await getUserLocation();
       
-      // Get Google Maps API key from edge function
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: apiKeyData } = await supabase.functions.invoke('get-google-maps-key');
-      const apiKey = apiKeyData?.key || 'placeholder';
-      
-      // Load Google Maps
+      // Load Google Maps with the API key directly
       const loader = new Loader({
-        apiKey: apiKey,
+        apiKey: "AIzaSyAm3IKVxRxms6p1tX5jPg6xzz85IGspT0k",
         version: "weekly"
       });
       
