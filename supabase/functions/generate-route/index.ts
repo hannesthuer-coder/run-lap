@@ -51,7 +51,9 @@ serve(async (req) => {
     
     // Function to fetch route from Mapbox
     const fetchRoute = async (waypoints) => {
-      const coordinates = `${startLng},${startLat};` + waypoints.map(w => `${w[0]},${w[1]}`).join(';')
+      // Create a loop by adding the start point at the end
+      const loopWaypoints = [...waypoints, [startLng, startLat]]
+      const coordinates = `${startLng},${startLat};` + loopWaypoints.map(w => `${w[0]},${w[1]}`).join(';')
       const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
       
       const response = await fetch(directionsUrl)
