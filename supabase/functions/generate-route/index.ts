@@ -82,7 +82,67 @@ serve(async (req) => {
       return waypoints
     }
     
-    // Function to fetch route from Mapbox with anti-backtracking preferences
+    // Function to calculate bearing between two points
+    const calculateBearing = (lat1, lng1, lat2, lng2) => {
+      const dLng = (lng2 - lng1) * Math.PI / 180
+      const lat1Rad = lat1 * Math.PI / 180
+      const lat2Rad = lat2 * Math.PI / 180
+      
+      const y = Math.sin(dLng) * Math.cos(lat2Rad)
+      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
+      
+      const bearing = Math.atan2(y, x) * 180 / Math.PI
+      return (bearing + 360) % 360
+    }
+
+    // Function to detect backtracking on the same street/road
+    const detectBacktracking = (coordinates) => {
+      if (coordinates.length < 10) return false // Need enough points to detect patterns
+      
+      const segments = []
+      const segmentLength = 4 // Analyze segments of 4 coordinate pairs
+      
+      // Create segments from the route
+      for (let i = 0; i < coordinates.length - segmentLength; i += 3) {
+        if (i + segmentLength < coordinates.length) {
+          const segment = coordinates.slice(i, i + segmentLength)
+          const startBearing = calculateBearing(segment[0][1], segment[0][0], segment[segmentLength-1][1], segment[segmentLength-1][0])
+          segments.push({
+            start: i,
+            end: i + segmentLength - 1,
+            bearing: startBearing,
+            coords: segment
+          })
+        }
+      }
+      
+      // Check for opposite bearings (backtracking detection)
+      for (let i = 0; i < segments.length; i++) {
+        for (let j = i + 5; j < segments.length; j++) { // Skip nearby segments
+          const bearingDiff = Math.abs(segments[i].bearing - segments[j].bearing)
+          const oppositeBearing = bearingDiff > 135 && bearingDiff < 225 // Opposite directions
+          
+          if (oppositeBearing) {
+            // Check if segments are geographically close (same street)
+            const avgLat1 = segments[i].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[i].coords.length
+            const avgLng1 = segments[i].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[i].coords.length
+            const avgLat2 = segments[j].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[j].coords.length
+            const avgLng2 = segments[j].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[j].coords.length
+            
+            const distance = Math.sqrt(Math.pow((avgLng2 - avgLng1) * 111000, 2) + Math.pow((avgLat2 - avgLat1) * 111000, 2))
+            
+            if (distance < 100) { // Same street if within 100 meters
+              console.log(`Backtracking detected: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, bearing diff: ${bearingDiff}°`)
+              return true
+            }
+          }
+        }
+      }
+      
+      return false
+    }
+
+    // Function to fetch route from Mapbox with backtracking validation
     const fetchRoute = async (waypoints) => {
       // Create a loop by adding the start point at the end
       const loopWaypoints = [...waypoints, [startLng, startLat]]
@@ -104,7 +164,15 @@ serve(async (req) => {
         return null
       }
       
-      return data.routes[0]
+      const route = data.routes[0]
+      
+      // Check for backtracking in the route geometry
+      if (detectBacktracking(route.geometry.coordinates)) {
+        console.log('Rejecting route due to backtracking')
+        return null
+      }
+      
+      return route
     }
     
     // Enforce strict 0.2km (200m) tolerance for precise distance matching
