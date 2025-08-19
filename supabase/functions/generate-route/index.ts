@@ -23,43 +23,56 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints that ensure continuous forward progress (no backtracking)
+    // Function to generate waypoints that create true loop circuits (no out-and-back patterns)
     const generateWaypoints = (baseRadius, seed = Math.random()) => {
-      // Use 3-4 waypoints strategically placed to ensure smooth progression
-      const numWaypoints = 3 + Math.floor(seed * 2) // 3-4 waypoints
+      // Use 4-6 waypoints arranged in a proper circle to ensure a complete loop
+      const numWaypoints = 4 + Math.floor(seed * 3) // 4-6 waypoints
       const waypoints = []
       
-      // Ensure waypoints are arranged in a logical sequence (clockwise or counterclockwise)
-      const clockwise = seed > 0.5 // Random direction for variety
-      const startAngle = seed * 2 * Math.PI // Random starting angle
+      // Ensure waypoints form a complete circle around the starting point
+      const clockwise = seed > 0.5
+      const startAngle = seed * Math.PI * 0.5 // Limit starting angle to quarter circle for better control
       
       for (let i = 0; i < numWaypoints; i++) {
-        // Ensure proper sequencing - each waypoint progresses logically around the circle
+        // Distribute waypoints evenly around a full circle (360 degrees)
         const progressionFactor = clockwise ? 1 : -1
         const angle = startAngle + progressionFactor * (i / numWaypoints) * 2 * Math.PI
         
-        // Controlled radius variation to maintain smooth circular flow
-        const radiusVariation = 1 + Math.sin(angle + seed * Math.PI) * 0.1 // Very minimal variation (10%)
-        const finalRadius = baseRadius * radiusVariation
-        
-        // Ensure minimum spacing between waypoints to prevent tight turns and backtracking
-        const minSpacing = baseRadius * 0.3 // Minimum 30% of radius between waypoints
+        // Ensure waypoints are far enough from the starting point and each other
+        // This prevents routes that go out and come back on the same path
+        const minDistanceFromStart = baseRadius * 0.7 // At least 70% of radius from start
+        const radiusVariation = 1 + Math.sin(angle * 1.5 + seed * Math.PI) * 0.2 // 20% variation max
+        const finalRadius = Math.max(minDistanceFromStart, baseRadius * radiusVariation)
         
         const lat = startLat + finalRadius * Math.cos(angle)
         const lng = startLng + finalRadius * Math.sin(angle)
         
-        // Check spacing with previous waypoint if not the first
+        // Validate that this waypoint creates a proper circuit
         if (waypoints.length > 0) {
           const lastWaypoint = waypoints[waypoints.length - 1]
-          const distance = Math.sqrt(Math.pow(lng - lastWaypoint[0], 2) + Math.pow(lat - lastWaypoint[1], 2))
+          const distanceFromLast = Math.sqrt(Math.pow(lng - lastWaypoint[0], 2) + Math.pow(lat - lastWaypoint[1], 2))
+          const distanceFromStart = Math.sqrt(Math.pow(lng - startLng, 2) + Math.pow(lat - startLat, 2))
           
-          // If too close, skip this waypoint to prevent tight turns
-          if (distance < minSpacing * 0.000009) { // Convert to degrees
+          // Ensure waypoint is not too close to start (prevents out-and-back) 
+          // and maintains good spacing from previous waypoint
+          const minSpacingDegrees = baseRadius * 0.000004 // Minimum spacing in degrees
+          if (distanceFromLast < minSpacingDegrees || distanceFromStart < minDistanceFromStart * 0.000009) {
             continue
           }
         }
         
         waypoints.push([lng, lat])
+      }
+      
+      // Ensure we have enough waypoints for a proper circuit
+      if (waypoints.length < 3) {
+        // Fallback to simple 4-point square pattern if not enough waypoints
+        return [
+          [startLng + baseRadius * 0.000009, startLat],
+          [startLng, startLat + baseRadius * 0.000009],
+          [startLng - baseRadius * 0.000009, startLat],
+          [startLng, startLat - baseRadius * 0.000009]
+        ]
       }
       
       return waypoints
