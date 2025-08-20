@@ -14,28 +14,48 @@ const Preferences = () => {
   const [isKm, setIsKm] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [locationMethod, setLocationMethod] = useState<"current" | "map" | null>(null);
 
   // Handle location selection from map
   useEffect(() => {
     if (location.state?.selectedLocation) {
       setSelectedLocation(location.state.selectedLocation);
+      setLocationMethod("map");
       // Clear the state to prevent re-setting on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
   const handleUseCurrentLocation = () => {
+    // Toggle selection state
+    if (locationMethod === "current") {
+      setLocationMethod(null);
+      setSelectedLocation("");
+      return;
+    }
+    
+    setLocationMethod("current");
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
         setSelectedLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
         toast.success("Current location detected!");
       }, error => {
         toast.error("Unable to get your location. Please try again or choose on map.");
+        setLocationMethod(null);
       });
     } else {
       toast.error("Geolocation is not supported by this browser.");
+      setLocationMethod(null);
     }
   };
   const handleChooseOnMap = () => {
+    // Toggle selection state
+    if (locationMethod === "map") {
+      setLocationMethod(null);
+      setSelectedLocation("");
+      return;
+    }
+    
+    setLocationMethod("map");
     navigate("/choose-location");
   };
   const handleGenerate = async () => {
@@ -113,11 +133,29 @@ const Preferences = () => {
           </div>
 
           <div className="flex gap-4 justify-center">
-            <Button variant="outline" onClick={handleUseCurrentLocation} className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide" disabled={isGenerating}>
+            <Button 
+              variant={locationMethod === "current" ? "default" : "outline"} 
+              onClick={handleUseCurrentLocation} 
+              className={`px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide transition-colors ${
+                locationMethod === "current" 
+                  ? "bg-beige text-beige-foreground border-beige hover:bg-beige/90" 
+                  : ""
+              }`}
+              disabled={isGenerating}
+            >
               CURRENT LOCATION
             </Button>
             
-            <Button variant="outline" onClick={handleChooseOnMap} className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide" disabled={isGenerating}>
+            <Button 
+              variant={locationMethod === "map" ? "default" : "outline"} 
+              onClick={handleChooseOnMap} 
+              className={`px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide transition-colors ${
+                locationMethod === "map" 
+                  ? "bg-beige text-beige-foreground border-beige hover:bg-beige/90" 
+                  : ""
+              }`}
+              disabled={isGenerating}
+            >
               CHOOSE ON MAP
             </Button>
           </div>

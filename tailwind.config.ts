@@ -60,6 +60,10 @@ export default {
 					DEFAULT: 'hsl(var(--info))',
 					foreground: 'hsl(var(--info-foreground))'
 				},
+				beige: {
+					DEFAULT: 'hsl(var(--beige))',
+					foreground: 'hsl(var(--beige-foreground))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
