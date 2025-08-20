@@ -54,14 +54,15 @@ const Route = () => {
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="relative flex items-center justify-center">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider">
+          <div className="relative flex items-center justify-center w-40 h-40">
+            <h2 className="text-xs font-light text-foreground uppercase tracking-wider text-center">
               Generating your perfect route...
             </h2>
-            <Loader2 className="absolute h-32 w-32 animate-spin text-beige-400" style={{
-              animationDuration: '2s',
-              strokeWidth: '1'
-            }} />
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
+              <Loader2 className="absolute top-0 left-1/2 transform -translate-x-1/2 h-6 w-6 text-beige-400" style={{
+                strokeWidth: '1'
+              }} />
+            </div>
           </div>
         </div>
       )}
