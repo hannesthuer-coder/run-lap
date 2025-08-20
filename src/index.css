@@ -45,6 +45,8 @@ All colors MUST be HSL.
     
     --beige: 43 50% 88%;
     --beige-foreground: 215 25% 27%;
+    --beige-hover: 43 45% 82%;
+    --beige-pressed: 43 40% 78%;
     
     --gradient-primary: linear-gradient(135deg, hsl(142 86% 28%), hsl(162 75% 45%));
     --gradient-secondary: linear-gradient(135deg, hsl(210 20% 98%), hsl(210 16% 93%));
@@ -107,6 +109,8 @@ All colors MUST be HSL.
     /* Dark mode custom tokens */
     --beige: 43 30% 25%;
     --beige-foreground: 210 20% 98%;
+    --beige-hover: 43 35% 30%;
+    --beige-pressed: 43 40% 35%;
     
     --gradient-primary: linear-gradient(135deg, hsl(142 86% 28%), hsl(162 75% 45%));
     --gradient-secondary: linear-gradient(135deg, hsl(215 28% 17%), hsl(215 25% 20%));

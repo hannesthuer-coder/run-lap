@@ -62,7 +62,9 @@ export default {
 				},
 				beige: {
 					DEFAULT: 'hsl(var(--beige))',
-					foreground: 'hsl(var(--beige-foreground))'
+					foreground: 'hsl(var(--beige-foreground))',
+					hover: 'hsl(var(--beige-hover))',
+					pressed: 'hsl(var(--beige-pressed))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',

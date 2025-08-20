@@ -134,26 +134,18 @@ const Preferences = () => {
 
           <div className="flex gap-4 justify-center">
             <Button 
-              variant={locationMethod === "current" ? "default" : "outline"} 
+              variant={locationMethod === "current" ? "selected" : "outline"} 
               onClick={handleUseCurrentLocation} 
-              className={`px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide transition-colors ${
-                locationMethod === "current" 
-                  ? "bg-beige text-beige-foreground border-beige hover:bg-beige/90" 
-                  : ""
-              }`}
+              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
               disabled={isGenerating}
             >
               CURRENT LOCATION
             </Button>
             
             <Button 
-              variant={locationMethod === "map" ? "default" : "outline"} 
+              variant={locationMethod === "map" ? "selected" : "outline"} 
               onClick={handleChooseOnMap} 
-              className={`px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide transition-colors ${
-                locationMethod === "map" 
-                  ? "bg-beige text-beige-foreground border-beige hover:bg-beige/90" 
-                  : ""
-              }`}
+              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
               disabled={isGenerating}
             >
               CHOOSE ON MAP
