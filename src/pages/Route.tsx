@@ -15,7 +15,7 @@ const Route = () => {
   const [showMap, setShowMap] = useState(false);
   const [showNotSatisfied, setShowNotSatisfied] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
-  const [dots, setDots] = useState('.');
+  const [dots, setDots] = useState('');
   
   const routeData = location.state || { distance: 5, unit: "km", location: "Current Location" };
 
@@ -25,9 +25,10 @@ const Route = () => {
     
     const interval = setInterval(() => {
       setDots(prev => {
+        if (prev === '') return '.';
         if (prev === '.') return '..';
         if (prev === '..') return '...';
-        return '.';
+        return '';
       });
     }, 500);
     
@@ -71,12 +72,10 @@ const Route = () => {
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider">
-              Generating your perfect route
+            <h2 className="text-xs font-light text-foreground uppercase tracking-wider leading-relaxed">
+              Generating your<br />
+              perfect running route<span className="inline-block w-6 text-left">{dots}</span>
             </h2>
-            <div className="w-6 text-xs font-light text-foreground uppercase tracking-wider mt-1">
-              {dots}
-            </div>
           </div>
         </div>
       )}
