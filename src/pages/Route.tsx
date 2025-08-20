@@ -58,6 +58,12 @@ const Route = () => {
     setRegenerateKey(prev => prev + 1);
   };
 
+  const handleRouteError = () => {
+    setIsLoading(false);
+    setIsRegenerating(false);
+    navigate("/");
+  };
+
   const handleChangePreferences = () => {
     navigate("/");
   };
@@ -96,6 +102,7 @@ const Route = () => {
             unit={routeData.unit}
             regenerateKey={regenerateKey}
             onRouteGenerated={handleRouteGenerated}
+            onError={handleRouteError}
           />
         </div>
       </div>

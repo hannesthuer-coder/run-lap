@@ -11,9 +11,10 @@ interface MapComponentProps {
   unit: string;
   regenerateKey?: number; // Add regeneration trigger
   onRouteGenerated?: () => void; // Callback when route is ready
+  onError?: () => void; // Callback when route generation fails
 }
 
-const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated }: MapComponentProps) => {
+const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
@@ -124,6 +125,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     } catch (error) {
       console.error('Error generating new route:', error);
       toast.error("Failed to generate new route. Please try again.");
+      onError?.(); // Notify parent of error
     }
   };
 
@@ -185,51 +187,57 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       };
 
       mapInstance.on('load', async () => {
-        const routeCoords = await generateRealRoute([lng, lat], distance);
-        
-        // Add route source and layer
-        mapInstance.addSource('route', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: routeCoords
+        try {
+          const routeCoords = await generateRealRoute([lng, lat], distance);
+          
+          // Add route source and layer
+          mapInstance.addSource('route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeCoords
+              }
             }
-          }
-        });
+          });
 
-        mapInstance.addLayer({
-          id: 'route',
-          type: 'line',
-          source: 'route',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#3B82F6', // Clear blue like Lovable publish button  
-            'line-width': 4,
-            'line-opacity': 0.9
-          }
-        });
+          mapInstance.addLayer({
+            id: 'route',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#3B82F6', // Clear blue like Lovable publish button  
+              'line-width': 4,
+              'line-opacity': 0.9
+            }
+          });
 
-        // Add start/end marker
-        new mapboxgl.default.Marker({ 
-          color: '#3B82F6', // Clear blue to match route
-          scale: 1.2 
-        })
-          .setLngLat(routeCoords[0])
-          .addTo(mapInstance);
+          // Add start/end marker
+          new mapboxgl.default.Marker({ 
+            color: '#3B82F6', // Clear blue to match route
+            scale: 1.2 
+          })
+            .setLngLat(routeCoords[0])
+            .addTo(mapInstance);
 
-        // Fit map to route
-        const bounds = new mapboxgl.default.LngLatBounds();
-        routeCoords.forEach(coord => bounds.extend(coord));
-        mapInstance.fitBounds(bounds, { padding: 50 });
+          // Fit map to route
+          const bounds = new mapboxgl.default.LngLatBounds();
+          routeCoords.forEach(coord => bounds.extend(coord));
+          mapInstance.fitBounds(bounds, { padding: 50 });
 
-        // Call callback to notify parent that initial route is ready
-        onRouteGenerated?.();
+          // Call callback to notify parent that initial route is ready
+          onRouteGenerated?.();
+        } catch (error) {
+          console.error('Error loading initial route:', error);
+          toast.error("Failed to load route. Please try again.");
+          onError?.(); // Notify parent of error
+        }
       });
 
       setMap(mapInstance);
@@ -238,6 +246,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     } catch (error) {
       console.error('Error initializing map:', error);
       toast.error("Failed to load map. Please check your token and try again.");
+      onError?.(); // Notify parent of error
     }
   };
 
