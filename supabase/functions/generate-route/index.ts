@@ -27,56 +27,29 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate waypoints that create true loop circuits (no out-and-back patterns)
+    // Function to generate waypoints that create balanced routes in all directions
     const generateWaypoints = (baseRadius, seed = Math.random()) => {
-      // Use 4-6 waypoints arranged in a proper circle to ensure a complete loop
+      // Use 4-6 waypoints for a proper loop
       const numWaypoints = 4 + Math.floor(seed * 3) // 4-6 waypoints
       const waypoints = []
       
-      // Ensure waypoints form a complete circle around the starting point
+      // Full 360-degree coverage - no bias toward any direction
       const clockwise = seed > 0.5
-      const startAngle = seed * Math.PI * 0.5 // Limit starting angle to quarter circle for better control
+      const startAngle = seed * 2 * Math.PI // Full circle starting angle
       
       for (let i = 0; i < numWaypoints; i++) {
-        // Distribute waypoints evenly around a full circle (360 degrees)
+        // Distribute waypoints evenly around a full circle
         const progressionFactor = clockwise ? 1 : -1
         const angle = startAngle + progressionFactor * (i / numWaypoints) * 2 * Math.PI
         
-        // Ensure waypoints are far enough from the starting point and each other
-        // This prevents routes that go out and come back on the same path
-        const minDistanceFromStart = baseRadius * 0.7 // At least 70% of radius from start
-        const radiusVariation = 1 + Math.sin(angle * 1.5 + seed * Math.PI) * 0.2 // 20% variation max
-        const finalRadius = Math.max(minDistanceFromStart, baseRadius * radiusVariation)
+        // Add some radius variation to make routes more natural
+        const radiusVariation = 0.8 + Math.sin(angle * 1.5 + seed * Math.PI) * 0.3 // 30% variation
+        const finalRadius = baseRadius * radiusVariation
         
         const lat = startLat + finalRadius * Math.cos(angle)
         const lng = startLng + finalRadius * Math.sin(angle)
         
-        // Validate that this waypoint creates a proper circuit
-        if (waypoints.length > 0) {
-          const lastWaypoint = waypoints[waypoints.length - 1]
-          const distanceFromLast = Math.sqrt(Math.pow(lng - lastWaypoint[0], 2) + Math.pow(lat - lastWaypoint[1], 2))
-          const distanceFromStart = Math.sqrt(Math.pow(lng - startLng, 2) + Math.pow(lat - startLat, 2))
-          
-          // Ensure waypoint is not too close to start (prevents out-and-back) 
-          // and maintains good spacing from previous waypoint
-          const minSpacingDegrees = baseRadius * 0.000004 // Minimum spacing in degrees
-          if (distanceFromLast < minSpacingDegrees || distanceFromStart < minDistanceFromStart * 0.000009) {
-            continue
-          }
-        }
-        
         waypoints.push([lng, lat])
-      }
-      
-      // Ensure we have enough waypoints for a proper circuit
-      if (waypoints.length < 3) {
-        // Fallback to simple 4-point square pattern if not enough waypoints
-        return [
-          [startLng + baseRadius * 0.000009, startLat],
-          [startLng, startLat + baseRadius * 0.000009],
-          [startLng - baseRadius * 0.000009, startLat],
-          [startLng, startLat - baseRadius * 0.000009]
-        ]
       }
       
       return waypoints
@@ -200,15 +173,15 @@ serve(async (req) => {
     console.log(`Target distance: ${targetDistanceMeters}m, Fast tolerance: ${tolerance}m, Starting radius: ${radius}`)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Create different seeds for each attempt
-      const attemptSeed = (routeSeed + attempt * 0.15) % 1
+      // Create different seeds for each attempt to explore different directions
+      const attemptSeed = (routeSeed + attempt * 0.25) % 1 // Larger seed variation
       const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
-        console.log(`Attempt ${attempt + 1}: No route found`)
-        // Faster radius adjustment
-        radius *= (0.9 + Math.random() * 0.2) // More aggressive adjustment
+        console.log(`Attempt ${attempt + 1}: No route found, trying different direction`)
+        // Try different radius and direction
+        radius *= (0.85 + Math.random() * 0.3) // More variation in radius
         continue
       }
       
@@ -231,7 +204,7 @@ serve(async (req) => {
       }
       
       // Quick radius adjustments
-      const adjustmentFactor = Math.min(distanceDiff / targetDistanceMeters, 0.2)
+      const adjustmentFactor = Math.min(distanceDiff / targetDistanceMeters, 0.25)
       
       if (routeDistance < targetDistanceMeters) {
         radius *= (1 + adjustmentFactor)
