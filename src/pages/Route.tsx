@@ -70,10 +70,13 @@ const Route = () => {
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center text-center">
             <h2 className="text-xs font-light text-foreground uppercase tracking-wider">
-              Generating your perfect route{dots}
+              Generating your perfect route
             </h2>
+            <div className="w-6 text-xs font-light text-foreground uppercase tracking-wider mt-1">
+              {dots}
+            </div>
           </div>
         </div>
       )}
