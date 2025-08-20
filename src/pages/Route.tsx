@@ -58,7 +58,7 @@ const Route = () => {
             <h2 className="text-xs font-light text-foreground uppercase tracking-wider">
               Generating your perfect route...
             </h2>
-            <Loader2 className="absolute h-24 w-24 animate-spin text-beige-400" style={{
+            <Loader2 className="absolute h-32 w-32 animate-spin text-beige-400" style={{
               animationDuration: '2s',
               strokeWidth: '1'
             }} />
