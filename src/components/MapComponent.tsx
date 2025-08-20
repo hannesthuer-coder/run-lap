@@ -10,9 +10,10 @@ interface MapComponentProps {
   distance: number;
   unit: string;
   regenerateKey?: number; // Add regeneration trigger
+  onRouteGenerated?: () => void; // Callback when route is ready
 }
 
-const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapComponentProps) => {
+const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
@@ -116,6 +117,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
       }
 
       toast.success("New route generated!");
+      
+      // Call callback to notify parent that route is ready
+      onRouteGenerated?.();
 
     } catch (error) {
       console.error('Error generating new route:', error);
@@ -223,6 +227,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey }: MapCompo
         const bounds = new mapboxgl.default.LngLatBounds();
         routeCoords.forEach(coord => bounds.extend(coord));
         mapInstance.fitBounds(bounds, { padding: 50 });
+
+        // Call callback to notify parent that initial route is ready
+        onRouteGenerated?.();
       });
 
       setMap(mapInstance);
