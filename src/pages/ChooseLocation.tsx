@@ -45,7 +45,7 @@ const ChooseLocation = () => {
 
       {/* Map Container */}
       <div className="flex-1 relative px-4">
-        <div className="bg-card rounded-2xl overflow-hidden shadow-soft h-[400px] mb-8">
+        <div className="bg-card rounded-2xl overflow-hidden shadow-soft h-[500px] mb-8">
           <MapSelector onLocationSelect={handleLocationSelect} />
         </div>
       </div>
