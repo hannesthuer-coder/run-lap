@@ -102,11 +102,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           'line-join': 'round',
           'line-cap': 'round'
         },
-        paint: {
-          'line-color': '#22c55e',
-          'line-width': 4,
-          'line-opacity': 0.8
-        }
+          paint: {
+            'line-color': '#8B7355', // Beige/brown color
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
       });
 
       // Fit map to new route
@@ -144,7 +144,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: 'mapbox://styles/mapbox/dark-v11', // Changed to dark theme
         center: [lng, lat],
         zoom: 12,
         attributionControl: false
@@ -209,7 +209,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#22c55e',
+            'line-color': '#8B7355', // Beige/brown color  
             'line-width': 4,
             'line-opacity': 0.8
           }
@@ -217,7 +217,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
 
         // Add start/end marker
         new mapboxgl.default.Marker({ 
-          color: '#22c55e',
+          color: '#8B7355', // Beige/brown color to match route
           scale: 1.2 
         })
           .setLngLat(routeCoords[0])
