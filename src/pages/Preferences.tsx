@@ -10,7 +10,7 @@ import { toast } from "sonner";
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [distance, setDistance] = useState("5");
+  const [distance, setDistance] = useState("");
   const [isKm, setIsKm] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
