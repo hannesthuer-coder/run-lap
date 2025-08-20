@@ -95,62 +95,55 @@ serve(async (req) => {
       return (bearing + 360) % 360
     }
 
-    // Function to detect backtracking and parallel segments that are too close
+    // Function to detect only severe backtracking (relaxed for speed)
     const detectInvalidRouteSegments = (coordinates) => {
-      if (coordinates.length < 10) return false // Need enough points to detect patterns
+      if (coordinates.length < 20) return false // Need more points, less strict
       
       const segments = []
-      const segmentLength = 4 // Analyze segments of 4 coordinate pairs
+      const segmentLength = 6 // Larger segments for faster processing
       
-      // Create segments from the route
-      for (let i = 0; i < coordinates.length - segmentLength; i += 3) {
+      // Create fewer segments from the route
+      for (let i = 0; i < coordinates.length - segmentLength; i += 6) { // Skip more points
         if (i + segmentLength < coordinates.length) {
           const segment = coordinates.slice(i, i + segmentLength)
           const startBearing = calculateBearing(segment[0][1], segment[0][0], segment[segmentLength-1][1], segment[segmentLength-1][0])
           segments.push({
             start: i,
-            end: i + segmentLength - 1,
             bearing: startBearing,
             coords: segment
           })
         }
       }
       
-      // Check for opposite bearings (backtracking) and parallel segments too close together
-      // Allow issues near start/end (first 20% and last 20% of route)
+      // Only check for severe backtracking, ignore minor issues
       const routeLength = segments.length
-      const startBuffer = Math.floor(routeLength * 0.2) // First 20%
-      const endBuffer = Math.floor(routeLength * 0.8)   // Last 20%
+      const startBuffer = Math.floor(routeLength * 0.3) // Larger buffer zones
+      const endBuffer = Math.floor(routeLength * 0.7)
       
       for (let i = 0; i < segments.length; i++) {
-        for (let j = i + 5; j < segments.length; j++) { // Skip nearby segments
-          // Skip if either segment is in start/end buffer zones
+        for (let j = i + 3; j < segments.length; j++) { // Check fewer combinations
+          // Skip if either segment is in buffer zones
           const iInBuffer = i < startBuffer || i > endBuffer
           const jInBuffer = j < startBuffer || j > endBuffer
           if (iInBuffer || jInBuffer) continue
           
           const bearingDiff = Math.abs(segments[i].bearing - segments[j].bearing)
-          const oppositeBearing = bearingDiff > 135 && bearingDiff < 225 // Opposite directions
-          const parallelBearing = bearingDiff < 45 || bearingDiff > 315 // Same/similar directions
+          const severeBacktrack = bearingDiff > 160 && bearingDiff < 200 // Only severe backtracking
           
-          // Calculate average positions of segments
-          const avgLat1 = segments[i].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[i].coords.length
-          const avgLng1 = segments[i].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[i].coords.length
-          const avgLat2 = segments[j].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[j].coords.length
-          const avgLng2 = segments[j].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[j].coords.length
-          
-          const distance = Math.sqrt(Math.pow((avgLng2 - avgLng1) * 111000, 2) + Math.pow((avgLat2 - avgLat1) * 111000, 2))
-          
-          // Check for backtracking (opposite directions on same street)
-          if (oppositeBearing && distance < 100) {
-            console.log(`Backtracking detected: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, bearing diff: ${bearingDiff}°`)
-            return true
-          }
-          
-          // Check for parallel segments too close together (minimum 50m separation)
-          if (parallelBearing && distance < 50) {
-            console.log(`Parallel segments too close: segments ${segments[i].start}-${segments[i].end} and ${segments[j].start}-${segments[j].end}, distance: ${Math.round(distance)}m`)
-            return true
+          // Only reject severe backtracking on same street
+          if (severeBacktrack) {
+            const avgLat1 = segments[i].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[i].coords.length
+            const avgLng1 = segments[i].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[i].coords.length
+            const avgLat2 = segments[j].coords.reduce((sum, coord) => sum + coord[1], 0) / segments[j].coords.length
+            const avgLng2 = segments[j].coords.reduce((sum, coord) => sum + coord[0], 0) / segments[j].coords.length
+            
+            const distance = Math.sqrt(Math.pow((avgLng2 - avgLng1) * 111000, 2) + Math.pow((avgLat2 - avgLat1) * 111000, 2))
+            
+            // Only reject if very close (same street)
+            if (distance < 30) {
+              console.log(`Severe backtracking detected: distance ${Math.round(distance)}m`)
+              return true
+            }
           }
         }
       }
@@ -191,12 +184,12 @@ serve(async (req) => {
       return route
     }
     
-    // Optimized tolerance and attempts for better performance
+    // Fast generation settings - prioritize speed over perfect validation
     let bestRoute = null
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
-    const tolerance = 300 // 300m tolerance for faster generation
-    const maxAttempts = 12 // Reduced attempts for better performance
+    const tolerance = 500 // 500m tolerance for much faster generation
+    const maxAttempts = 6 // Minimal attempts for speed
     
     // More precise base radius calculation
     let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
@@ -204,18 +197,18 @@ serve(async (req) => {
     // Generate a unique seed based on timestamp and random for maximum variation
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
     
-    console.log(`Target distance: ${targetDistanceMeters}m, Strict tolerance: ${tolerance}m, Starting radius: ${radius}, Seed: ${routeSeed}`)
+    console.log(`Target distance: ${targetDistanceMeters}m, Fast tolerance: ${tolerance}m, Starting radius: ${radius}`)
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Create different seeds for each attempt for variety
-      const attemptSeed = (routeSeed + attempt * 0.1) % 1
+      // Create different seeds for each attempt
+      const attemptSeed = (routeSeed + attempt * 0.15) % 1
       const waypoints = generateWaypoints(radius, attemptSeed)
       const route = await fetchRoute(waypoints)
       
       if (!route) {
         console.log(`Attempt ${attempt + 1}: No route found`)
-        // Smaller radius adjustment to be more precise
-        radius *= (0.95 + Math.random() * 0.1) // Random adjustment between 0.95-1.05
+        // Faster radius adjustment
+        radius *= (0.9 + Math.random() * 0.2) // More aggressive adjustment
         continue
       }
       
@@ -231,19 +224,19 @@ serve(async (req) => {
         bestDistanceDiff = distanceDiff
       }
       
-      // If we're within tolerance, use this route immediately
+      // Accept route within tolerance immediately
       if (distanceDiff <= tolerance) {
         console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
         break
       }
       
-      // More precise radius adjustments based on distance difference
-      const adjustmentFactor = Math.min(Math.max(distanceDiff / targetDistanceMeters, 0.02), 0.15) // Smaller adjustments
+      // Quick radius adjustments
+      const adjustmentFactor = Math.min(distanceDiff / targetDistanceMeters, 0.2)
       
       if (routeDistance < targetDistanceMeters) {
-        radius *= (1 + adjustmentFactor) // Increase radius proportionally
+        radius *= (1 + adjustmentFactor)
       } else {
-        radius *= (1 - adjustmentFactor) // Decrease radius proportionally
+        radius *= (1 - adjustmentFactor)
       }
     }
     
