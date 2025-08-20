@@ -144,7 +144,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/outdoors-v12', // Natural style with green forests, blue water
+        style: 'mapbox://styles/mapbox/light-v11', // Lighter, more faded style
         center: [lng, lat],
         zoom: 12,
         attributionControl: false
@@ -255,6 +255,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   return (
     <div className="h-full w-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
+      
+      {/* Fading overlay to make colors more muted */}
+      <div className="absolute inset-0 bg-white/20 pointer-events-none" />
       
       {/* Route Info Overlay */}
       <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-medium border">
