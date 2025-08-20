@@ -106,7 +106,7 @@ const Preferences = () => {
                 <button
                   onClick={() => setIsKm(true)}
                   className={`px-3 py-1 text-sm font-medium transition-colors ${
-                    isKm ? 'bg-gray-200 text-gray-800' : 'bg-background hover:bg-gray-50'
+                    isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
                   }`}
                 >
                   KM
@@ -114,7 +114,7 @@ const Preferences = () => {
                 <button
                   onClick={() => setIsKm(false)}
                   className={`px-3 py-1 text-sm font-medium transition-colors border-l ${
-                    !isKm ? 'bg-gray-200 text-gray-800' : 'bg-background hover:bg-gray-50'
+                    !isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
                   }`}
                 >
                   MILES
