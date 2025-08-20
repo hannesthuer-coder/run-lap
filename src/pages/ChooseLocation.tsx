@@ -30,7 +30,14 @@ const ChooseLocation = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="text-center py-8">
+      <div className="relative flex items-center justify-center py-8">
+        <button
+          onClick={handleBack}
+          className="absolute left-4 flex items-center gap-2 text-foreground hover:text-foreground/80 transition-colors"
+        >
+          <ArrowLeft size={20} />
+          <span className="font-medium">Back</span>
+        </button>
         <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
           SELECT YOUR STARTING POINT
         </h1>
