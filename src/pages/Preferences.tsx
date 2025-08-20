@@ -155,7 +155,12 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex justify-center">
-          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="px-8 py-3 h-12 rounded-full font-semibold uppercase tracking-wide" size="lg">
+          <Button 
+            onClick={handleGenerate} 
+            disabled={isGenerating || !distance || !selectedLocation} 
+            className="px-8 py-3 h-12 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed" 
+            size="lg"
+          >
             {isGenerating ? "GENERATING..." : "GENERATE RUNNING LAPS"}
           </Button>
         </div>
