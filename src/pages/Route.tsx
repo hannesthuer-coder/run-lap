@@ -15,8 +15,24 @@ const Route = () => {
   const [showMap, setShowMap] = useState(false);
   const [showNotSatisfied, setShowNotSatisfied] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+  const [dots, setDots] = useState('.');
   
   const routeData = location.state || { distance: 5, unit: "km", location: "Current Location" };
+
+  // Animate dots
+  useEffect(() => {
+    if (!isLoading) return;
+    
+    const interval = setInterval(() => {
+      setDots(prev => {
+        if (prev === '.') return '..';
+        if (prev === '..') return '...';
+        return '.';
+      });
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleRouteGenerated = () => {
     setIsLoading(false);
@@ -54,13 +70,10 @@ const Route = () => {
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="relative flex items-center justify-center">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider text-center max-w-32">
-              Generating your perfect route...
+          <div className="flex items-center justify-center">
+            <h2 className="text-xs font-light text-foreground uppercase tracking-wider">
+              Generating your perfect route{dots}
             </h2>
-            <div className="absolute w-40 h-40 border-2 border-transparent border-t-beige-400 rounded-full animate-spin" style={{
-              animationDuration: '2s'
-            }}></div>
           </div>
         </div>
       )}
