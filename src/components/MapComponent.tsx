@@ -103,9 +103,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           'line-cap': 'round'
         },
           paint: {
-            'line-color': '#8B7355', // Beige/brown color
+            'line-color': '#3B82F6', // Clear blue like Lovable publish button
             'line-width': 4,
-            'line-opacity': 0.8
+            'line-opacity': 0.9
           }
       });
 
@@ -144,7 +144,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11', // Changed to dark theme
+        style: 'mapbox://styles/mapbox/outdoors-v12', // Natural style with green forests, blue water
         center: [lng, lat],
         zoom: 12,
         attributionControl: false
@@ -209,15 +209,15 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#8B7355', // Beige/brown color  
+            'line-color': '#3B82F6', // Clear blue like Lovable publish button  
             'line-width': 4,
-            'line-opacity': 0.8
+            'line-opacity': 0.9
           }
         });
 
         // Add start/end marker
         new mapboxgl.default.Marker({ 
-          color: '#8B7355', // Beige/brown color to match route
+          color: '#3B82F6', // Clear blue to match route
           scale: 1.2 
         })
           .setLngLat(routeCoords[0])
