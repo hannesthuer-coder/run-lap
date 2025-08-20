@@ -46,7 +46,7 @@ const MapSelector = ({
       // Create map instance centered on user's location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: 'mapbox://styles/mapbox/streets-v12', // Same style as route page
         center: userLocation,
         zoom: 14,
         attributionControl: false
@@ -86,6 +86,9 @@ const MapSelector = ({
   }, []);
   return <div className="h-full w-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
+      
+      {/* Very subtle overlay to match route page style */}
+      <div className="absolute inset-0 bg-white/5 pointer-events-none" />
       
       {/* Instructions Overlay */}
       
