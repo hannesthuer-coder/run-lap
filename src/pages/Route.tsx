@@ -17,9 +17,8 @@ const Route = () => {
     setIsRegenerating(true);
     // Trigger route regeneration by incrementing the key
     setRegenerateKey(prev => prev + 1);
-    // Simulate loading time
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsRegenerating(false);
+    // Remove artificial delay - let the actual generation time be the only delay
+    setTimeout(() => setIsRegenerating(false), 100); // Just enough time for UI feedback
   };
 
   const handleChangePreferences = () => {

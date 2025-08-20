@@ -191,12 +191,12 @@ serve(async (req) => {
       return route
     }
     
-    // Enforce strict 0.2km (200m) tolerance for precise distance matching
+    // Optimized tolerance and attempts for better performance
     let bestRoute = null
     let bestWaypoints = null
     let bestDistanceDiff = Infinity
-    const tolerance = 200 // 200m = 0.2km tolerance as requested
-    const maxAttempts = 25 // Increase attempts to find routes within tolerance
+    const tolerance = 300 // 300m tolerance for faster generation
+    const maxAttempts = 12 // Reduced attempts for better performance
     
     // More precise base radius calculation
     let radius = (targetDistanceMeters / (2 * Math.PI)) * 0.000009
@@ -231,9 +231,9 @@ serve(async (req) => {
         bestDistanceDiff = distanceDiff
       }
       
-      // If we're within strict 200m tolerance, use this route immediately
+      // If we're within tolerance, use this route immediately
       if (distanceDiff <= tolerance) {
-        console.log(`Found acceptable route within strict ${tolerance}m tolerance on attempt ${attempt + 1}`)
+        console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
         break
       }
       
