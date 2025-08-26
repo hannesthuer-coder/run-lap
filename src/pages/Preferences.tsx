@@ -21,6 +21,13 @@ const Preferences = () => {
     if (location.state?.selectedLocation) {
       setSelectedLocation(location.state.selectedLocation);
       setLocationMethod("map");
+      // Restore distance and unit if they were passed back
+      if (location.state.distance) {
+        setDistance(location.state.distance);
+      }
+      if (location.state.isKm !== undefined) {
+        setIsKm(location.state.isKm);
+      }
       // Clear the state to prevent re-setting on refresh
       window.history.replaceState({}, document.title);
     }
@@ -56,7 +63,12 @@ const Preferences = () => {
     }
     
     setLocationMethod("map");
-    navigate("/choose-location");
+    navigate("/choose-location", {
+      state: {
+        distance,
+        isKm
+      }
+    });
   };
   const handleGenerate = async () => {
     if (!distance || parseFloat(distance) <= 0) {

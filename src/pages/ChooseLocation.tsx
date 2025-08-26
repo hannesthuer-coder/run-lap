@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check } from "lucide-react";
 import MapSelector from "@/components/MapSelector";
 
 const ChooseLocation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
 
   const handleLocationSelect = useCallback((coords: [number, number]) => {
@@ -14,10 +15,12 @@ const ChooseLocation = () => {
 
   const handleDone = () => {
     if (selectedCoords) {
-      // Navigate back to preferences with selected location
+      // Navigate back to preferences with selected location and preserved form data
       navigate("/", { 
         state: { 
-          selectedLocation: `${selectedCoords[1].toFixed(4)}, ${selectedCoords[0].toFixed(4)}` 
+          selectedLocation: `${selectedCoords[1].toFixed(4)}, ${selectedCoords[0].toFixed(4)}`,
+          distance: location.state?.distance || "",
+          isKm: location.state?.isKm ?? true
         } 
       });
     }
