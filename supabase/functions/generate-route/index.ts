@@ -60,11 +60,11 @@ serve(async (req) => {
       }
     }
 
-    // Create a natural loop route
+    // Create a natural loop route with gradual turns to avoid U-turns
     const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
       console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
       
-      // Choose initial direction (avoid pure north/south for better loops)
+      // Choose initial direction
       const baseDirection = 45 + (seed * 270) // 45-315 degrees
       console.log(`Initial direction: ${baseDirection.toFixed(1)}°`)
       
@@ -74,72 +74,51 @@ serve(async (req) => {
       let currentLat = startLat
       let currentBearing = baseDirection
       
-      // Step 1: Go out in initial direction for ~30-40% of total distance
-      const outwardDistance = targetDistance * (0.3 + seed * 0.1) // 30-40%
-      const outwardDistanceKm = outwardDistance / 1000
+      // Create a pentagon-like path (5 segments) to ensure smooth, no-backtrack loops
+      const segments = 5
+      const segmentDistance = targetDistance / segments
+      const turnAngle = 360 / segments // 72 degrees per turn for pentagon
       
-      console.log(`Step 1: Going outward ${outwardDistance}m`)
+      console.log(`Creating ${segments} segments of ~${segmentDistance}m each with ${turnAngle}° turns`)
       
-      const outwardPoint = findPointInDirection(startLng, startLat, currentBearing, outwardDistanceKm)
-      const outwardRoute = await getWalkingRoute(startLng, startLat, outwardPoint.lng, outwardPoint.lat)
-      
-      if (!outwardRoute) {
-        console.log('Failed to get outward route')
-        return null
-      }
-      
-      totalDistance += outwardRoute.distance
-      allCoordinates.push(...outwardRoute.geometry.coordinates.slice(1))
-      currentLng = outwardRoute.geometry.coordinates[outwardRoute.geometry.coordinates.length - 1][0]
-      currentLat = outwardRoute.geometry.coordinates[outwardRoute.geometry.coordinates.length - 1][1]
-      
-      console.log(`After outward: ${totalDistance}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
-      
-      // Step 2: Make a 90-degree turn and continue for another portion
-      currentBearing = (currentBearing + 90 + (seed - 0.5) * 40) % 360 // 90° + some variation
-      const sideDistance = targetDistance * (0.25 + seed * 0.1) // 25-35%
-      const sideDistanceKm = sideDistance / 1000
-      
-      console.log(`Step 2: Turning to ${currentBearing.toFixed(1)}° for ${sideDistance}m`)
-      
-      const sidePoint = findPointInDirection(currentLng, currentLat, currentBearing, sideDistanceKm)
-      const sideRoute = await getWalkingRoute(currentLng, currentLat, sidePoint.lng, sidePoint.lat)
-      
-      if (!sideRoute) {
-        console.log('Failed to get side route')
-        return null
-      }
-      
-      totalDistance += sideRoute.distance
-      allCoordinates.push(...sideRoute.geometry.coordinates.slice(1))
-      currentLng = sideRoute.geometry.coordinates[sideRoute.geometry.coordinates.length - 1][0]
-      currentLat = sideRoute.geometry.coordinates[sideRoute.geometry.coordinates.length - 1][1]
-      
-      console.log(`After side: ${totalDistance}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
-      
-      // Step 3: If we still need distance, make another turn
-      const remainingDistance = targetDistance - totalDistance
-      if (remainingDistance > 800) { // Only if significant distance remains
-        currentBearing = (currentBearing + 90 + (seed - 0.5) * 30) % 360
-        const middleDistance = Math.min(remainingDistance * 0.6, remainingDistance - 500) // Leave room for return
-        const middleDistanceKm = middleDistance / 1000
+      for (let i = 0; i < segments; i++) {
+        // Add some variation to segment distances to make it more natural
+        const variation = (seed - 0.5) * 0.3 // ±15% variation
+        const thisSegmentDistance = segmentDistance * (1 + variation)
+        const thisSegmentDistanceKm = thisSegmentDistance / 1000
         
-        console.log(`Step 3: Additional turn to ${currentBearing.toFixed(1)}° for ${middleDistance}m`)
+        console.log(`Segment ${i + 1}: Direction ${currentBearing.toFixed(1)}° for ${thisSegmentDistance.toFixed(0)}m`)
         
-        const middlePoint = findPointInDirection(currentLng, currentLat, currentBearing, middleDistanceKm)
-        const middleRoute = await getWalkingRoute(currentLng, currentLat, middlePoint.lng, middlePoint.lat)
+        // Find the endpoint for this segment
+        const segmentPoint = findPointInDirection(currentLng, currentLat, currentBearing, thisSegmentDistanceKm)
         
-        if (middleRoute) {
-          totalDistance += middleRoute.distance
-          allCoordinates.push(...middleRoute.geometry.coordinates.slice(1))
-          currentLng = middleRoute.geometry.coordinates[middleRoute.geometry.coordinates.length - 1][0]
-          currentLat = middleRoute.geometry.coordinates[middleRoute.geometry.coordinates.length - 1][1]
-          console.log(`After middle: ${totalDistance}m covered`)
+        // Get the route for this segment
+        const segmentRoute = await getWalkingRoute(currentLng, currentLat, segmentPoint.lng, segmentPoint.lat)
+        
+        if (!segmentRoute) {
+          console.log(`Failed to get segment ${i + 1} route`)
+          return null
+        }
+        
+        // Add this segment to the total route
+        totalDistance += segmentRoute.distance
+        allCoordinates.push(...segmentRoute.geometry.coordinates.slice(1))
+        
+        // Update current position to the end of this segment
+        const coords = segmentRoute.geometry.coordinates
+        currentLng = coords[coords.length - 1][0]
+        currentLat = coords[coords.length - 1][1]
+        
+        console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+        
+        // Turn for the next segment (except on the last segment)
+        if (i < segments - 1) {
+          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * 20) % 360 // Add some turn variation
         }
       }
       
-      // Step 4: Return directly to start
-      console.log(`Step 4: Returning to start from [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+      // Final segment back to start
+      console.log(`Final segment: Returning to start from [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
       
       const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
       
@@ -156,7 +135,7 @@ serve(async (req) => {
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: outwardRoute.duration + (sideRoute?.duration || 0) + (returnRoute?.duration || 0)
+        duration: 0 // Will be calculated from segments if needed
       }
     }
 
