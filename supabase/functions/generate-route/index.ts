@@ -35,8 +35,9 @@ serve(async (req) => {
       const patterns = ['oval', 'figure8', 'rectangle', 'organic']
       const selectedPattern = patterns[Math.floor(seed * patterns.length)] || pattern
       
-      // Estimate rough coordinate distance (very approximate)
-      const coordDistance = baseDistance * 0.000009 // rough conversion for lat/lng
+      // Estimate rough coordinate distance for waypoint placement
+      // For lat/lng: 1 degree ≈ 111km, so for target distance in meters:
+      const coordDistance = (baseDistance / 1000) / 111 // Convert meters to degrees roughly
       
       switch (selectedPattern) {
         case 'oval':
@@ -261,6 +262,7 @@ serve(async (req) => {
     const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
     
     console.log(`Target distance: ${targetDistanceMeters}m, Tolerance: ${tolerance}m`)
+    console.log(`Starting coordinate distance: ${(targetDistanceMeters / 1000) / 111} degrees`)
     
     // Try different approaches for natural loop generation
     const approaches = [
@@ -293,8 +295,15 @@ serve(async (req) => {
           route = await fetchNaturalRoute(waypoints, attempt % 2 === 0 ? [startLng, startLat] : null)
         }
         
+        console.log(`Attempt ${attempt + 1} (${approach.type}): Generated waypoints:`, waypoints.slice(0, 2))
+        
         if (!route) {
-          console.log(`Attempt ${attempt + 1} (${approach.type}): No valid route found`)
+          console.log(`Attempt ${attempt + 1} (${approach.type}): No valid route found, waypoint spread: ${JSON.stringify({
+            minLat: Math.min(...waypoints.map(w => w[1])),
+            maxLat: Math.max(...waypoints.map(w => w[1])),
+            minLng: Math.min(...waypoints.map(w => w[0])), 
+            maxLng: Math.max(...waypoints.map(w => w[0]))
+          })}`)
           // Adjust base distance for next attempt
           baseDistance *= (0.8 + Math.random() * 0.4)
           continue
