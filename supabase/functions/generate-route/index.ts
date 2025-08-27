@@ -14,190 +14,195 @@ serve(async (req) => {
   try {
     const { startLng, startLat, distance, unit } = await req.json()
     
-    // Get Mapbox token - use hardcoded token as fallback since secret access isn't working
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN') || 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q'
     
-    console.log(`Using Mapbox token: ${MAPBOX_TOKEN ? 'Token available' : 'No token found'}`)
-    
-    if (!MAPBOX_TOKEN) {
-      console.error('No Mapbox access token available')
-      throw new Error('Mapbox access token not configured')
-    }
+    console.log(`Using Mapbox token: ${MAPBOX_TOKEN ? 'Available' : 'Missing'}`)
     
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     console.log(`Target distance: ${targetDistanceMeters}m`)
 
-    // Helper function to get a route between two points
-    const getRoute = async (fromLng, fromLat, toLng, toLat) => {
-      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
-        `geometries=geojson&` +
-        `access_token=${MAPBOX_TOKEN}&` +
-        `overview=full&` +
-        `steps=true&` +
-        `continue_straight=false&` +
-        `waypoint_snapping=any&` +
-        `annotations=distance,duration`
+    // Simple function to get walking route between two points
+    const getWalkingRoute = async (fromLng, fromLat, toLng, toLat) => {
+      const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
+        `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
       
-      const response = await fetch(directionsUrl)
-      const data = await response.json()
-      
-      if (!data.routes || data.routes.length === 0) {
+      try {
+        const response = await fetch(url)
+        const data = await response.json()
+        
+        if (data.routes && data.routes.length > 0) {
+          return data.routes[0]
+        }
+        return null
+      } catch (error) {
+        console.log(`Route request failed: ${error.message}`)
         return null
       }
-      
-      return data.routes[0]
     }
 
-    // Helper function to find a point at approximately given distance and bearing from start
-    const findPointAtDistance = async (startLng, startLat, bearingDegrees, targetDistance) => {
-      // Convert to approximate lat/lng offset (rough estimation)
-      const distanceInKm = targetDistance / 1000
-      const bearingRadians = bearingDegrees * Math.PI / 180
+    // Function to find a point roughly at given distance in given direction
+    const findPointInDirection = (startLng, startLat, bearingDegrees, distanceKm) => {
+      const R = 6371 // Earth's radius in km
+      const bearing = bearingDegrees * Math.PI / 180
+      const lat1 = startLat * Math.PI / 180
+      const lon1 = startLng * Math.PI / 180
       
-      const latOffset = (distanceInKm / 111) * Math.cos(bearingRadians)
-      const lngOffset = (distanceInKm / (111 * Math.cos(startLat * Math.PI / 180))) * Math.sin(bearingRadians)
+      const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceKm / R) +
+                            Math.cos(lat1) * Math.sin(distanceKm / R) * Math.cos(bearing))
       
-      const testLng = startLng + lngOffset
-      const testLat = startLat + latOffset
+      const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(distanceKm / R) * Math.cos(lat1),
+                                    Math.cos(distanceKm / R) - Math.sin(lat1) * Math.sin(lat2))
       
-      // Try to get a route to this point to ensure it's reachable
-      const route = await getRoute(startLng, startLat, testLng, testLat)
-      if (!route) return null
-      
-      // Return the actual end point from the route (snapped to walkable path)
-      const coords = route.geometry.coordinates
       return {
-        lng: coords[coords.length - 1][0],
-        lat: coords[coords.length - 1][1],
-        route: route
+        lat: lat2 * 180 / Math.PI,
+        lng: lon2 * 180 / Math.PI
       }
     }
 
-    // Incremental route building algorithm
-    const buildIncrementalRoute = async (targetDistance, seed = Math.random()) => {
-      const segments = []
+    // Create a natural loop route
+    const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
+      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
+      
+      // Choose initial direction (avoid pure north/south for better loops)
+      const baseDirection = 45 + (seed * 270) // 45-315 degrees
+      console.log(`Initial direction: ${baseDirection.toFixed(1)}°`)
+      
       let totalDistance = 0
+      let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
-      let allCoordinates = [[startLng, startLat]]
+      let currentBearing = baseDirection
       
-      // Start with initial direction
-      let currentBearing = seed * 360
+      // Step 1: Go out in initial direction for ~30-40% of total distance
+      const outwardDistance = targetDistance * (0.3 + seed * 0.1) // 30-40%
+      const outwardDistanceKm = outwardDistance / 1000
       
-      // Segment length - start with smaller segments for better path following
-      const baseSegmentLength = Math.min(800, targetDistance / 6) // 6-8 segments typical
+      console.log(`Step 1: Going outward ${outwardDistance}m`)
       
-      console.log(`Building incremental route with ~${baseSegmentLength}m segments`)
+      const outwardPoint = findPointInDirection(startLng, startLat, currentBearing, outwardDistanceKm)
+      const outwardRoute = await getWalkingRoute(startLng, startLat, outwardPoint.lng, outwardPoint.lat)
       
-      let attempt = 0
-      const maxSegments = 12 // Prevent infinite loops
-      
-      while (totalDistance < targetDistance * 0.75 && attempt < maxSegments) {
-        // Vary segment length slightly
-        const segmentLength = baseSegmentLength * (0.8 + Math.random() * 0.4)
-        
-        // Find next point
-        const nextPoint = await findPointAtDistance(currentLng, currentLat, currentBearing, segmentLength)
-        
-        if (!nextPoint) {
-          // Try different bearing if current one doesn't work
-          currentBearing = (currentBearing + 60 + Math.random() * 60) % 360
-          attempt++
-          continue
-        }
-        
-        segments.push(nextPoint.route)
-        totalDistance += nextPoint.route.distance
-        
-        // Update position
-        currentLng = nextPoint.lng
-        currentLat = nextPoint.lat
-        
-        // Add coordinates from this segment (skip first point to avoid duplicates)
-        const segmentCoords = nextPoint.route.geometry.coordinates.slice(1)
-        allCoordinates.push(...segmentCoords)
-        
-        // Gradually curve the bearing for a more natural path
-        const curveAmount = (Math.random() - 0.5) * 45 // ±22.5 degrees
-        currentBearing = (currentBearing + curveAmount) % 360
-        
-        console.log(`Segment ${attempt + 1}: ${nextPoint.route.distance}m, total: ${totalDistance}m, bearing: ${currentBearing.toFixed(1)}°`)
-        attempt++
-      }
-      
-      // Now route back to start to complete the loop
-      const returnRoute = await getRoute(currentLng, currentLat, startLng, startLat)
-      if (!returnRoute) {
-        console.log('Could not create return route to start')
+      if (!outwardRoute) {
+        console.log('Failed to get outward route')
         return null
       }
       
-      segments.push(returnRoute)
+      totalDistance += outwardRoute.distance
+      allCoordinates.push(...outwardRoute.geometry.coordinates.slice(1))
+      currentLng = outwardRoute.geometry.coordinates[outwardRoute.geometry.coordinates.length - 1][0]
+      currentLat = outwardRoute.geometry.coordinates[outwardRoute.geometry.coordinates.length - 1][1]
+      
+      console.log(`After outward: ${totalDistance}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+      
+      // Step 2: Make a 90-degree turn and continue for another portion
+      currentBearing = (currentBearing + 90 + (seed - 0.5) * 40) % 360 // 90° + some variation
+      const sideDistance = targetDistance * (0.25 + seed * 0.1) // 25-35%
+      const sideDistanceKm = sideDistance / 1000
+      
+      console.log(`Step 2: Turning to ${currentBearing.toFixed(1)}° for ${sideDistance}m`)
+      
+      const sidePoint = findPointInDirection(currentLng, currentLat, currentBearing, sideDistanceKm)
+      const sideRoute = await getWalkingRoute(currentLng, currentLat, sidePoint.lng, sidePoint.lat)
+      
+      if (!sideRoute) {
+        console.log('Failed to get side route')
+        return null
+      }
+      
+      totalDistance += sideRoute.distance
+      allCoordinates.push(...sideRoute.geometry.coordinates.slice(1))
+      currentLng = sideRoute.geometry.coordinates[sideRoute.geometry.coordinates.length - 1][0]
+      currentLat = sideRoute.geometry.coordinates[sideRoute.geometry.coordinates.length - 1][1]
+      
+      console.log(`After side: ${totalDistance}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+      
+      // Step 3: If we still need distance, make another turn
+      const remainingDistance = targetDistance - totalDistance
+      if (remainingDistance > 800) { // Only if significant distance remains
+        currentBearing = (currentBearing + 90 + (seed - 0.5) * 30) % 360
+        const middleDistance = Math.min(remainingDistance * 0.6, remainingDistance - 500) // Leave room for return
+        const middleDistanceKm = middleDistance / 1000
+        
+        console.log(`Step 3: Additional turn to ${currentBearing.toFixed(1)}° for ${middleDistance}m`)
+        
+        const middlePoint = findPointInDirection(currentLng, currentLat, currentBearing, middleDistanceKm)
+        const middleRoute = await getWalkingRoute(currentLng, currentLat, middlePoint.lng, middlePoint.lat)
+        
+        if (middleRoute) {
+          totalDistance += middleRoute.distance
+          allCoordinates.push(...middleRoute.geometry.coordinates.slice(1))
+          currentLng = middleRoute.geometry.coordinates[middleRoute.geometry.coordinates.length - 1][0]
+          currentLat = middleRoute.geometry.coordinates[middleRoute.geometry.coordinates.length - 1][1]
+          console.log(`After middle: ${totalDistance}m covered`)
+        }
+      }
+      
+      // Step 4: Return directly to start
+      console.log(`Step 4: Returning to start from [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+      
+      const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
+      
+      if (!returnRoute) {
+        console.log('Failed to get return route')
+        return null
+      }
+      
       totalDistance += returnRoute.distance
+      allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      // Add return route coordinates (skip first point)
-      const returnCoords = returnRoute.geometry.coordinates.slice(1)
-      allCoordinates.push(...returnCoords)
-      
-      console.log(`Return segment: ${returnRoute.distance}m, final total: ${totalDistance}m`)
+      console.log(`Final total distance: ${totalDistance}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance)}m)`)
       
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: segments.reduce((sum, seg) => sum + seg.duration, 0),
-        segments: segments
+        duration: outwardRoute.duration + (sideRoute?.duration || 0) + (returnRoute?.duration || 0)
       }
     }
 
-    // Try building route with different approaches
+    // Try multiple variations to find the best route
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = Math.max(500, targetDistanceMeters * 0.15) // 15% tolerance, minimum 500m
-    const maxAttempts = 6
+    const tolerance = Math.max(800, targetDistanceMeters * 0.2) // 20% tolerance
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const seed = (Date.now() % 10000) / 10000 + Math.random() + attempt * 0.2
-        console.log(`\n--- Attempt ${attempt + 1} ---`)
+        const seed = (Date.now() + attempt * 1000) % 10000 / 10000
+        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
         
-        const route = await buildIncrementalRoute(targetDistanceMeters, seed)
+        const route = await createNaturalLoop(targetDistanceMeters, seed)
         
         if (!route) {
-          console.log(`Attempt ${attempt + 1}: Failed to build route`)
+          console.log('No route generated')
           continue
         }
         
         const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
-        console.log(`Attempt ${attempt + 1}: Distance ${route.distance}m (diff: ${distanceDiff}m)`)
+        console.log(`Route: ${route.distance}m (diff: ${distanceDiff}m)`)
         
         if (distanceDiff < bestDistanceDiff) {
           bestRoute = route
           bestDistanceDiff = distanceDiff
+          console.log('✓ New best route')
         }
         
-        // Accept if within tolerance
         if (distanceDiff <= tolerance) {
-          console.log(`✓ Acceptable route found within tolerance`)
+          console.log('✓ Within tolerance - using this route')
           break
         }
         
       } catch (error) {
-        console.log(`Attempt ${attempt + 1} error: ${error.message}`)
+        console.log(`Attempt ${attempt + 1} failed: ${error.message}`)
       }
     }
     
     if (!bestRoute) {
-      throw new Error('Could not generate any valid route')
+      throw new Error('Could not generate any valid route after 5 attempts')
     }
     
-    if (bestDistanceDiff > tolerance) {
-      console.log(`⚠ Best route is ${bestDistanceDiff}m outside tolerance, but using anyway`)
-    }
-    
-    console.log(`\n✓ Final route: ${bestRoute.distance}m (target: ${targetDistanceMeters}m)`)
+    console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
     
     return new Response(
       JSON.stringify({
@@ -209,7 +214,7 @@ serve(async (req) => {
           },
           distance: bestRoute.distance,
           duration: bestRoute.duration,
-          waypoints: [] // Not using traditional waypoints in this approach
+          waypoints: []
         }
       }),
       { 
