@@ -26,263 +26,190 @@ serve(async (req) => {
     
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
-    
-    // Progressive path building algorithm
-    const generateProgressivePath = (targetDistance, seed = Math.random()) => {
-      const waypoints = []
-      
-      // Pick an initial direction (north, south, east, west, or diagonal)
-      const initialDirection = seed * 360 // Random direction in degrees
-      
-      // Calculate how many waypoints we need based on target distance
-      // Space them every 800-1200m for natural routing
-      const waypointSpacing = 800 + (seed * 400) // 800-1200m between waypoints
-      const numWaypoints = Math.max(3, Math.floor(targetDistance / waypointSpacing))
-      
-      console.log(`Generating ${numWaypoints} waypoints with ${waypointSpacing}m spacing for ${targetDistance}m target`)
-      
-      let currentLat = startLat
-      let currentLng = startLng
-      let currentDirection = initialDirection
-      let totalDistance = 0
-      
-      // Build path progressively
-      for (let i = 0; i < numWaypoints; i++) {
-        const progress = i / (numWaypoints - 1)
-        
-        // Distance for this segment
-        const segmentDistance = waypointSpacing
-        
-        // Start curving back when we're about 60% through
-        if (progress > 0.6) {
-          // Calculate direction back to start
-          const deltaLat = startLat - currentLat
-          const deltaLng = startLng - currentLng
-          const directionToStart = Math.atan2(deltaLng, deltaLat) * (180 / Math.PI)
-          
-          // Gradually curve toward start direction
-          const curveStrength = (progress - 0.6) / 0.4 // 0 to 1 as we approach end
-          currentDirection = currentDirection + (directionToStart - currentDirection) * curveStrength * 0.3
-        } else {
-          // Add some natural variation to direction
-          const variation = (Math.sin(i * 0.7 + seed * Math.PI) * 30) // ±30 degrees variation
-          currentDirection += variation * (1 - progress) // Less variation as we approach return phase
-        }
-        
-        // Convert direction and distance to lat/lng offset
-        // 1 degree lat ≈ 111km, 1 degree lng ≈ 111km * cos(lat)
-        const distanceInKm = segmentDistance / 1000
-        const latOffset = (distanceInKm / 111) * Math.cos(currentDirection * Math.PI / 180)
-        const lngOffset = (distanceInKm / (111 * Math.cos(currentLat * Math.PI / 180))) * Math.sin(currentDirection * Math.PI / 180)
-        
-        currentLat += latOffset
-        currentLng += lngOffset
-        totalDistance += segmentDistance
-        
-        waypoints.push([currentLng, currentLat])
-        
-        console.log(`Waypoint ${i + 1}: [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}], direction: ${currentDirection.toFixed(1)}°`)
-      }
-      
-      console.log(`Generated ${waypoints.length} waypoints, estimated total: ${totalDistance}m`)
-      return waypoints
-    }
-    
-    // Function to calculate bearing between two points
-    const calculateBearing = (lat1, lng1, lat2, lng2) => {
-      const dLng = (lng2 - lng1) * Math.PI / 180
-      const lat1Rad = lat1 * Math.PI / 180
-      const lat2Rad = lat2 * Math.PI / 180
-      
-      const y = Math.sin(dLng) * Math.cos(lat2Rad)
-      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
-      
-      const bearing = Math.atan2(y, x) * 180 / Math.PI
-      return (bearing + 360) % 360
-    }
+    console.log(`Target distance: ${targetDistanceMeters}m`)
 
-    // Simplified validation: check for natural flow and avoid sharp reversals
-    const validateNaturalFlow = (coordinates) => {
-      if (coordinates.length < 15) return true // Too short to validate properly
-      
-      const bearings = []
-      const checkPoints = Math.min(20, Math.floor(coordinates.length / 3)) // Check fewer points for speed
-      
-      // Calculate bearings at intervals throughout the route
-      for (let i = 0; i < coordinates.length - 5; i += Math.floor(coordinates.length / checkPoints)) {
-        if (i + 5 < coordinates.length) {
-          const bearing = calculateBearing(
-            coordinates[i][1], coordinates[i][0],
-            coordinates[i + 5][1], coordinates[i + 5][0]
-          )
-          bearings.push(bearing)
-        }
-      }
-      
-      // Check for sharp directional reversals (U-turns)
-      let sharpReversals = 0
-      for (let i = 1; i < bearings.length - 1; i++) {
-        const prevBearing = bearings[i - 1]
-        const currBearing = bearings[i]
-        const nextBearing = bearings[i + 1]
-        
-        // Calculate bearing changes
-        const change1 = Math.abs(((currBearing - prevBearing + 540) % 360) - 180)
-        const change2 = Math.abs(((nextBearing - currBearing + 540) % 360) - 180)
-        
-        // Detect sharp U-turn pattern
-        if (change1 > 120 && change2 > 120) {
-          sharpReversals++
-        }
-      }
-      
-      // Reject routes with too many sharp reversals
-      const maxReversals = Math.ceil(bearings.length * 0.2) // Allow up to 20% sharp turns
-      if (sharpReversals > maxReversals) {
-        console.log(`Route rejected: ${sharpReversals} sharp reversals (max: ${maxReversals})`)
-        return false
-      }
-      
-      return true
-    }
-
-    // Function to fetch route from Mapbox with natural loop preferences
-    const fetchNaturalRoute = async (waypoints, startPoint = null) => {
-      let routeCoordinates
-      
-      if (startPoint) {
-        // Start from specific point, visit waypoints, return to start
-        routeCoordinates = `${startPoint[0]},${startPoint[1]};` + 
-          waypoints.map(w => `${w[0]},${w[1]}`).join(';') + 
-          `;${startPoint[0]},${startPoint[1]}`
-      } else {
-        // Create natural loop through waypoints
-        routeCoordinates = waypoints.map(w => `${w[0]},${w[1]}`).join(';') + 
-          `;${waypoints[0][0]},${waypoints[0][1]}` // Return to first waypoint
-      }
-      
-      // Optimize for natural walking paths and smooth turns
-      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${routeCoordinates}?` + 
+    // Helper function to get a route between two points
+    const getRoute = async (fromLng, fromLat, toLng, toLat) => {
+      const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
         `geometries=geojson&` +
         `access_token=${MAPBOX_TOKEN}&` +
         `overview=full&` +
         `steps=true&` +
-        `continue_straight=false&` + // Allow natural turns at intersections
-        `waypoint_snapping=any&` + // Snap to nearest routable point
-        `annotations=distance,duration` // Get detailed information
+        `continue_straight=false&` +
+        `waypoint_snapping=any&` +
+        `annotations=distance,duration`
       
       const response = await fetch(directionsUrl)
       const data = await response.json()
       
       if (!data.routes || data.routes.length === 0) {
-        console.log('No route found for waypoints')
         return null
       }
       
-      const route = data.routes[0]
-      
-      // Validate natural flow instead of complex backtracking detection
-      if (!validateNaturalFlow(route.geometry.coordinates)) {
-        console.log('Route rejected due to poor flow')
-        return null
-      }
-      
-      return route
+      return data.routes[0]
     }
-    
-    // Natural loop generation settings
-    let bestRoute = null
-    let bestWaypoints = null
-    let bestDistanceDiff = Infinity
-    const tolerance = 800 // Slightly more tolerant for natural loops
-    const maxAttempts = 8 // Try different patterns and approaches
-    
-    // Estimate base distance for loop generation
-    let baseDistance = targetDistanceMeters
-    
-    // Generate a unique seed based on timestamp and random for maximum variation
-    const routeSeed = (Date.now() % 10000) / 10000 + Math.random()
-    
-    console.log(`Target distance: ${targetDistanceMeters}m, Tolerance: ${tolerance}m`)
-    console.log(`Starting coordinate distance: ${(targetDistanceMeters / 1000) / 111} degrees`)
-    
-    // Try progressive path building with different variations
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const attemptSeed = (routeSeed + attempt * 0.3) % 1
+
+    // Helper function to find a point at approximately given distance and bearing from start
+    const findPointAtDistance = async (startLng, startLat, bearingDegrees, targetDistance) => {
+      // Convert to approximate lat/lng offset (rough estimation)
+      const distanceInKm = targetDistance / 1000
+      const bearingRadians = bearingDegrees * Math.PI / 180
       
-      let route = null
-      let waypoints = null
+      const latOffset = (distanceInKm / 111) * Math.cos(bearingRadians)
+      const lngOffset = (distanceInKm / (111 * Math.cos(startLat * Math.PI / 180))) * Math.sin(bearingRadians)
       
-      try {
-        // Generate progressive path that builds naturally from start location
-        waypoints = generateProgressivePath(baseDistance, attemptSeed)
+      const testLng = startLng + lngOffset
+      const testLat = startLat + latOffset
+      
+      // Try to get a route to this point to ensure it's reachable
+      const route = await getRoute(startLng, startLat, testLng, testLat)
+      if (!route) return null
+      
+      // Return the actual end point from the route (snapped to walkable path)
+      const coords = route.geometry.coordinates
+      return {
+        lng: coords[coords.length - 1][0],
+        lat: coords[coords.length - 1][1],
+        route: route
+      }
+    }
+
+    // Incremental route building algorithm
+    const buildIncrementalRoute = async (targetDistance, seed = Math.random()) => {
+      const segments = []
+      let totalDistance = 0
+      let currentLng = startLng
+      let currentLat = startLat
+      let allCoordinates = [[startLng, startLat]]
+      
+      // Start with initial direction
+      let currentBearing = seed * 360
+      
+      // Segment length - start with smaller segments for better path following
+      const baseSegmentLength = Math.min(800, targetDistance / 6) // 6-8 segments typical
+      
+      console.log(`Building incremental route with ~${baseSegmentLength}m segments`)
+      
+      let attempt = 0
+      const maxSegments = 12 // Prevent infinite loops
+      
+      while (totalDistance < targetDistance * 0.75 && attempt < maxSegments) {
+        // Vary segment length slightly
+        const segmentLength = baseSegmentLength * (0.8 + Math.random() * 0.4)
         
-        // Create route that starts and ends at the original location
-        route = await fetchNaturalRoute(waypoints, [startLng, startLat])
+        // Find next point
+        const nextPoint = await findPointAtDistance(currentLng, currentLat, currentBearing, segmentLength)
         
-        console.log(`Attempt ${attempt + 1}: Generated ${waypoints.length} waypoints`)
-        
-        if (!route) {
-          console.log(`Attempt ${attempt + 1}: No valid route found`)
-          // Adjust base distance for next attempt
-          baseDistance *= (0.8 + Math.random() * 0.4)
+        if (!nextPoint) {
+          // Try different bearing if current one doesn't work
+          currentBearing = (currentBearing + 60 + Math.random() * 60) % 360
+          attempt++
           continue
         }
         
-        const routeDistance = route.distance
-        const distanceDiff = Math.abs(routeDistance - targetDistanceMeters)
+        segments.push(nextPoint.route)
+        totalDistance += nextPoint.route.distance
         
-        console.log(`Attempt ${attempt + 1}: Route distance: ${routeDistance}m, Target: ${targetDistanceMeters}m, Diff: ${distanceDiff}m`)
+        // Update position
+        currentLng = nextPoint.lng
+        currentLat = nextPoint.lat
         
-        // Keep track of the best route so far
+        // Add coordinates from this segment (skip first point to avoid duplicates)
+        const segmentCoords = nextPoint.route.geometry.coordinates.slice(1)
+        allCoordinates.push(...segmentCoords)
+        
+        // Gradually curve the bearing for a more natural path
+        const curveAmount = (Math.random() - 0.5) * 45 // ±22.5 degrees
+        currentBearing = (currentBearing + curveAmount) % 360
+        
+        console.log(`Segment ${attempt + 1}: ${nextPoint.route.distance}m, total: ${totalDistance}m, bearing: ${currentBearing.toFixed(1)}°`)
+        attempt++
+      }
+      
+      // Now route back to start to complete the loop
+      const returnRoute = await getRoute(currentLng, currentLat, startLng, startLat)
+      if (!returnRoute) {
+        console.log('Could not create return route to start')
+        return null
+      }
+      
+      segments.push(returnRoute)
+      totalDistance += returnRoute.distance
+      
+      // Add return route coordinates (skip first point)
+      const returnCoords = returnRoute.geometry.coordinates.slice(1)
+      allCoordinates.push(...returnCoords)
+      
+      console.log(`Return segment: ${returnRoute.distance}m, final total: ${totalDistance}m`)
+      
+      return {
+        coordinates: allCoordinates,
+        distance: totalDistance,
+        duration: segments.reduce((sum, seg) => sum + seg.duration, 0),
+        segments: segments
+      }
+    }
+
+    // Try building route with different approaches
+    let bestRoute = null
+    let bestDistanceDiff = Infinity
+    const tolerance = Math.max(500, targetDistanceMeters * 0.15) // 15% tolerance, minimum 500m
+    const maxAttempts = 6
+    
+    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const seed = (Date.now() % 10000) / 10000 + Math.random() + attempt * 0.2
+        console.log(`\n--- Attempt ${attempt + 1} ---`)
+        
+        const route = await buildIncrementalRoute(targetDistanceMeters, seed)
+        
+        if (!route) {
+          console.log(`Attempt ${attempt + 1}: Failed to build route`)
+          continue
+        }
+        
+        const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
+        console.log(`Attempt ${attempt + 1}: Distance ${route.distance}m (diff: ${distanceDiff}m)`)
+        
         if (distanceDiff < bestDistanceDiff) {
           bestRoute = route
-          bestWaypoints = waypoints
           bestDistanceDiff = distanceDiff
         }
         
-        // Accept route within tolerance immediately
+        // Accept if within tolerance
         if (distanceDiff <= tolerance) {
-          console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
+          console.log(`✓ Acceptable route found within tolerance`)
           break
         }
         
-        // Adjust base distance based on results for next attempt
-        const adjustmentFactor = Math.min(distanceDiff / targetDistanceMeters, 0.3)
-        
-        if (routeDistance < targetDistanceMeters) {
-          baseDistance *= (1 + adjustmentFactor)
-        } else {
-          baseDistance *= (1 - adjustmentFactor)
-        }
-        
       } catch (error) {
-        console.log(`Attempt ${attempt + 1} failed: ${error.message}`)
-        // Try different base distance
-        baseDistance *= (0.7 + Math.random() * 0.6)
+        console.log(`Attempt ${attempt + 1} error: ${error.message}`)
       }
     }
     
-    // Reject routes that exceed tolerance
-    if (!bestRoute || bestDistanceDiff > tolerance) {
-      const errorMsg = bestRoute ? 
-        `Could not generate route within ${tolerance}m tolerance. Best attempt was ${Math.round(bestDistanceDiff)}m off target.` :
-        'Could not generate a suitable route'
-      throw new Error(errorMsg)
+    if (!bestRoute) {
+      throw new Error('Could not generate any valid route')
     }
     
-    console.log(`Final route distance: ${bestRoute.distance}m vs target: ${targetDistanceMeters}m`)
-    const route = bestRoute
-    const waypoints = bestWaypoints
+    if (bestDistanceDiff > tolerance) {
+      console.log(`⚠ Best route is ${bestDistanceDiff}m outside tolerance, but using anyway`)
+    }
+    
+    console.log(`\n✓ Final route: ${bestRoute.distance}m (target: ${targetDistanceMeters}m)`)
     
     return new Response(
       JSON.stringify({
         success: true,
         route: {
-          geometry: route.geometry,
-          distance: route.distance,
-          duration: route.duration,
-          waypoints: waypoints
+          geometry: {
+            type: 'LineString',
+            coordinates: bestRoute.coordinates
+          },
+          distance: bestRoute.distance,
+          duration: bestRoute.duration,
+          waypoints: [] // Not using traditional waypoints in this approach
         }
       }),
       { 
