@@ -60,34 +60,44 @@ serve(async (req) => {
       }
     }
 
-    // Create a natural loop route with gradual turns to avoid U-turns
+    // Create a natural loop route with distance-aware algorithm
     const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
       console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
       
+      // Start with smaller estimated segments (roads add ~40% to straight-line distance)
+      const estimatedSegments = 4
+      let estimatedSegmentDistance = (targetDistance * 0.6) / estimatedSegments // Compensate for road curves
+      
       // Choose initial direction
       const baseDirection = 45 + (seed * 270) // 45-315 degrees
-      console.log(`Initial direction: ${baseDirection.toFixed(1)}°`)
+      console.log(`Initial direction: ${baseDirection.toFixed(1)}°, estimated segment: ${estimatedSegmentDistance.toFixed(0)}m`)
       
       let totalDistance = 0
       let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
       let currentBearing = baseDirection
+      let segmentCount = 0
       
-      // Create a pentagon-like path (5 segments) to ensure smooth, no-backtrack loops
-      const segments = 5
-      const segmentDistance = targetDistance / segments
-      const turnAngle = 360 / segments // 72 degrees per turn for pentagon
-      
-      console.log(`Creating ${segments} segments of ~${segmentDistance}m each with ${turnAngle}° turns`)
-      
-      for (let i = 0; i < segments; i++) {
-        // Add some variation to segment distances to make it more natural
-        const variation = (seed - 0.5) * 0.3 // ±15% variation
-        const thisSegmentDistance = segmentDistance * (1 + variation)
+      // Build segments until we're close to target distance
+      while (totalDistance < targetDistance * 0.75 && segmentCount < 6) { // Stop at 75% to leave room for return
+        segmentCount++
+        
+        // Dynamically adjust segment distance based on remaining distance
+        const remainingDistance = targetDistance - totalDistance
+        const remainingSegments = Math.max(1, estimatedSegments - segmentCount + 1)
+        let thisSegmentDistance = remainingDistance / remainingSegments * 0.6 // Conservative estimate
+        
+        // Add natural variation but ensure minimum viable distance
+        const variation = (seed - 0.5) * 0.15 // ±7.5% variation
+        thisSegmentDistance = Math.max(400, thisSegmentDistance * (1 + variation)) // Min 400m segments
+        
+        // Cap segment distance to avoid overshooting
+        thisSegmentDistance = Math.min(thisSegmentDistance, remainingDistance * 0.4)
+        
         const thisSegmentDistanceKm = thisSegmentDistance / 1000
         
-        console.log(`Segment ${i + 1}: Direction ${currentBearing.toFixed(1)}° for ${thisSegmentDistance.toFixed(0)}m`)
+        console.log(`Segment ${segmentCount}: Direction ${currentBearing.toFixed(1)}° for ~${thisSegmentDistance.toFixed(0)}m`)
         
         // Find the endpoint for this segment
         const segmentPoint = findPointInDirection(currentLng, currentLat, currentBearing, thisSegmentDistanceKm)
@@ -96,8 +106,15 @@ serve(async (req) => {
         const segmentRoute = await getWalkingRoute(currentLng, currentLat, segmentPoint.lng, segmentPoint.lat)
         
         if (!segmentRoute) {
-          console.log(`Failed to get segment ${i + 1} route`)
-          return null
+          console.log(`Failed to get segment ${segmentCount} route`)
+          break
+        }
+        
+        // Check if adding this segment would exceed target by too much
+        const potentialTotal = totalDistance + segmentRoute.distance
+        if (potentialTotal > targetDistance * 1.15 && segmentCount > 2) {
+          console.log(`Segment ${segmentCount} would exceed target (${potentialTotal.toFixed(0)}m vs ${targetDistance}m), stopping`)
+          break
         }
         
         // Add this segment to the total route
@@ -109,12 +126,11 @@ serve(async (req) => {
         currentLng = coords[coords.length - 1][0]
         currentLat = coords[coords.length - 1][1]
         
-        console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+        console.log(`After segment ${segmentCount}: ${totalDistance.toFixed(0)}m covered (${(totalDistance/targetDistance*100).toFixed(1)}%)`)
         
-        // Turn for the next segment (except on the last segment)
-        if (i < segments - 1) {
-          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * 20) % 360 // Add some turn variation
-        }
+        // Turn for the next segment - use 90 degree turns for square-ish loops
+        currentBearing = (currentBearing + 90 + (seed - 0.5) * 20) % 360 // 90° ±10° variation
+        if (currentBearing < 0) currentBearing += 360
       }
       
       // Final segment back to start
@@ -130,19 +146,22 @@ serve(async (req) => {
       totalDistance += returnRoute.distance
       allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      console.log(`Final total distance: ${totalDistance}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance)}m)`)
+      const distanceDiff = Math.abs(totalDistance - targetDistance)
+      const percentageDiff = (distanceDiff / targetDistance * 100).toFixed(1)
+      
+      console.log(`Final total distance: ${totalDistance.toFixed(0)}m (target: ${targetDistance}m, diff: ${distanceDiff.toFixed(0)}m, ${percentageDiff}%)`)
       
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: 0 // Will be calculated from segments if needed
+        duration: 0
       }
     }
 
     // Try multiple variations to find the best route
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = Math.max(800, targetDistanceMeters * 0.2) // 20% tolerance
+    const tolerance = Math.max(400, targetDistanceMeters * 0.1) // 10% tolerance for better accuracy
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
