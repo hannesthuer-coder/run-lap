@@ -27,122 +27,64 @@ serve(async (req) => {
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     
-    // Function to generate natural loop patterns using directional exploration
-    const generateNaturalLoop = (baseDistance, seed = Math.random(), pattern = 'oval') => {
+    // Progressive path building algorithm
+    const generateProgressivePath = (targetDistance, seed = Math.random()) => {
       const waypoints = []
       
-      // Choose loop pattern based on seed and pattern preference
-      const patterns = ['oval', 'figure8', 'rectangle', 'organic']
-      const selectedPattern = patterns[Math.floor(seed * patterns.length)] || pattern
+      // Pick an initial direction (north, south, east, west, or diagonal)
+      const initialDirection = seed * 360 // Random direction in degrees
       
-      // Estimate rough coordinate distance for waypoint placement
-      // For lat/lng: 1 degree ≈ 111km, so for target distance in meters:
-      const coordDistance = (baseDistance / 1000) / 111 // Convert meters to degrees roughly
+      // Calculate how many waypoints we need based on target distance
+      // Space them every 800-1200m for natural routing
+      const waypointSpacing = 800 + (seed * 400) // 800-1200m between waypoints
+      const numWaypoints = Math.max(3, Math.floor(targetDistance / waypointSpacing))
       
-      switch (selectedPattern) {
-        case 'oval':
-          return generateOvalLoop(startLat, startLng, coordDistance, seed)
-        case 'figure8':
-          return generateFigure8Loop(startLat, startLng, coordDistance, seed)
-        case 'rectangle':
-          return generateRectangleLoop(startLat, startLng, coordDistance, seed)
-        case 'organic':
-        default:
-          return generateOrganicLoop(startLat, startLng, coordDistance, seed)
+      console.log(`Generating ${numWaypoints} waypoints with ${waypointSpacing}m spacing for ${targetDistance}m target`)
+      
+      let currentLat = startLat
+      let currentLng = startLng
+      let currentDirection = initialDirection
+      let totalDistance = 0
+      
+      // Build path progressively
+      for (let i = 0; i < numWaypoints; i++) {
+        const progress = i / (numWaypoints - 1)
+        
+        // Distance for this segment
+        const segmentDistance = waypointSpacing
+        
+        // Start curving back when we're about 60% through
+        if (progress > 0.6) {
+          // Calculate direction back to start
+          const deltaLat = startLat - currentLat
+          const deltaLng = startLng - currentLng
+          const directionToStart = Math.atan2(deltaLng, deltaLat) * (180 / Math.PI)
+          
+          // Gradually curve toward start direction
+          const curveStrength = (progress - 0.6) / 0.4 // 0 to 1 as we approach end
+          currentDirection = currentDirection + (directionToStart - currentDirection) * curveStrength * 0.3
+        } else {
+          // Add some natural variation to direction
+          const variation = (Math.sin(i * 0.7 + seed * Math.PI) * 30) // ±30 degrees variation
+          currentDirection += variation * (1 - progress) // Less variation as we approach return phase
+        }
+        
+        // Convert direction and distance to lat/lng offset
+        // 1 degree lat ≈ 111km, 1 degree lng ≈ 111km * cos(lat)
+        const distanceInKm = segmentDistance / 1000
+        const latOffset = (distanceInKm / 111) * Math.cos(currentDirection * Math.PI / 180)
+        const lngOffset = (distanceInKm / (111 * Math.cos(currentLat * Math.PI / 180))) * Math.sin(currentDirection * Math.PI / 180)
+        
+        currentLat += latOffset
+        currentLng += lngOffset
+        totalDistance += segmentDistance
+        
+        waypoints.push([currentLng, currentLat])
+        
+        console.log(`Waypoint ${i + 1}: [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}], direction: ${currentDirection.toFixed(1)}°`)
       }
-    }
-
-    // Generate oval-shaped loop
-    const generateOvalLoop = (lat, lng, distance, seed) => {
-      const waypoints = []
-      const numPoints = 6 + Math.floor(seed * 4) // 6-9 waypoints
-      const clockwise = seed > 0.5
       
-      // Create oval by varying the radius along the ellipse
-      for (let i = 0; i < numPoints; i++) {
-        const angle = (i / numPoints) * 2 * Math.PI * (clockwise ? 1 : -1)
-        
-        // Oval shape: wider in one direction
-        const radiusX = distance * (0.6 + 0.4 * Math.cos(seed * Math.PI))
-        const radiusY = distance * (0.4 + 0.3 * Math.sin(seed * Math.PI))
-        
-        const offsetLat = lat + radiusY * Math.cos(angle)
-        const offsetLng = lng + radiusX * Math.sin(angle)
-        
-        waypoints.push([offsetLng, offsetLat])
-      }
-      return waypoints
-    }
-
-    // Generate figure-8 shaped loop
-    const generateFigure8Loop = (lat, lng, distance, seed) => {
-      const waypoints = []
-      const numPoints = 8
-      
-      for (let i = 0; i < numPoints; i++) {
-        const t = (i / numPoints) * 2 * Math.PI
-        
-        // Figure-8 parametric equations
-        const scale = distance * 0.5
-        const offsetLat = lat + scale * Math.sin(t)
-        const offsetLng = lng + scale * Math.sin(t) * Math.cos(t)
-        
-        waypoints.push([offsetLng, offsetLat])
-      }
-      return waypoints
-    }
-
-    // Generate rectangle/square shaped loop
-    const generateRectangleLoop = (lat, lng, distance, seed) => {
-      const waypoints = []
-      const width = distance * (0.7 + 0.3 * seed)
-      const height = distance * (0.7 + 0.3 * (1 - seed))
-      
-      // Create rectangle corners with some randomness
-      const corners = [
-        [lng - width/2, lat + height/2], // top-left
-        [lng + width/2, lat + height/2], // top-right  
-        [lng + width/2, lat - height/2], // bottom-right
-        [lng - width/2, lat - height/2]  // bottom-left
-      ]
-      
-      // Add intermediate points for more natural routing
-      corners.forEach((corner, i) => {
-        waypoints.push(corner)
-        // Add midpoint to next corner
-        const nextCorner = corners[(i + 1) % corners.length]
-        const midLng = (corner[0] + nextCorner[0]) / 2
-        const midLat = (corner[1] + nextCorner[1]) / 2
-        waypoints.push([midLng, midLat])
-      })
-      
-      return waypoints
-    }
-
-    // Generate organic/natural shaped loop
-    const generateOrganicLoop = (lat, lng, distance, seed) => {
-      const waypoints = []
-      const numPoints = 5 + Math.floor(seed * 4) // 5-8 waypoints
-      const clockwise = seed > 0.5
-      
-      // Create organic shape with varying radius and some randomness
-      for (let i = 0; i < numPoints; i++) {
-        const baseAngle = (i / numPoints) * 2 * Math.PI * (clockwise ? 1 : -1)
-        
-        // Add organic variation
-        const angleNoise = (Math.sin(i * 1.3 + seed * Math.PI) * 0.3)
-        const angle = baseAngle + angleNoise
-        
-        // Varying radius for organic shape
-        const baseRadius = distance * (0.5 + 0.3 * Math.sin(i * 0.7 + seed * Math.PI * 2))
-        const radiusNoise = distance * 0.1 * Math.cos(i * 1.1 + seed * Math.PI)
-        const radius = baseRadius + radiusNoise
-        
-        const offsetLat = lat + radius * Math.cos(angle)
-        const offsetLng = lng + radius * Math.sin(angle)
-        
-        waypoints.push([offsetLng, offsetLat])
-      }
+      console.log(`Generated ${waypoints.length} waypoints, estimated total: ${totalDistance}m`)
       return waypoints
     }
     
@@ -264,46 +206,24 @@ serve(async (req) => {
     console.log(`Target distance: ${targetDistanceMeters}m, Tolerance: ${tolerance}m`)
     console.log(`Starting coordinate distance: ${(targetDistanceMeters / 1000) / 111} degrees`)
     
-    // Try different approaches for natural loop generation
-    const approaches = [
-      { type: 'waypoint_loop', startFromOriginal: false },
-      { type: 'start_centered', startFromOriginal: true },
-      { type: 'mixed_pattern', startFromOriginal: false }
-    ]
-    
+    // Try progressive path building with different variations
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const approach = approaches[attempt % approaches.length]
       const attemptSeed = (routeSeed + attempt * 0.3) % 1
       
       let route = null
       let waypoints = null
       
       try {
-        if (approach.type === 'waypoint_loop') {
-          // Generate loop through natural waypoints (start can be anywhere on loop)
-          waypoints = generateNaturalLoop(baseDistance, attemptSeed)
-          route = await fetchNaturalRoute(waypoints)
-        } else if (approach.type === 'start_centered') {
-          // Traditional approach but with natural patterns
-          waypoints = generateNaturalLoop(baseDistance, attemptSeed)
-          route = await fetchNaturalRoute(waypoints, [startLng, startLat])
-        } else {
-          // Mixed: try different loop patterns
-          const patterns = ['oval', 'organic', 'rectangle', 'figure8']
-          const pattern = patterns[attempt % patterns.length]
-          waypoints = generateNaturalLoop(baseDistance, attemptSeed, pattern)
-          route = await fetchNaturalRoute(waypoints, attempt % 2 === 0 ? [startLng, startLat] : null)
-        }
+        // Generate progressive path that builds naturally from start location
+        waypoints = generateProgressivePath(baseDistance, attemptSeed)
         
-        console.log(`Attempt ${attempt + 1} (${approach.type}): Generated waypoints:`, waypoints.slice(0, 2))
+        // Create route that starts and ends at the original location
+        route = await fetchNaturalRoute(waypoints, [startLng, startLat])
+        
+        console.log(`Attempt ${attempt + 1}: Generated ${waypoints.length} waypoints`)
         
         if (!route) {
-          console.log(`Attempt ${attempt + 1} (${approach.type}): No valid route found, waypoint spread: ${JSON.stringify({
-            minLat: Math.min(...waypoints.map(w => w[1])),
-            maxLat: Math.max(...waypoints.map(w => w[1])),
-            minLng: Math.min(...waypoints.map(w => w[0])), 
-            maxLng: Math.max(...waypoints.map(w => w[0]))
-          })}`)
+          console.log(`Attempt ${attempt + 1}: No valid route found`)
           // Adjust base distance for next attempt
           baseDistance *= (0.8 + Math.random() * 0.4)
           continue
@@ -312,7 +232,7 @@ serve(async (req) => {
         const routeDistance = route.distance
         const distanceDiff = Math.abs(routeDistance - targetDistanceMeters)
         
-        console.log(`Attempt ${attempt + 1} (${approach.type}): Route distance: ${routeDistance}m, Target: ${targetDistanceMeters}m, Diff: ${distanceDiff}m`)
+        console.log(`Attempt ${attempt + 1}: Route distance: ${routeDistance}m, Target: ${targetDistanceMeters}m, Diff: ${distanceDiff}m`)
         
         // Keep track of the best route so far
         if (distanceDiff < bestDistanceDiff) {
@@ -323,11 +243,11 @@ serve(async (req) => {
         
         // Accept route within tolerance immediately
         if (distanceDiff <= tolerance) {
-          console.log(`Found acceptable natural loop within ${tolerance}m tolerance on attempt ${attempt + 1}`)
+          console.log(`Found acceptable route within ${tolerance}m tolerance on attempt ${attempt + 1}`)
           break
         }
         
-        // Adjust base distance based on results
+        // Adjust base distance based on results for next attempt
         const adjustmentFactor = Math.min(distanceDiff / targetDistanceMeters, 0.3)
         
         if (routeDistance < targetDistanceMeters) {
