@@ -60,59 +60,82 @@ serve(async (req) => {
       }
     }
 
-    // Create a simple rectangular loop route
+    // Create a natural loop route with distance-aware algorithm
     const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
-      console.log(`\n=== Creating simple rectangular loop (seed: ${seed.toFixed(3)}) ===`)
+      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
       
-      // Simple 4-segment rectangular approach
-      const segmentDistance = targetDistance / 4 // Each side of rectangle
-      console.log(`Target segment distance: ${segmentDistance.toFixed(0)}m each`)
+      // Start with smaller estimated segments (roads add ~40% to straight-line distance)
+      const estimatedSegments = 4
+      let estimatedSegmentDistance = (targetDistance * 0.6) / estimatedSegments // Compensate for road curves
       
-      // Cardinal directions for natural rectangular loop
-      const directions = [
-        0 + (seed - 0.5) * 20,    // North ±10°
-        90 + (seed - 0.5) * 20,   // East ±10°  
-        180 + (seed - 0.5) * 20,  // South ±10°
-        270 + (seed - 0.5) * 20   // West ±10°
-      ]
+      // Choose initial direction
+      const baseDirection = 45 + (seed * 270) // 45-315 degrees
+      console.log(`Initial direction: ${baseDirection.toFixed(1)}°, estimated segment: ${estimatedSegmentDistance.toFixed(0)}m`)
       
       let totalDistance = 0
       let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
+      let currentBearing = baseDirection
+      let segmentCount = 0
       
-      // Create 3 segments (4th will be return to start)
-      for (let i = 0; i < 3; i++) {
-        const direction = directions[i]
-        const distanceKm = segmentDistance / 1000
+      // Build segments until we're close to target distance
+      while (totalDistance < targetDistance * 0.75 && segmentCount < 6) { // Stop at 75% to leave room for return
+        segmentCount++
         
-        console.log(`Segment ${i + 1}: Direction ${direction.toFixed(1)}° for ${segmentDistance.toFixed(0)}m`)
+        // Dynamically adjust segment distance based on remaining distance
+        const remainingDistance = targetDistance - totalDistance
+        const remainingSegments = Math.max(1, estimatedSegments - segmentCount + 1)
+        let thisSegmentDistance = remainingDistance / remainingSegments * 0.6 // Conservative estimate
+        
+        // Add natural variation but ensure minimum viable distance
+        const variation = (seed - 0.5) * 0.15 // ±7.5% variation
+        thisSegmentDistance = Math.max(400, thisSegmentDistance * (1 + variation)) // Min 400m segments
+        
+        // Cap segment distance to avoid overshooting
+        thisSegmentDistance = Math.min(thisSegmentDistance, remainingDistance * 0.4)
+        
+        const thisSegmentDistanceKm = thisSegmentDistance / 1000
+        
+        console.log(`Segment ${segmentCount}: Direction ${currentBearing.toFixed(1)}° for ~${thisSegmentDistance.toFixed(0)}m`)
         
         // Find the endpoint for this segment
-        const segmentPoint = findPointInDirection(currentLng, currentLat, direction, distanceKm)
+        const segmentPoint = findPointInDirection(currentLng, currentLat, currentBearing, thisSegmentDistanceKm)
         
         // Get the route for this segment
         const segmentRoute = await getWalkingRoute(currentLng, currentLat, segmentPoint.lng, segmentPoint.lat)
         
         if (!segmentRoute) {
-          console.log(`Failed to get segment ${i + 1} route`)
-          return null
+          console.log(`Failed to get segment ${segmentCount} route`)
+          break
+        }
+        
+        // Check if adding this segment would exceed target by too much
+        const potentialTotal = totalDistance + segmentRoute.distance
+        if (potentialTotal > targetDistance * 1.15 && segmentCount > 2) {
+          console.log(`Segment ${segmentCount} would exceed target (${potentialTotal.toFixed(0)}m vs ${targetDistance}m), stopping`)
+          break
         }
         
         // Add this segment to the total route
         totalDistance += segmentRoute.distance
         allCoordinates.push(...segmentRoute.geometry.coordinates.slice(1))
         
-        // Update current position
+        // Update current position to the end of this segment
         const coords = segmentRoute.geometry.coordinates
         currentLng = coords[coords.length - 1][0]
         currentLat = coords[coords.length - 1][1]
         
-        console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered`)
+        console.log(`After segment ${segmentCount}: ${totalDistance.toFixed(0)}m covered (${(totalDistance/targetDistance*100).toFixed(1)}%)`)
+        
+        // Turn for the next segment - use 90 degree turns for square-ish loops
+        currentBearing = (currentBearing + 90 + (seed - 0.5) * 20) % 360 // 90° ±10° variation
+        if (currentBearing < 0) currentBearing += 360
       }
       
       // Final segment back to start
-      console.log(`Final segment: Returning to start`)
+      console.log(`Final segment: Returning to start from [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
+      
       const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
       
       if (!returnRoute) {
