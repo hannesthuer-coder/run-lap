@@ -14,7 +14,10 @@ serve(async (req) => {
   try {
     const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
     
+    console.log('Checking for MAPBOX_ACCESS_TOKEN:', mapboxToken ? 'Token found' : 'Token not found');
+    
     if (!mapboxToken) {
+      console.error('MAPBOX_ACCESS_TOKEN environment variable is not set');
       throw new Error('Mapbox token not configured');
     }
 
