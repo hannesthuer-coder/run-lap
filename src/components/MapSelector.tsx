@@ -16,39 +16,40 @@ const MapSelector = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(true);
 
   const getMapboxToken = async (): Promise<string> => {
-    // Temporary hardcoded token - replace with your actual Mapbox public token
-    const hardcodedToken = "pk.YOUR_MAPBOX_TOKEN_HERE";
+    // Use the user-entered token if available
+    if (mapboxToken && mapboxToken.startsWith('pk.')) {
+      return mapboxToken;
+    }
     
-    // Try to get from Supabase first, fallback to hardcoded
+    // Try to get from Supabase
     try {
       const { data, error } = await supabase.functions.invoke('get-mapbox-token');
       if (!error && data?.token) {
+        setShowTokenInput(false);
         return data.token;
       }
     } catch (error) {
-      console.log('Edge function failed, using fallback token');
+      console.log('Edge function failed');
     }
     
-    if (hardcodedToken.startsWith("pk.") && hardcodedToken !== "pk.YOUR_MAPBOX_TOKEN_HERE") {
-      return hardcodedToken;
-    }
-    
-    throw new Error('Please update the hardcoded Mapbox token in MapSelector.tsx');
+    throw new Error('Please enter your Mapbox token below');
   };
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
     try {
-      // Get Mapbox token from Supabase
-      const mapboxToken = await getMapboxToken();
+      // Get Mapbox token
+      const token = await getMapboxToken();
       
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
 
       // Set access token
-      mapboxgl.default.accessToken = mapboxToken;
+      mapboxgl.default.accessToken = token;
 
       // Get user's current location first
       const getUserLocation = (): Promise<[number, number]> => {
@@ -72,7 +73,7 @@ const MapSelector = ({
       // Create map instance centered on user's location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // Same style as route page
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: userLocation,
         zoom: 14,
         attributionControl: false
@@ -100,24 +101,59 @@ const MapSelector = ({
         onLocationSelect(coords);
         toast.success("Starting point selected!");
       });
+      
       setMap(mapInstance);
       toast.success("Map loaded! Click anywhere to select your starting point.");
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please check your token and try again.");
+      toast.error(error instanceof Error ? error.message : 'Failed to load map');
+      setShowTokenInput(true);
     }
   };
+
+  const handleTokenSubmit = () => {
+    if (mapboxToken.startsWith('pk.')) {
+      setShowTokenInput(false);
+      initializeMap();
+    } else {
+      toast.error('Please enter a valid Mapbox token (starts with pk.)');
+    }
+  };
+
   useEffect(() => {
     initializeMap();
   }, []);
-  return <div className="h-full w-full relative">
-      <div ref={mapContainer} className="absolute inset-0" />
-      
-      {/* Very subtle overlay to match route page style */}
-      <div className="absolute inset-0 bg-white/5 pointer-events-none" />
-      
-      {/* Instructions Overlay */}
-      
-    </div>;
+
+  return (
+    <div className="relative w-full h-[500px] bg-muted rounded-lg overflow-hidden">
+      {showTokenInput && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="p-6 bg-card rounded-lg shadow-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Enter Mapbox Token</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Get your public token from <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">mapbox.com</a>
+            </p>
+            <input
+              type="text"
+              value={mapboxToken}
+              onChange={(e) => setMapboxToken(e.target.value)}
+              placeholder="pk.your_mapbox_token_here"
+              className="w-full p-2 border border-border rounded mb-4"
+            />
+            <button
+              onClick={handleTokenSubmit}
+              disabled={!mapboxToken.startsWith('pk.')}
+              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded disabled:opacity-50"
+            >
+              Load Map
+            </button>
+          </div>
+        </div>
+      )}
+      <div ref={mapContainer} className="w-full h-full" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/5 rounded-lg" />
+    </div>
+  );
 };
+
 export default MapSelector;
