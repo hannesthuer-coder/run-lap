@@ -18,14 +18,24 @@ const MapSelector = ({
   const markerRef = useRef<any>(null);
 
   const getMapboxToken = async (): Promise<string> => {
+    // Temporary hardcoded token - replace with your actual Mapbox public token
+    const hardcodedToken = "pk.YOUR_MAPBOX_TOKEN_HERE";
+    
+    // Try to get from Supabase first, fallback to hardcoded
     try {
       const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-      if (error) throw error;
-      return data.token;
+      if (!error && data?.token) {
+        return data.token;
+      }
     } catch (error) {
-      console.error('Failed to get Mapbox token:', error);
-      throw new Error('Unable to load map. Please try again later.');
+      console.log('Edge function failed, using fallback token');
     }
+    
+    if (hardcodedToken.startsWith("pk.") && hardcodedToken !== "pk.YOUR_MAPBOX_TOKEN_HERE") {
+      return hardcodedToken;
+    }
+    
+    throw new Error('Please update the hardcoded Mapbox token in MapSelector.tsx');
   };
 
   const initializeMap = async () => {
