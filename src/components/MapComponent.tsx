@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
-import MapTokenInput from './MapTokenInput';
-import { useMapboxToken } from '@/hooks/useMapboxToken';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
@@ -18,8 +16,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { token, isTokenSet, saveToken } = useMapboxToken();
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -33,6 +31,20 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     } catch (error) {
       console.warn('Error parsing location, using default:', error);
       return [-74.5, 40];
+    }
+  };
+
+  // Get Mapbox token from Supabase edge function
+  const getMapboxToken = async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      
+      if (error) throw error;
+      return data.token;
+    } catch (error) {
+      console.error('Failed to get Mapbox token:', error);
+      return null;
     }
   };
 
@@ -128,22 +140,18 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     }
   };
 
-  const handleTokenSet = (newToken: string) => {
-    saveToken(newToken);
-    setIsLoading(true);
-    initializeMap(newToken);
-  };
-
-  useEffect(() => {
-    if (isTokenSet && token) {
-      initializeMap(token);
-    }
-  }, [isTokenSet, token]);
-
-  const initializeMap = async (token: string) => {
-    if (!mapContainer.current || !token) return;
+  const initializeMap = async () => {
+    if (!mapContainer.current) return;
 
     try {
+      // Get the Mapbox token
+      const token = await getMapboxToken();
+      if (!token) {
+        throw new Error('Failed to get Mapbox token');
+      }
+      
+      setMapboxToken(token);
+      
       // Parse the actual start location
       const [lng, lat] = parseLocation(startLocation);
       
@@ -258,12 +266,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     } catch (error) {
       console.error('Error initializing map:', error);
       setIsLoading(false);
-      toast.error("Failed to load map. Please check your token and try again.");
+      toast.error("Failed to load map. Please try again.");
       onError?.(); // Notify parent of error
     }
   };
 
-  // Remove automatic initialization
+  useEffect(() => {
+    initializeMap();
+  }, []);
 
   // Regenerate route when regenerateKey changes
   useEffect(() => {
@@ -272,10 +282,13 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     }
   }, [regenerateKey]);
 
-  if (!isTokenSet) {
+  if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-8">
-        <MapTokenInput onTokenSet={handleTokenSet} isLoading={isLoading} />
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
       </div>
     );
   }
