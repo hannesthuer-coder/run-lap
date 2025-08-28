@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import MapTokenInput from './MapTokenInput';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
@@ -19,8 +17,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q";
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [isTokenSet, setIsTokenSet] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -129,8 +128,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     }
   };
 
-  const initializeMap = async () => {
-    if (!mapContainer.current) return;
+  const handleTokenSet = (token: string) => {
+    setMapboxToken(token);
+    setIsLoading(true);
+    initializeMap(token);
+  };
+
+  const initializeMap = async (token: string) => {
+    if (!mapContainer.current || !token) return;
 
     try {
       // Parse the actual start location
@@ -141,7 +146,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       mapboxglRef.current = mapboxgl.default;
       
       // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      mapboxgl.default.accessToken = token;
 
       // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
@@ -241,18 +246,19 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       });
 
       setMap(mapInstance);
+      setIsTokenSet(true);
+      setIsLoading(false);
       toast.success("Map loaded successfully!");
 
     } catch (error) {
       console.error('Error initializing map:', error);
+      setIsLoading(false);
       toast.error("Failed to load map. Please check your token and try again.");
       onError?.(); // Notify parent of error
     }
   };
 
-  useEffect(() => {
-    initializeMap();
-  }, []);
+  // Remove automatic initialization
 
   // Regenerate route when regenerateKey changes
   useEffect(() => {
@@ -260,6 +266,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       generateNewRoute();
     }
   }, [regenerateKey]);
+
+  if (!isTokenSet) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-8">
+        <MapTokenInput onTokenSet={handleTokenSet} isLoading={isLoading} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full relative">

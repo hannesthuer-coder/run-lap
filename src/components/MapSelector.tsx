@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import MapTokenInput from './MapTokenInput';
 import 'mapbox-gl/dist/mapbox-gl.css';
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
@@ -13,16 +11,24 @@ const MapSelector = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q"; // TODO: Move to environment variable
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [isTokenSet, setIsTokenSet] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const initializeMap = async () => {
-    if (!mapContainer.current) return;
+  const handleTokenSet = (token: string) => {
+    setMapboxToken(token);
+    setIsLoading(true);
+    initializeMap(token);
+  };
+
+  const initializeMap = async (token: string) => {
+    if (!mapContainer.current || !token) return;
     try {
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
 
       // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      mapboxgl.default.accessToken = token;
 
       // Get user's current location first
       const getUserLocation = (): Promise<[number, number]> => {
@@ -75,23 +81,31 @@ const MapSelector = ({
         toast.success("Starting point selected!");
       });
       setMap(mapInstance);
+      setIsTokenSet(true);
+      setIsLoading(false);
       toast.success("Map loaded! Click anywhere to select your starting point.");
     } catch (error) {
       console.error('Error initializing map:', error);
+      setIsLoading(false);
       toast.error("Failed to load map. Please check your token and try again.");
     }
   };
-  useEffect(() => {
-    initializeMap();
-  }, []);
-  return <div className="h-full w-full relative">
+  // Remove the automatic initialization
+  if (!isTokenSet) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-8">
+        <MapTokenInput onTokenSet={handleTokenSet} isLoading={isLoading} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full w-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Very subtle overlay to match route page style */}
       <div className="absolute inset-0 bg-white/5 pointer-events-none" />
-      
-      {/* Instructions Overlay */}
-      
-    </div>;
+    </div>
+  );
 };
 export default MapSelector;
