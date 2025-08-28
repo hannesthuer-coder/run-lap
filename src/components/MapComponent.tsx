@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
@@ -20,7 +21,16 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
 
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q";
+  const getMapboxToken = async (): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      if (error) throw error;
+      return data.token;
+    } catch (error) {
+      console.error('Failed to get Mapbox token:', error);
+      throw new Error('Unable to load map. Please try again later.');
+    }
+  };
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -136,12 +146,15 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       // Parse the actual start location
       const [lng, lat] = parseLocation(startLocation);
       
+      // Get Mapbox token from Supabase
+      const mapboxToken = await getMapboxToken();
+      
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
       mapboxglRef.current = mapboxgl.default;
       
       // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      mapboxgl.default.accessToken = mapboxToken;
 
       // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({

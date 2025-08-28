@@ -3,26 +3,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import 'mapbox-gl/dist/mapbox-gl.css';
+
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
 }
+
 const MapSelector = ({
   onLocationSelect
 }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q"; // TODO: Move to environment variable
+
+  const getMapboxToken = async (): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      if (error) throw error;
+      return data.token;
+    } catch (error) {
+      console.error('Failed to get Mapbox token:', error);
+      throw new Error('Unable to load map. Please try again later.');
+    }
+  };
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
     try {
+      // Get Mapbox token from Supabase
+      const mapboxToken = await getMapboxToken();
+      
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
 
       // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      mapboxgl.default.accessToken = mapboxToken;
 
       // Get user's current location first
       const getUserLocation = (): Promise<[number, number]> => {
