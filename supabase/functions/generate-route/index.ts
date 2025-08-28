@@ -84,7 +84,19 @@ serve(async (req) => {
       return diff > 120
     }
 
-    // Generate Strava-style organic loop routes focused on distance accuracy
+    // Fast distance calculation between two points in meters
+    const calculateDistance = (lng1, lat1, lng2, lat2) => {
+      const R = 6371000 // Earth's radius in meters
+      const dLat = (lat2 - lat1) * Math.PI / 180
+      const dLng = (lng2 - lng1) * Math.PI / 180
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      return R * c
+    }
+
+    // Generate optimized Strava-style organic loops
     const generateOrganicLoop = async (targetDistance, seed = Math.random()) => {
       console.log(`\n=== Generating organic loop (seed: ${seed.toFixed(3)}) ===`)
       
@@ -92,100 +104,91 @@ serve(async (req) => {
       let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
-      let visitedCoords = new Set()
+      let visitedPoints = [] // Store [lng, lat] for distance-based collision detection
+      let lastBearing = seed * 360 // Track direction for natural turns
       
-      // Add starting point to visited
-      visitedCoords.add(`${startLng.toFixed(5)},${startLat.toFixed(5)}`)
+      // Add starting point
+      visitedPoints.push([startLng, startLat])
       
-      // Exploration phase: build route naturally until we've covered ~75% of target distance
+      // Plan segments upfront for efficiency
       const explorationTarget = targetDistance * 0.75
+      const numSegments = Math.min(4, Math.max(2, Math.floor(targetDistance / 2000))) // 2-4 segments based on distance
+      const avgSegmentDistance = explorationTarget / numSegments
       
-      console.log(`Exploration target: ${explorationTarget}m`)
+      console.log(`Planning ${numSegments} segments, avg ${avgSegmentDistance.toFixed(0)}m each`)
       
-      while (totalDistance < explorationTarget) {
+      // Exploration phase with minimal API calls
+      for (let segment = 0; segment < numSegments; segment++) {
         const remainingDistance = explorationTarget - totalDistance
+        if (remainingDistance < 500) break // Stop if very close to target
         
-        // Dynamic segment distance: shorter segments when closer to target
-        const segmentTarget = Math.min(
-          remainingDistance * (0.3 + seed * 0.4), // 30-70% of remaining
-          targetDistance * 0.25 // Never more than 25% of total in one segment
-        )
+        const segmentTarget = Math.min(remainingDistance, avgSegmentDistance * (0.8 + seed * 0.4))
+        const segmentDistanceKm = segmentTarget / 1000
         
         let bestRoute = null
         let bestDistance = 0
         
-        // Try multiple directions for natural exploration
+        // Try only 2-3 smart directions (massive reduction from 18 combinations)
+        const baseDirection = (lastBearing + 60 + seed * 120) % 360 // Turn 60-180° from last direction
         const directions = [
-          seed * 360, // Random primary direction
-          (seed * 360 + 90) % 360, // Perpendicular options
-          (seed * 360 + 180) % 360,
-          (seed * 360 + 270) % 360,
-          (seed * 360 + 45) % 360, // Diagonal options
-          (seed * 360 + 135) % 360
+          baseDirection,
+          (baseDirection + 90) % 360,
+          (baseDirection - 90 + 360) % 360
         ]
         
         for (const direction of directions) {
-          // Try different distances for this direction
-          for (const distanceRatio of [0.8, 1.0, 1.2]) {
-            const segmentDistanceKm = (segmentTarget * distanceRatio) / 1000
-            const waypoint = findPointInDirection(currentLng, currentLat, direction, segmentDistanceKm)
-            
-            // Skip if we've been too close to this area
-            const waypointKey = `${waypoint.lng.toFixed(5)},${waypoint.lat.toFixed(5)}`
-            if (visitedCoords.has(waypointKey)) continue
-            
-            const testRoute = await getWalkingRoute(currentLng, currentLat, waypoint.lng, waypoint.lat)
-            
-            if (testRoute && testRoute.distance > 100) { // Minimum 100m segments
-              // Check if this would be too close to existing route (prevent backtracking)
-              const routeCoords = testRoute.geometry.coordinates
-              let tooClose = false
-              
-              for (const coord of routeCoords.slice(0, -1)) { // Don't check endpoint
-                const coordKey = `${coord[0].toFixed(5)},${coord[1].toFixed(5)}`
-                if (visitedCoords.has(coordKey)) {
-                  tooClose = true
-                  break
-                }
-              }
-              
-              if (!tooClose && testRoute.distance > bestDistance) {
-                bestRoute = testRoute
-                bestDistance = testRoute.distance
-                console.log(`Found route: ${direction.toFixed(0)}° for ${testRoute.distance.toFixed(0)}m`)
-              }
+          const waypoint = findPointInDirection(currentLng, currentLat, direction, segmentDistanceKm)
+          
+          // Fast collision detection: check if waypoint is too close to any visited point
+          let tooClose = false
+          for (const [vLng, vLat] of visitedPoints) {
+            if (calculateDistance(waypoint.lng, waypoint.lat, vLng, vLat) < 200) { // 200m minimum separation
+              tooClose = true
+              break
             }
+          }
+          
+          if (tooClose) continue
+          
+          const testRoute = await getWalkingRoute(currentLng, currentLat, waypoint.lng, waypoint.lat)
+          
+          if (testRoute && testRoute.distance > 300 && testRoute.distance > bestDistance) {
+            bestRoute = testRoute
+            bestDistance = testRoute.distance
+            console.log(`Segment ${segment + 1}: ${direction.toFixed(0)}° for ${testRoute.distance.toFixed(0)}m`)
+            break // Take first good route for speed
           }
         }
         
         if (!bestRoute) {
-          console.log('No valid exploration route found')
+          console.log(`No valid route for segment ${segment + 1}`)
           break
         }
         
-        // Add route and mark coordinates as visited
+        // Add route
         totalDistance += bestRoute.distance
         const coords = bestRoute.geometry.coordinates
         allCoordinates.push(...coords.slice(1))
         
-        // Mark route coordinates as visited
-        for (const coord of coords) {
-          visitedCoords.add(`${coord[0].toFixed(5)},${coord[1].toFixed(5)}`)
+        // Update position and visited points (sample every ~100m for efficiency)
+        const sampleRate = Math.max(1, Math.floor(coords.length / 10))
+        for (let i = 0; i < coords.length; i += sampleRate) {
+          visitedPoints.push([coords[i][0], coords[i][1]])
         }
         
-        // Update current position
         currentLng = coords[coords.length - 1][0]
         currentLat = coords[coords.length - 1][1]
+        lastBearing = calculateBearing(coords[coords.length - 2][0], coords[coords.length - 2][1], currentLng, currentLat)
         
-        console.log(`Exploration progress: ${totalDistance.toFixed(0)}m / ${explorationTarget.toFixed(0)}m`)
+        console.log(`Progress: ${totalDistance.toFixed(0)}m / ${explorationTarget.toFixed(0)}m`)
         
-        // Update seed for next iteration to ensure variety
-        seed = (seed * 1.618034) % 1 // Golden ratio for good distribution
+        // Update seed for natural variation
+        seed = (seed * 1.618034) % 1
       }
       
       // Return phase: complete the loop
       console.log(`\n--- Return phase ---`)
-      console.log(`Current distance: ${totalDistance.toFixed(0)}m, need ${(targetDistance - totalDistance).toFixed(0)}m more`)
+      console.log(`Current: ${totalDistance.toFixed(0)}m, need ${(targetDistance - totalDistance).toFixed(0)}m more`)
       
       const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
       
@@ -197,7 +200,7 @@ serve(async (req) => {
       totalDistance += returnRoute.distance
       allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      console.log(`Final total: ${totalDistance.toFixed(0)}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance).toFixed(0)}m)`)
+      console.log(`Final: ${totalDistance.toFixed(0)}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance).toFixed(0)}m)`)
       
       return {
         coordinates: allCoordinates,
@@ -206,18 +209,18 @@ serve(async (req) => {
       }
     }
 
-    // Generate multiple route variations focused on distance accuracy
+    // Generate route with early termination for speed
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = 500 // Maximum 500m tolerance as requested
+    const tolerance = 500 // Maximum 500m tolerance
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
-    // Try different route generation strategies
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // Reduced attempts for faster generation
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const seed = (Date.now() + attempt * 1337 + Math.random() * 1000) % 10000 / 10000
-        console.log(`\n--- Attempt ${attempt + 1}/10 ---`)
+        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
         
         const route = await generateOrganicLoop(targetDistanceMeters, seed)
         
@@ -229,9 +232,9 @@ serve(async (req) => {
         const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
         console.log(`Route: ${route.distance.toFixed(0)}m (diff: ${distanceDiff.toFixed(0)}m)`)
         
-        // Always prefer routes within tolerance
+        // Early termination: use first route within tolerance
         if (distanceDiff <= tolerance) {
-          console.log('✓ Within tolerance - using this route')
+          console.log('✓ Within tolerance - using this route immediately')
           bestRoute = route
           bestDistanceDiff = distanceDiff
           break
@@ -250,7 +253,7 @@ serve(async (req) => {
     }
     
     if (!bestRoute) {
-      throw new Error('Could not generate any valid route after 10 attempts')
+      throw new Error('Could not generate any valid route after 5 attempts')
     }
     
     console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
