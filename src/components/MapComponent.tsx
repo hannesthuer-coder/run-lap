@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import MapTokenInput from './MapTokenInput';
+import { useMapboxToken } from '@/hooks/useMapboxToken';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapComponentProps {
@@ -17,9 +18,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { token, isTokenSet, saveToken } = useMapboxToken();
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -128,11 +128,17 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     }
   };
 
-  const handleTokenSet = (token: string) => {
-    setMapboxToken(token);
+  const handleTokenSet = (newToken: string) => {
+    saveToken(newToken);
     setIsLoading(true);
-    initializeMap(token);
+    initializeMap(newToken);
   };
+
+  useEffect(() => {
+    if (isTokenSet && token) {
+      initializeMap(token);
+    }
+  }, [isTokenSet, token]);
 
   const initializeMap = async (token: string) => {
     if (!mapContainer.current || !token) return;
@@ -246,7 +252,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       });
 
       setMap(mapInstance);
-      setIsTokenSet(true);
       setIsLoading(false);
       toast.success("Map loaded successfully!");
 

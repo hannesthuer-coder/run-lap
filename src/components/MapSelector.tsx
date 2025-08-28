@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import MapTokenInput from './MapTokenInput';
+import { useMapboxToken } from '@/hooks/useMapboxToken';
 import 'mapbox-gl/dist/mapbox-gl.css';
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
@@ -11,15 +12,20 @@ const MapSelector = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { token, isTokenSet, saveToken } = useMapboxToken();
 
-  const handleTokenSet = (token: string) => {
-    setMapboxToken(token);
+  const handleTokenSet = (newToken: string) => {
+    saveToken(newToken);
     setIsLoading(true);
-    initializeMap(token);
+    initializeMap(newToken);
   };
+
+  useEffect(() => {
+    if (isTokenSet && token) {
+      initializeMap(token);
+    }
+  }, [isTokenSet, token]);
 
   const initializeMap = async (token: string) => {
     if (!mapContainer.current || !token) return;
@@ -81,7 +87,6 @@ const MapSelector = ({
         toast.success("Starting point selected!");
       });
       setMap(mapInstance);
-      setIsTokenSet(true);
       setIsLoading(false);
       toast.success("Map loaded! Click anywhere to select your starting point.");
     } catch (error) {
