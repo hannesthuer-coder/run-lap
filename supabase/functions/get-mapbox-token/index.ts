@@ -13,12 +13,16 @@ serve(async (req) => {
   }
 
   try {
+    // Debug: Log all available environment variables
+    console.log('Available environment variables:', Object.keys(Deno.env.toObject()));
+    
     const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
     
     console.log('Checking for MAPBOX_ACCESS_TOKEN:', mapboxToken ? 'Token found' : 'Token not found');
+    console.log('Token length:', mapboxToken ? mapboxToken.length : 0);
     
-    if (!mapboxToken) {
-      console.error('MAPBOX_ACCESS_TOKEN environment variable is not set');
+    if (!mapboxToken || mapboxToken.trim() === '') {
+      console.error('MAPBOX_ACCESS_TOKEN environment variable is not set or empty');
       throw new Error('Mapbox token not configured');
     }
 
