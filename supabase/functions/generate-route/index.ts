@@ -60,115 +60,43 @@ serve(async (req) => {
       }
     }
 
-    // Helper function to calculate bearing between two points
-    const calculateBearing = (startLng, startLat, endLng, endLat) => {
-      const lat1 = startLat * Math.PI / 180
-      const lat2 = endLat * Math.PI / 180
-      const deltaLng = (endLng - startLng) * Math.PI / 180
-      
-      const y = Math.sin(deltaLng) * Math.cos(lat2)
-      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng)
-      
-      const bearing = Math.atan2(y, x) * 180 / Math.PI
-      return (bearing + 360) % 360
-    }
-
-    // Check if a route segment creates a spike (sharp reversal) - distance-adaptive
-    const isSpike = (prevBearing, currentBearing, targetDistance) => {
-      if (prevBearing === null) return false
-      
-      let diff = Math.abs(currentBearing - prevBearing)
-      if (diff > 180) diff = 360 - diff
-      
-      // Distance-adaptive spike detection thresholds
-      let spikeThreshold
-      if (targetDistance < 3000) {
-        spikeThreshold = 120 // Stricter for short routes
-      } else if (targetDistance < 6000) {
-        spikeThreshold = 130 // Medium for medium routes
-      } else {
-        spikeThreshold = 145 // More relaxed for long routes
-      }
-      
-      return diff > spikeThreshold
-    }
-
-    // Create a natural loop route with anti-spike logic
+    // Create a natural loop route with gradual turns to avoid U-turns
     const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
       console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
       
-      // Distance-adaptive segment strategy
-      let segments
-      if (targetDistance < 3000) {
-        segments = 2 // Simple 2-segment routes for short distances
-      } else if (targetDistance < 6000) {
-        segments = 3 // 3 segments for medium distances  
-      } else {
-        segments = 4 + Math.floor(seed * 2) // 4-5 segments for long distances
-      }
-      
-      const baseDirection = seed * 360 // Random initial direction
-      
-      console.log(`Creating ${segments} segments, initial direction: ${baseDirection.toFixed(1)}°`)
+      // Choose initial direction
+      const baseDirection = 45 + (seed * 270) // 45-315 degrees
+      console.log(`Initial direction: ${baseDirection.toFixed(1)}°`)
       
       let totalDistance = 0
       let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
-      let prevBearing = null
+      let currentBearing = baseDirection
       
-      // Create segments with natural exploration
+      // Create a pentagon-like path (5 segments) to ensure smooth, no-backtrack loops
+      const segments = 5
+      const segmentDistance = targetDistance / segments
+      const turnAngle = 360 / segments // 72 degrees per turn for pentagon
+      
+      console.log(`Creating ${segments} segments of ~${segmentDistance}m each with ${turnAngle}° turns`)
+      
       for (let i = 0; i < segments; i++) {
-        const segmentRatio = (i + 1) / segments
-        let segmentDistance = targetDistance * (0.8 / segments) // Conservative segment size
+        // Add some variation to segment distances to make it more natural
+        const variation = (seed - 0.5) * 0.3 // ±15% variation
+        const thisSegmentDistance = segmentDistance * (1 + variation)
+        const thisSegmentDistanceKm = thisSegmentDistance / 1000
         
-        // Add natural variation to segment distances
-        const variation = (seed - 0.5) * 0.4 // ±20% variation
-        segmentDistance *= (1 + variation)
+        console.log(`Segment ${i + 1}: Direction ${currentBearing.toFixed(1)}° for ${thisSegmentDistance.toFixed(0)}m`)
         
-        // Calculate turn angle (90-120° for natural turns)
-        const baseTurnAngle = 360 / segments // Base angle for completing the loop
-        const turnVariation = (seed - 0.5) * 60 // ±30° variation
-        let targetBearing = (baseDirection + (i * baseTurnAngle) + turnVariation) % 360
+        // Find the endpoint for this segment
+        const segmentPoint = findPointInDirection(currentLng, currentLat, currentBearing, thisSegmentDistanceKm)
         
-        // Reduce attempts for better performance: max 2 attempts per segment
-        let attempts = 0
-        let segmentRoute = null
-        let actualBearing = null
-        
-        while (attempts < 2 && !segmentRoute) {
-          const segmentDistanceKm = segmentDistance / 1000
-          const waypoint = findPointInDirection(currentLng, currentLat, targetBearing, segmentDistanceKm)
-          
-          // Test the route
-          const testRoute = await getWalkingRoute(currentLng, currentLat, waypoint.lng, waypoint.lat)
-          
-          if (testRoute) {
-            // Calculate the actual bearing of this route
-            const routeCoords = testRoute.geometry.coordinates
-            if (routeCoords.length >= 2) {
-              actualBearing = calculateBearing(
-                routeCoords[0][0], routeCoords[0][1],
-                routeCoords[routeCoords.length - 1][0], routeCoords[routeCoords.length - 1][1]
-              )
-              
-              // Check for spikes with distance-adaptive threshold
-              if (!isSpike(prevBearing, actualBearing, targetDistance)) {
-                segmentRoute = testRoute
-                console.log(`Segment ${i + 1}: Direction ${actualBearing.toFixed(1)}° for ${testRoute.distance.toFixed(0)}m`)
-                break
-              } else {
-                console.log(`Spike detected (${prevBearing?.toFixed(1)}° -> ${actualBearing.toFixed(1)}°), trying alternative`)
-              }
-            }
-          }
-          
-          attempts++
-          targetBearing = (targetBearing + 45) % 360 // Try different direction
-        }
+        // Get the route for this segment
+        const segmentRoute = await getWalkingRoute(currentLng, currentLat, segmentPoint.lng, segmentPoint.lat)
         
         if (!segmentRoute) {
-          console.log(`Failed to find non-spike route for segment ${i + 1}`)
+          console.log(`Failed to get segment ${i + 1} route`)
           return null
         }
         
@@ -176,24 +104,21 @@ serve(async (req) => {
         totalDistance += segmentRoute.distance
         allCoordinates.push(...segmentRoute.geometry.coordinates.slice(1))
         
-        // Update current position
+        // Update current position to the end of this segment
         const coords = segmentRoute.geometry.coordinates
         currentLng = coords[coords.length - 1][0]
         currentLat = coords[coords.length - 1][1]
-        prevBearing = actualBearing
         
-        console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered`)
+        console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
         
-        // Dynamic distance adjustment
-        const remainingSegments = segments - i - 1
-        if (remainingSegments > 0) {
-          const remainingDistance = targetDistance - totalDistance
-          segmentDistance = remainingDistance / remainingSegments * 0.8 // Leave room for return
+        // Turn for the next segment (except on the last segment)
+        if (i < segments - 1) {
+          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * 20) % 360 // Add some turn variation
         }
       }
       
-      // Final return segment to complete the loop
-      console.log(`Final return: From [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}] to start`)
+      // Final segment back to start
+      console.log(`Final segment: Returning to start from [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
       
       const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
       
@@ -202,39 +127,29 @@ serve(async (req) => {
         return null
       }
       
-      // Check if return route creates a spike with distance-adaptive threshold
-      const returnBearing = calculateBearing(currentLng, currentLat, startLng, startLat)
-      if (isSpike(prevBearing, returnBearing, targetDistance)) {
-        console.log('Return route would create a spike - rejecting this route')
-        return null
-      }
-      
       totalDistance += returnRoute.distance
       allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      console.log(`Final total: ${totalDistance}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance)}m)`)
+      console.log(`Final total distance: ${totalDistance}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance)}m)`)
       
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: 0
+        duration: 0 // Will be calculated from segments if needed
       }
     }
 
-    // Distance-adaptive tolerance and reduced attempts for performance
+    // Try multiple variations to find the best route
     let bestRoute = null
     let bestDistanceDiff = Infinity
+    const tolerance = Math.max(800, targetDistanceMeters * 0.2) // 20% tolerance
     
-    // Adaptive tolerance: fixed for short distances, percentage-based for long distances
-    const tolerance = targetDistanceMeters < 4000 ? 500 : Math.max(500, targetDistanceMeters * 0.04) // 4% for longer distances
-    const maxAttempts = targetDistanceMeters < 3000 ? 3 : 4 // Fewer attempts for short routes
+    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
-    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m, Max attempts: ${maxAttempts}`)
-    
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const seed = (Date.now() + attempt * 1000) % 10000 / 10000
-        console.log(`\n--- Attempt ${attempt + 1}/${maxAttempts} ---`)
+        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
         
         const route = await createNaturalLoop(targetDistanceMeters, seed)
         
@@ -253,7 +168,7 @@ serve(async (req) => {
         }
         
         if (distanceDiff <= tolerance) {
-          console.log('✓ Within tolerance - stopping early for performance')
+          console.log('✓ Within tolerance - using this route')
           break
         }
         
@@ -263,7 +178,7 @@ serve(async (req) => {
     }
     
     if (!bestRoute) {
-      throw new Error(`Could not generate any valid route after ${maxAttempts} attempts`)
+      throw new Error('Could not generate any valid route after 5 attempts')
     }
     
     console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
