@@ -73,208 +73,127 @@ serve(async (req) => {
       return (bearing + 360) % 360
     }
 
-    // Check if a route segment creates a spike (sharp reversal)
-    const isSpike = (prevBearing, currentBearing) => {
-      if (prevBearing === null) return false
+    // Super-Fast Route Generation Algorithm (2-3 seconds max)
+    const generateFastLoop = async () => {
+      console.log(`\n=== Super-Fast Route Generation ===`)
+      console.log(`Target: ${targetDistanceMeters}m`)
       
-      let diff = Math.abs(currentBearing - prevBearing)
-      if (diff > 180) diff = 360 - diff
-      
-      // Consider it a spike if the direction changes by more than 120°
-      return diff > 120
-    }
-
-    // Fast distance calculation between two points in meters
-    const calculateDistance = (lng1, lat1, lng2, lat2) => {
-      const R = 6371000 // Earth's radius in meters
-      const dLat = (lat2 - lat1) * Math.PI / 180
-      const dLng = (lng2 - lng1) * Math.PI / 180
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-      return R * c
-    }
-
-    // Generate optimized Strava-style organic loops
-    const generateOrganicLoop = async (targetDistance, seed = Math.random()) => {
-      console.log(`\n=== Generating organic loop (seed: ${seed.toFixed(3)}) ===`)
-      
+      const startTime = Date.now()
       let totalDistance = 0
       let allCoordinates = [[startLng, startLat]]
       let currentLng = startLng
       let currentLat = startLat
-      let visitedPoints = [] // Store [lng, lat] for distance-based collision detection
-      let lastBearing = seed * 360 // Track direction for natural turns
       
-      // Add starting point
-      visitedPoints.push([startLng, startLat])
+      // Calculate optimal segments for target distance
+      const explorationTarget = targetDistanceMeters * 0.7 // 70% exploration, 30% return
+      const numSegments = targetDistanceMeters > 5000 ? 3 : 2 // Keep it simple: 2-3 segments max
+      const segmentDistance = explorationTarget / numSegments
       
-      // Plan segments upfront for efficiency
-      const explorationTarget = targetDistance * 0.75
-      const numSegments = Math.min(4, Math.max(2, Math.floor(targetDistance / 2000))) // 2-4 segments based on distance
-      const avgSegmentDistance = explorationTarget / numSegments
+      console.log(`Planning ${numSegments} segments of ~${(segmentDistance/1000).toFixed(1)}km each`)
       
-      console.log(`Planning ${numSegments} segments, avg ${avgSegmentDistance.toFixed(0)}m each`)
-      
-      // Exploration phase with minimal API calls
-      for (let segment = 0; segment < numSegments; segment++) {
+      // Generate segments with smart bearing distribution
+      for (let i = 0; i < numSegments; i++) {
         const remainingDistance = explorationTarget - totalDistance
-        if (remainingDistance < 500) break // Stop if very close to target
+        if (remainingDistance < 800) break // Stop if close to target
         
-        const segmentTarget = Math.min(remainingDistance, avgSegmentDistance * (0.8 + seed * 0.4))
-        const segmentDistanceKm = segmentTarget / 1000
+        // Smart direction calculation: spread segments around 120-140° apart
+        const baseAngle = (i * 130 + Math.random() * 40) % 360
+        const segmentDistanceKm = Math.min(remainingDistance / 1000, segmentDistance / 1000)
         
-        let bestRoute = null
-        let bestDistance = 0
+        // Calculate waypoint directly
+        const waypoint = findPointInDirection(currentLng, currentLat, baseAngle, segmentDistanceKm)
         
-        // Try only 2-3 smart directions (massive reduction from 18 combinations)
-        const baseDirection = (lastBearing + 60 + seed * 120) % 360 // Turn 60-180° from last direction
-        const directions = [
-          baseDirection,
-          (baseDirection + 90) % 360,
-          (baseDirection - 90 + 360) % 360
-        ]
+        console.log(`Segment ${i + 1}: ${baseAngle.toFixed(0)}° for ${segmentDistanceKm.toFixed(1)}km`)
         
-        for (const direction of directions) {
-          const waypoint = findPointInDirection(currentLng, currentLat, direction, segmentDistanceKm)
-          
-          // Fast collision detection: check if waypoint is too close to any visited point
-          let tooClose = false
-          for (const [vLng, vLat] of visitedPoints) {
-            if (calculateDistance(waypoint.lng, waypoint.lat, vLng, vLat) < 200) { // 200m minimum separation
-              tooClose = true
-              break
-            }
-          }
-          
-          if (tooClose) continue
-          
-          const testRoute = await getWalkingRoute(currentLng, currentLat, waypoint.lng, waypoint.lat)
-          
-          if (testRoute && testRoute.distance > 300 && testRoute.distance > bestDistance) {
-            bestRoute = testRoute
-            bestDistance = testRoute.distance
-            console.log(`Segment ${segment + 1}: ${direction.toFixed(0)}° for ${testRoute.distance.toFixed(0)}m`)
-            break // Take first good route for speed
-          }
+        // Single API call per segment - no retries
+        const route = await getWalkingRoute(currentLng, currentLat, waypoint.lng, waypoint.lat)
+        
+        if (!route || route.distance < 300) {
+          console.log(`Segment ${i + 1} failed, skipping`)
+          continue
         }
         
-        if (!bestRoute) {
-          console.log(`No valid route for segment ${segment + 1}`)
-          break
-        }
-        
-        // Add route
-        totalDistance += bestRoute.distance
-        const coords = bestRoute.geometry.coordinates
+        // Add successful route
+        totalDistance += route.distance
+        const coords = route.geometry.coordinates
         allCoordinates.push(...coords.slice(1))
         
-        // Update position and visited points (sample every ~100m for efficiency)
-        const sampleRate = Math.max(1, Math.floor(coords.length / 10))
-        for (let i = 0; i < coords.length; i += sampleRate) {
-          visitedPoints.push([coords[i][0], coords[i][1]])
-        }
-        
+        // Update current position
         currentLng = coords[coords.length - 1][0]
         currentLat = coords[coords.length - 1][1]
-        lastBearing = calculateBearing(coords[coords.length - 2][0], coords[coords.length - 2][1], currentLng, currentLat)
         
-        console.log(`Progress: ${totalDistance.toFixed(0)}m / ${explorationTarget.toFixed(0)}m`)
+        console.log(`Segment ${i + 1} complete: ${route.distance.toFixed(0)}m (total: ${totalDistance.toFixed(0)}m)`)
         
-        // Update seed for natural variation
-        seed = (seed * 1.618034) % 1
+        // Timeout check (30 seconds max)
+        if (Date.now() - startTime > 30000) {
+          console.log('⚠️ Timeout reached, finishing with current segments')
+          break
+        }
       }
       
-      // Return phase: complete the loop
-      console.log(`\n--- Return phase ---`)
-      console.log(`Current: ${totalDistance.toFixed(0)}m, need ${(targetDistance - totalDistance).toFixed(0)}m more`)
-      
+      // Complete the loop with direct return
+      console.log(`\n--- Completing loop ---`)
       const returnRoute = await getWalkingRoute(currentLng, currentLat, startLng, startLat)
       
       if (!returnRoute) {
-        console.log('Failed to generate return route')
-        return null
+        throw new Error('Failed to complete route loop')
       }
       
       totalDistance += returnRoute.distance
       allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      console.log(`Final: ${totalDistance.toFixed(0)}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance).toFixed(0)}m)`)
+      const generationTime = (Date.now() - startTime) / 1000
+      const distanceDiff = Math.abs(totalDistance - targetDistanceMeters)
+      
+      console.log(`✅ Route complete in ${generationTime.toFixed(1)}s`)
+      console.log(`Final: ${totalDistance.toFixed(0)}m (diff: ${distanceDiff.toFixed(0)}m)`)
       
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: 0
+        duration: 0,
+        generationTime
       }
     }
 
-    // Generate route with early termination for speed
-    let bestRoute = null
-    let bestDistanceDiff = Infinity
-    const tolerance = 500 // Maximum 500m tolerance
+    // Generate single route with timeout protection
+    console.log(`Target: ${targetDistanceMeters}m`)
     
-    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Route generation timeout (30s)')), 30000)
+    })
     
-    // Reduced attempts for faster generation
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const seed = (Date.now() + attempt * 1337 + Math.random() * 1000) % 10000 / 10000
-        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
-        
-        const route = await generateOrganicLoop(targetDistanceMeters, seed)
-        
-        if (!route) {
-          console.log('No route generated')
-          continue
-        }
-        
-        const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
-        console.log(`Route: ${route.distance.toFixed(0)}m (diff: ${distanceDiff.toFixed(0)}m)`)
-        
-        // Early termination: use first route within tolerance
-        if (distanceDiff <= tolerance) {
-          console.log('✓ Within tolerance - using this route immediately')
-          bestRoute = route
-          bestDistanceDiff = distanceDiff
-          break
-        }
-        
-        // Otherwise keep the closest one
-        if (distanceDiff < bestDistanceDiff) {
-          bestRoute = route
-          bestDistanceDiff = distanceDiff
-          console.log('✓ New best route')
-        }
-        
-      } catch (error) {
-        console.log(`Attempt ${attempt + 1} failed: ${error.message}`)
+    try {
+      const route = await Promise.race([generateFastLoop(), timeoutPromise])
+      
+      if (!route) {
+        throw new Error('No route generated')
       }
-    }
-    
-    if (!bestRoute) {
-      throw new Error('Could not generate any valid route after 5 attempts')
-    }
-    
-    console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
-    
-    return new Response(
-      JSON.stringify({
-        success: true,
-        route: {
-          geometry: {
-            type: 'LineString',
-            coordinates: bestRoute.coordinates
-          },
-          distance: bestRoute.distance,
-          duration: bestRoute.duration,
-          waypoints: []
+      
+      console.log(`🎯 Route generated: ${route.distance}m in ${route.generationTime}s`)
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          route: {
+            geometry: {
+              type: 'LineString',
+              coordinates: route.coordinates
+            },
+            distance: route.distance,
+            duration: route.duration,
+            waypoints: []
+          }
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+      )
+      
+    } catch (error) {
+      console.error('Route generation failed:', error)
+      throw error
+    }
     
   } catch (error) {
     console.error('Error generating route:', error)
