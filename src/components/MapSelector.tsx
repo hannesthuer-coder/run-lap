@@ -16,13 +16,28 @@ const MapSelector = ({
   // Get Mapbox token from Supabase edge function
   const getMapboxToken = async () => {
     try {
+      console.log('Attempting to get Mapbox token...');
       const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      console.log('Supabase client imported successfully');
       
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      console.log('Edge function response:', { data, error });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+      
+      if (!data || !data.token) {
+        console.error('No token in response:', data);
+        throw new Error('No token received from edge function');
+      }
+      
+      console.log('Successfully received Mapbox token');
       return data.token;
     } catch (error) {
       console.error('Failed to get Mapbox token:', error);
+      toast.error(`Failed to load map: ${error.message}`);
       return null;
     }
   };
