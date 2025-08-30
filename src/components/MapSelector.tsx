@@ -77,12 +77,17 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   };
   
   useEffect(() => {
-    // Add a small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      initializeMap();
-    }, 100);
+    // Wait for the DOM element to be properly mounted with dimensions
+    const checkAndInitialize = () => {
+      if (mapContainer.current && mapContainer.current.offsetHeight > 0) {
+        initializeMap();
+      } else {
+        // Try again in 50ms if container doesn't have dimensions yet
+        setTimeout(checkAndInitialize, 50);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    checkAndInitialize();
   }, []);
   if (isLoading) {
     return (
