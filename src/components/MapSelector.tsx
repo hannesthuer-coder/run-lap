@@ -13,7 +13,11 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const initializeMap = async () => {
-    if (!mapContainer.current) return;
+    console.log('MapSelector initializeMap called');
+    if (!mapContainer.current) {
+      console.error('Map container not found');
+      return;
+    }
     
     try {
       // Get user's current location
