@@ -77,7 +77,12 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   };
   
   useEffect(() => {
-    initializeMap();
+    // Add a small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initializeMap();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
   if (isLoading) {
     return (
