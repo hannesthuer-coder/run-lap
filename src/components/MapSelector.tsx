@@ -1,7 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import 'mapbox-gl/dist/mapbox-gl.css';
 interface MapSelectorProps {
@@ -13,16 +10,40 @@ const MapSelector = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q"; // TODO: Move to environment variable
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get Mapbox token from Supabase edge function
+  const getMapboxToken = async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      
+      if (error) throw error;
+      return data.token;
+    } catch (error) {
+      console.error('Failed to get Mapbox token:', error);
+      return null;
+    }
+  };
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
+    
     try {
+      // Get the Mapbox token
+      const token = await getMapboxToken();
+      if (!token) {
+        throw new Error('Failed to get Mapbox token');
+      }
+      
+      setMapboxToken(token);
+      
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
 
       // Set access token
-      mapboxgl.default.accessToken = MAPBOX_TOKEN;
+      mapboxgl.default.accessToken = token;
 
       // Get user's current location first
       const getUserLocation = (): Promise<[number, number]> => {
@@ -75,23 +96,36 @@ const MapSelector = ({
         toast.success("Starting point selected!");
       });
       setMap(mapInstance);
+      setIsLoading(false);
       toast.success("Map loaded! Click anywhere to select your starting point.");
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error("Failed to load map. Please check your token and try again.");
+      setIsLoading(false);
+      toast.error("Failed to load map. Please try again.");
     }
   };
+  
   useEffect(() => {
     initializeMap();
   }, []);
-  return <div className="h-full w-full relative">
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full w-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
       
       {/* Very subtle overlay to match route page style */}
       <div className="absolute inset-0 bg-white/5 pointer-events-none" />
-      
-      {/* Instructions Overlay */}
-      
-    </div>;
+    </div>
+  );
 };
 export default MapSelector;
