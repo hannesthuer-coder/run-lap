@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -6,9 +7,9 @@ interface MapComponentProps {
   startLocation: string;
   distance: number;
   unit: string;
-  regenerateKey?: number; // Add regeneration trigger
-  onRouteGenerated?: () => void; // Callback when route is ready
-  onError?: () => void; // Callback when route generation fails
+  regenerateKey?: number;
+  onRouteGenerated?: () => void;
+  onError?: () => void;
 }
 
 const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError }: MapComponentProps) => {
@@ -16,7 +17,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [routeInsights, setRouteInsights] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Parse startLocation coordinates from string format "lat,lng"
@@ -54,12 +55,12 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     try {
       const [lng, lat] = parseLocation(startLocation);
       
-      // Generate real running route using Supabase edge function
-      const generateRealRoute = async (center: [number, number], distance: number) => {
+      // Generate AI-powered running route using Supabase edge function
+      const generateAIRoute = async (center: [number, number], distance: number) => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
           
-          const { data, error } = await supabase.functions.invoke('generate-route', {
+          const { data, error } = await supabase.functions.invoke('generate-ai-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
@@ -73,19 +74,20 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           }
           
           if (data.success) {
-            // Update actual distance from API response
+            // Update actual distance and AI insights
             setActualDistance(data.route.distance);
+            setRouteInsights(data.route.aiInsights);
             return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
         } catch (error) {
-          console.error('Failed to generate real route:', error);
-          throw new Error('Route generation failed. Please try again.');
+          console.error('Failed to generate AI route:', error);
+          throw new Error('AI route generation failed. Please try again.');
         }
       };
 
-      const routeCoords = await generateRealRoute([lng, lat], distance);
+      const routeCoords = await generateAIRoute([lng, lat], distance);
       
       // Remove existing route and marker
       if (map.getSource('route')) {
@@ -114,11 +116,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           'line-join': 'round',
           'line-cap': 'round'
         },
-          paint: {
-            'line-color': '#3B82F6', // Clear blue like Lovable publish button
-            'line-width': 4,
-            'line-opacity': 0.9
-          }
+        paint: {
+          'line-color': '#3B82F6',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
       });
 
       // Fit map to new route
@@ -128,15 +130,13 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         map.fitBounds(bounds, { padding: 50 });
       }
 
-      toast.success("New route generated!");
-      
-      // Call callback to notify parent that route is ready
+      toast.success("AI-generated route created!");
       onRouteGenerated?.();
 
     } catch (error) {
       console.error('Error generating new route:', error);
-      toast.error("Failed to generate new route. Please try again.");
-      onError?.(); // Notify parent of error
+      toast.error("Failed to generate AI route. Please try again.");
+      onError?.();
     }
   };
 
@@ -144,42 +144,35 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     if (!mapContainer.current) return;
 
     try {
-      // Get the Mapbox token
       const token = await getMapboxToken();
       if (!token) {
         throw new Error('Failed to get Mapbox token');
       }
       
-      setMapboxToken(token);
-      
-      // Parse the actual start location
       const [lng, lat] = parseLocation(startLocation);
       
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
       mapboxglRef.current = mapboxgl.default;
       
-      // Set access token
       mapboxgl.default.accessToken = token;
 
-      // Create map instance centered on actual location
       const mapInstance = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // Streets style with subtle colors
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [lng, lat],
         zoom: 12,
         attributionControl: false
       });
 
-      // Add navigation controls
       mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
 
-      // Generate real running route using Supabase edge function
-      const generateRealRoute = async (center: [number, number], distance: number) => {
+      // Generate initial AI route
+      const generateAIRoute = async (center: [number, number], distance: number) => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
           
-          const { data, error } = await supabase.functions.invoke('generate-route', {
+          const { data, error } = await supabase.functions.invoke('generate-ai-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
@@ -193,23 +186,22 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           }
           
           if (data.success) {
-            // Update actual distance from initial API response
             setActualDistance(data.route.distance);
+            setRouteInsights(data.route.aiInsights);
             return data.route.geometry.coordinates;
           } else {
             throw new Error(data.error);
           }
         } catch (error) {
-          console.error('Failed to generate real route:', error);
-          throw new Error('Route generation failed. Please try again.');
+          console.error('Failed to generate AI route:', error);
+          throw new Error('AI route generation failed. Please try again.');
         }
       };
 
       mapInstance.on('load', async () => {
         try {
-          const routeCoords = await generateRealRoute([lng, lat], distance);
+          const routeCoords = await generateAIRoute([lng, lat], distance);
           
-          // Add route source and layer
           mapInstance.addSource('route', {
             type: 'geojson',
             data: {
@@ -231,31 +223,28 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
               'line-cap': 'round'
             },
             paint: {
-              'line-color': '#3B82F6', // Clear blue like Lovable publish button  
+              'line-color': '#3B82F6',
               'line-width': 4,
               'line-opacity': 0.9
             }
           });
 
-          // Add start/end marker
           new mapboxgl.default.Marker({ 
-            color: '#3B82F6', // Clear blue to match route
+            color: '#3B82F6',
             scale: 1.2 
           })
             .setLngLat(routeCoords[0])
             .addTo(mapInstance);
 
-          // Fit map to route
           const bounds = new mapboxgl.default.LngLatBounds();
           routeCoords.forEach(coord => bounds.extend(coord));
           mapInstance.fitBounds(bounds, { padding: 50 });
 
-          // Call callback to notify parent that initial route is ready
           onRouteGenerated?.();
         } catch (error) {
           console.error('Error loading initial route:', error);
-          toast.error("Failed to load route. Please try again.");
-          onError?.(); // Notify parent of error
+          toast.error("Failed to load AI route. Please try again.");
+          onError?.();
         }
       });
 
@@ -267,7 +256,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       console.error('Error initializing map:', error);
       setIsLoading(false);
       toast.error("Failed to load map. Please try again.");
-      onError?.(); // Notify parent of error
+      onError?.();
     }
   };
 
@@ -275,7 +264,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     initializeMap();
   }, []);
 
-  // Regenerate route when regenerateKey changes
   useEffect(() => {
     if (regenerateKey && regenerateKey > 0) {
       generateNewRoute();
@@ -287,7 +275,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+          <p className="text-sm text-muted-foreground">Loading AI-powered map...</p>
         </div>
       </div>
     );
@@ -297,18 +285,23 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     <div className="h-full w-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
       
-      {/* Very subtle overlay to just slightly fade colors */}
       <div className="absolute inset-0 bg-white/5 pointer-events-none" />
       
-      {/* Route Info Overlay */}
+      {/* Enhanced Route Info Overlay with AI insights */}
       <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-medium border">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
             {actualDistance 
-              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} running loop`
-              : `${distance} ${unit} running loop (generating...)`
+              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} AI-generated route`
+              : `${distance} ${unit} AI route (generating...)`
             }
           </p>
+          {routeInsights && (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>Style: {routeInsights.routeStyle}</p>
+              <p>Terrain: {routeInsights.estimatedTerrain}</p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Starting from: {startLocation}
           </p>
