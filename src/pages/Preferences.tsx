@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
-import MapTest from "@/components/MapTest";
+
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -178,11 +178,6 @@ const Preferences = () => {
           </Button>
         </div>
 
-        {/* Map Test Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-center">Map Test</h3>
-          <MapTest />
-        </div>
         
       </div>
     </div>;
