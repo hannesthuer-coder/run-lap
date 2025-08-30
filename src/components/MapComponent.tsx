@@ -18,7 +18,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
   const [routeInsights, setRouteInsights] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
@@ -229,12 +228,10 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       });
 
       setMap(mapInstance);
-      setIsLoading(false);
       toast.success("Map loaded successfully!");
 
     } catch (error) {
       console.error('Error initializing map:', error);
-      setIsLoading(false);
       toast.error("Failed to load map. Please try again.");
       onError?.();
     }
@@ -249,17 +246,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       generateNewRoute();
     }
   }, [regenerateKey]);
-
-  if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Loading AI-powered map...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full w-full relative">
