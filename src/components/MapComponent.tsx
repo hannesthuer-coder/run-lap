@@ -23,15 +23,19 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string): [number, number] => {
     try {
+      console.log('Parsing location:', locationStr);
       const [lat, lng] = locationStr.split(',').map(coord => parseFloat(coord.trim()));
       if (isNaN(lat) || isNaN(lng)) {
         console.warn('Invalid coordinates, using default location');
-        return [-74.5, 40]; // Default to NYC
+        toast.error('Invalid coordinates provided, using default location');
+        return [-74.0060, 40.7128]; // Default to NYC (lng, lat)
       }
+      console.log('Parsed coordinates:', [lng, lat]);
       return [lng, lat]; // Return as [lng, lat] for Mapbox
     } catch (error) {
-      console.warn('Error parsing location, using default:', error);
-      return [-74.5, 40];
+      console.error('Error parsing location, using default:', error);
+      toast.error('Error parsing location, using default');
+      return [-74.0060, 40.7128];
     }
   };
 

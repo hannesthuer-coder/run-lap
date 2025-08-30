@@ -17,7 +17,7 @@ const Route = () => {
   const [showButtons, setShowButtons] = useState(false);
   const [dots, setDots] = useState('');
   
-  const routeData = location.state || { distance: 5, unit: "km", location: "Current Location" };
+  const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" }; // Default to NYC coordinates
 
   // Animate dots
   useEffect(() => {
