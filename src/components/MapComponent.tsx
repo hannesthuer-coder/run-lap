@@ -45,10 +45,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     try {
       const [lng, lat] = parseLocation(startLocation);
       
-      // Generate AI-powered running route using Supabase edge function
-      const generateAIRoute = async (center: [number, number], distance: number) => {
+      // Generate AI-powered running route with retry logic
+      const generateAIRoute = async (center: [number, number], distance: number, retryCount = 0): Promise<any> => {
+        const maxRetries = 2;
+        
         try {
           const { supabase } = await import('@/integrations/supabase/client');
+          
+          console.log(`Attempting route generation (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
           const { data, error } = await supabase.functions.invoke('generate-ai-route', {
             body: {
@@ -60,6 +64,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           });
           
           if (error) {
+            console.error('Supabase function error:', error);
             throw error;
           }
           
@@ -67,13 +72,52 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             // Update actual distance and AI insights
             setActualDistance(data.route.distance);
             setRouteInsights(data.route.aiInsights);
+            
+            // Show appropriate success message based on generation method
+            if (data.route.aiInsights?.generationMethod === 'fallback') {
+              toast.success("Route generated using geometric algorithm");
+            } else {
+              toast.success("AI-powered route created successfully!");
+            }
+            
             return data.route.geometry.coordinates;
           } else {
-            throw new Error(data.error);
+            const errorMessage = data.error || 'Unknown error occurred';
+            console.error('Route generation failed:', errorMessage);
+            
+            // Handle specific error types with appropriate user messages
+            if (data.errorType === 'API_RATE_LIMITED' && retryCount < maxRetries) {
+              console.log(`Rate limited, retrying in ${(retryCount + 1) * 2} seconds...`);
+              await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+              return generateAIRoute(center, distance, retryCount + 1);
+            } else if (data.errorType === 'API_QUOTA_EXCEEDED') {
+              toast.error("AI service quota exceeded. Route generation may use fallback method.");
+            } else if (data.errorType === 'MAPBOX_ERROR') {
+              toast.error("Location routing unavailable. Please try a different area.");
+            } else if (data.errorType === 'NETWORK_ERROR' && retryCount < maxRetries) {
+              console.log(`Network error, retrying in ${(retryCount + 1) * 3} seconds...`);
+              await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 3000));
+              return generateAIRoute(center, distance, retryCount + 1);
+            }
+            
+            throw new Error(errorMessage);
           }
         } catch (error) {
-          console.error('Failed to generate AI route:', error);
-          throw new Error('AI route generation failed. Please try again.');
+          console.error('Route generation attempt failed:', error);
+          
+          // Retry on network errors
+          if (retryCount < maxRetries && (
+            error.message?.includes('fetch') || 
+            error.message?.includes('network') ||
+            error.message?.includes('timeout')
+          )) {
+            console.log(`Network error, retrying in ${(retryCount + 1) * 2} seconds...`);
+            toast.info(`Connection issue, retrying... (${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+            return generateAIRoute(center, distance, retryCount + 1);
+          }
+          
+          throw error;
         }
       };
 
@@ -120,12 +164,24 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         map.fitBounds(bounds, { padding: 50 });
       }
 
-      toast.success("AI-generated route created!");
       onRouteGenerated?.();
 
     } catch (error) {
       console.error('Error generating new route:', error);
-      toast.error("Failed to generate AI route. Please try again.");
+      
+      // Provide specific error messages based on error content
+      if (error.message?.includes('quota')) {
+        toast.error("Service quota exceeded. Please try again later.");
+      } else if (error.message?.includes('rate limit')) {
+        toast.error("Service temporarily busy. Please wait a moment and try again.");
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.error("Connection issue. Please check your internet and try again.");
+      } else if (error.message?.includes('location')) {
+        toast.error("Unable to generate route for this location. Try a different area.");
+      } else {
+        toast.error("Failed to generate route. Please try again or refresh the page.");
+      }
+      
       onError?.();
     }
   };
@@ -146,10 +202,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       const mapboxgl = await initializeMapbox();
       mapboxglRef.current = mapboxgl;
 
-      // Generate initial AI route
-      const generateAIRoute = async (center: [number, number], distance: number) => {
+      // Generate initial AI route with enhanced error handling
+      const generateAIRoute = async (center: [number, number], distance: number, retryCount = 0): Promise<any> => {
+        const maxRetries = 1; // Fewer retries on initial load
+        
         try {
           const { supabase } = await import('@/integrations/supabase/client');
+          
+          console.log(`Loading initial route (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
           const { data, error } = await supabase.functions.invoke('generate-ai-route', {
             body: {
@@ -161,19 +221,50 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           });
           
           if (error) {
+            console.error('Supabase function error:', error);
             throw error;
           }
           
           if (data.success) {
             setActualDistance(data.route.distance);
             setRouteInsights(data.route.aiInsights);
+            
+            // Show success message with method used
+            if (data.route.aiInsights?.generationMethod === 'fallback') {
+              toast.success("Route loaded using geometric algorithm");
+            } else {
+              toast.success("AI-powered route loaded successfully!");
+            }
+            
             return data.route.geometry.coordinates;
           } else {
-            throw new Error(data.error);
+            const errorMessage = data.error || 'Unknown error occurred';
+            console.error('Initial route generation failed:', errorMessage);
+            
+            // Limited retry logic for initial load
+            if (data.errorType === 'NETWORK_ERROR' && retryCount < maxRetries) {
+              console.log('Network error on initial load, retrying once...');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              return generateAIRoute(center, distance, retryCount + 1);
+            }
+            
+            throw new Error(errorMessage);
           }
         } catch (error) {
-          console.error('Failed to generate AI route:', error);
-          throw new Error('AI route generation failed. Please try again.');
+          console.error('Initial route generation attempt failed:', error);
+          
+          // Retry network errors once on initial load
+          if (retryCount < maxRetries && (
+            error.message?.includes('fetch') || 
+            error.message?.includes('network') ||
+            error.message?.includes('timeout')
+          )) {
+            console.log('Network error on initial load, retrying...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            return generateAIRoute(center, distance, retryCount + 1);
+          }
+          
+          throw error;
         }
       };
 
@@ -222,7 +313,20 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           onRouteGenerated?.();
         } catch (error) {
           console.error('Error loading initial route:', error);
-          toast.error("Failed to load AI route. Please try again.");
+          
+          // Provide specific error messages for initial load
+          if (error.message?.includes('quota')) {
+            toast.error("Service quota exceeded. Route generation may be limited.");
+          } else if (error.message?.includes('rate limit')) {
+            toast.error("Service busy. Please wait a moment before generating a new route.");
+          } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+            toast.error("Connection issue. Please check your internet and refresh the page.");
+          } else if (error.message?.includes('location')) {
+            toast.error("Unable to generate route for this location. Try a different area.");
+          } else {
+            toast.error("Failed to load route. Please refresh the page or try again.");
+          }
+          
           onError?.();
         }
       });
