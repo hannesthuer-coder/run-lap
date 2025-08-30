@@ -1,115 +1,67 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { createMap, initializeMapbox } from '@/services/mapService';
+
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
 }
-const MapSelector = ({
-  onLocationSelect
-}: MapSelectorProps) => {
+
+const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markerRef = useRef<any>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-
-  // Get Mapbox token from Supabase edge function
-  const getMapboxToken = async () => {
-    try {
-      console.log('Attempting to get Mapbox token...');
-      const { supabase } = await import('@/integrations/supabase/client');
-      console.log('Supabase client imported successfully');
-      
-      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-      console.log('Edge function response:', { data, error });
-      
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
-      
-      if (!data || !data.token) {
-        console.error('No token in response:', data);
-        throw new Error('No token received from edge function');
-      }
-      
-      console.log('Successfully received Mapbox token');
-      return data.token;
-    } catch (error) {
-      console.error('Failed to get Mapbox token:', error);
-      toast.error(`Failed to load map: ${error.message}`);
-      return null;
-    }
-  };
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
     
     try {
-      // Get the Mapbox token
-      const token = await getMapboxToken();
-      if (!token) {
-        throw new Error('Failed to get Mapbox token');
-      }
-      
-      setMapboxToken(token);
-      
-      // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
-
-      // Set access token
-      mapboxgl.default.accessToken = token;
-
-      // Get user's current location first
+      // Get user's current location
       const getUserLocation = (): Promise<[number, number]> => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-              resolve([position.coords.longitude, position.coords.latitude]);
-            }, error => {
-              console.warn('Could not get user location:', error);
-              // Default to New York if location fails
-              resolve([-74.5, 40]);
-            });
+            navigator.geolocation.getCurrentPosition(
+              position => resolve([position.coords.longitude, position.coords.latitude]),
+              () => resolve([-74.5, 40]) // Default to NYC if location fails
+            );
           } else {
-            // Default to New York if geolocation not supported
             resolve([-74.5, 40]);
           }
         });
       };
+      
       const userLocation = await getUserLocation();
 
-      // Create map instance centered on user's location
-      const mapInstance = new mapboxgl.default.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // Same style as route page
+      // Create map using shared service
+      const mapInstance = await createMap(mapContainer.current, {
         center: userLocation,
-        zoom: 14,
-        attributionControl: false
+        zoom: 14
       });
 
-      // Add navigation controls
-      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
+      // Initialize Mapbox library for marker creation
+      const mapboxgl = await initializeMapbox();
 
       // Handle map clicks
-      mapInstance.on('click', e => {
+      mapInstance.on('click', (e: any) => {
         const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
 
-        // Always remove existing marker first
+        // Remove existing marker
         if (markerRef.current) {
           markerRef.current.remove();
           markerRef.current = null;
         }
 
-        // Add new marker (only one at a time)
-        const newMarker = new mapboxgl.default.Marker({
+        // Add new marker
+        const newMarker = new mapboxgl.Marker({
           color: '#ef4444',
           scale: 1.2
         }).setLngLat(coords).addTo(mapInstance);
+        
         markerRef.current = newMarker;
         onLocationSelect(coords);
         toast.success("Starting point selected!");
       });
+
       setMap(mapInstance);
       setIsLoading(false);
       toast.success("Map loaded! Click anywhere to select your starting point.");

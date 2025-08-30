@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { createMap, initializeMapbox } from '@/services/mapService';
 
 interface MapComponentProps {
   startLocation: string;
@@ -35,19 +35,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     }
   };
 
-  // Get Mapbox token from Supabase edge function
-  const getMapboxToken = async () => {
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-      
-      if (error) throw error;
-      return data.token;
-    } catch (error) {
-      console.error('Failed to get Mapbox token:', error);
-      return null;
-    }
-  };
 
   const generateNewRoute = async () => {
     if (!map) return;
@@ -144,28 +131,17 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     if (!mapContainer.current) return;
 
     try {
-      const token = await getMapboxToken();
-      if (!token) {
-        throw new Error('Failed to get Mapbox token');
-      }
-      
       const [lng, lat] = parseLocation(startLocation);
       
-      // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
-      mapboxglRef.current = mapboxgl.default;
-      
-      mapboxgl.default.accessToken = token;
-
-      const mapInstance = new mapboxgl.default.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+      // Create map using shared service
+      const mapInstance = await createMap(mapContainer.current, {
         center: [lng, lat],
-        zoom: 12,
-        attributionControl: false
+        zoom: 12
       });
 
-      mapInstance.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
+      // Initialize Mapbox library for markers
+      const mapboxgl = await initializeMapbox();
+      mapboxglRef.current = mapboxgl;
 
       // Generate initial AI route
       const generateAIRoute = async (center: [number, number], distance: number) => {
@@ -229,14 +205,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             }
           });
 
-          new mapboxgl.default.Marker({ 
+          new mapboxgl.Marker({ 
             color: '#3B82F6',
             scale: 1.2 
           })
             .setLngLat(routeCoords[0])
             .addTo(mapInstance);
 
-          const bounds = new mapboxgl.default.LngLatBounds();
+          const bounds = new mapboxgl.LngLatBounds();
           routeCoords.forEach(coord => bounds.extend(coord));
           mapInstance.fitBounds(bounds, { padding: 50 });
 
