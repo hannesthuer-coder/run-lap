@@ -65,21 +65,37 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `You are a running route planner. Create a practical running route that returns to the starting point.
+    const aiPrompt = `You are a running route planner. Create a precise running loop that hits the target distance.
 
 LOCATION: ${locationContext} (${startLat}, ${startLng})
-TARGET DISTANCE: ${distance} ${unit} (${targetDistanceMeters} meters)
+TARGET DISTANCE: ${targetDistanceMeters} meters EXACTLY
 
-CRITICAL REQUIREMENTS:
-• Start and end at the EXACT same coordinates: ${startLat}, ${startLng}
-• Generate 4-6 waypoints that form a logical route close to ${targetDistanceMeters}m
-• NEVER create detours: avoid routes that go off-track then u-turn back to the main path
-• Each waypoint must be the next logical step toward completing the route
-• Avoid backtracking, u-turns, or zigzag patterns
-• Focus on continuous forward progress around a logical perimeter
-• Use walkable/runnable streets, paths, and trails only
-• Avoid highways and busy roads
-• If the natural route is too short, expand the perimeter rather than adding side detours
+DISTANCE CALCULATION RULES:
+• Calculate approximate radius needed: radius ≈ ${Math.round(targetDistanceMeters / (2 * Math.PI))}m from start point
+• For ${targetDistanceMeters}m route, place waypoints roughly ${Math.round(targetDistanceMeters / (6 * 1000))}km apart from each other
+• Each segment should be approximately ${Math.round(targetDistanceMeters / 6)}m long
+
+WAYPOINT PLACEMENT ALGORITHM:
+1. Start at coordinates: ${startLat}, ${startLng}
+2. Place 4-6 waypoints in logical sequence around the starting point
+3. Each waypoint should be roughly equidistant from the center (${startLat}, ${startLng})
+4. Arrange waypoints to form a polygon/loop that totals close to ${targetDistanceMeters}m
+5. End back at starting coordinates: ${startLat}, ${startLng}
+
+STRICT PROHIBITIONS:
+• NO detours (never go off-path then return to main route)
+• NO u-turns or backtracking
+• NO zigzag patterns
+• NO unnecessary loops or extensions
+• Each waypoint MUST be the next logical step in completing the loop
+
+ROUTE REQUIREMENTS:
+• Use only walkable/runnable paths, sidewalks, and quiet streets
+• Avoid highways, busy roads, and obstacles
+• Create smooth, continuous progression from start → waypoints → start
+• Prioritize logical street/path connections that flow naturally
+
+VALIDATION: Before responding, verify your waypoints form a logical loop close to ${targetDistanceMeters}m total distance.
 
 Return ONLY this JSON structure:
 {
