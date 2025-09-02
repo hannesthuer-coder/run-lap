@@ -65,37 +65,46 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `You are a running route planner. Create a precise running loop that hits the target distance.
+    const aiPrompt = `You are a running route planner. Generate EXACTLY ${targetDistanceMeters} meters.
 
 LOCATION: ${locationContext} (${startLat}, ${startLng})
-TARGET DISTANCE: ${targetDistanceMeters} meters EXACTLY
+TARGET: EXACTLY ${targetDistanceMeters}m (${distance}${unit})
 
-DISTANCE CALCULATION RULES:
-• Calculate approximate radius needed: radius ≈ ${Math.round(targetDistanceMeters / (2 * Math.PI))}m from start point
-• For ${targetDistanceMeters}m route, place waypoints roughly ${Math.round(targetDistanceMeters / (6 * 1000))}km apart from each other
-• Each segment should be approximately ${Math.round(targetDistanceMeters / 6)}m long
+MATHEMATICAL CONSTRAINTS:
+• Required radius from center: ${Math.round(targetDistanceMeters / (2 * Math.PI))}m
+• Each waypoint must be roughly ${Math.round(targetDistanceMeters / (2 * Math.PI))}m from start coordinates
+• Place exactly 6 waypoints in perfect sequence around start point
+• Each segment should be ~${Math.round(targetDistanceMeters / 7)}m long
 
-WAYPOINT PLACEMENT ALGORITHM:
-1. Start at coordinates: ${startLat}, ${startLng}
-2. Place 4-6 waypoints in logical sequence around the starting point
-3. Each waypoint should be roughly equidistant from the center (${startLat}, ${startLng})
-4. Arrange waypoints to form a polygon/loop that totals close to ${targetDistanceMeters}m
-5. End back at starting coordinates: ${startLat}, ${startLng}
+STRICT WAYPOINT RULES:
+1. Start: ${startLat}, ${startLng}
+2. Waypoint 1: Go North from start (~${Math.round(targetDistanceMeters / (2 * Math.PI))}m radius)
+3. Waypoint 2: Go Northeast from start
+4. Waypoint 3: Go East from start  
+5. Waypoint 4: Go Southeast from start
+6. Waypoint 5: Go South from start
+7. Waypoint 6: Go Southwest from start
+8. End: Return to exact start ${startLat}, ${startLng}
 
-STRICT PROHIBITIONS:
-• NO detours (never go off-path then return to main route)
-• NO u-turns or backtracking
-• NO zigzag patterns
-• NO unnecessary loops or extensions
-• Each waypoint MUST be the next logical step in completing the loop
+ABSOLUTE PROHIBITIONS:
+• NO backtracking (never return to previous waypoint)
+• NO zigzag patterns (never go back and forth)
+• NO detours (never deviate from the main perimeter)
+• NO u-turns within the route
+• Each waypoint MUST be the next logical step in completing the circle
 
-ROUTE REQUIREMENTS:
-• Use only walkable/runnable paths, sidewalks, and quiet streets
-• Avoid highways, busy roads, and obstacles
-• Create smooth, continuous progression from start → waypoints → start
-• Prioritize logical street/path connections that flow naturally
+DISTANCE ACCURACY:
+• Route MUST total between ${targetDistanceMeters - 200}m and ${targetDistanceMeters + 200}m
+• If too short, increase radius from center
+• If too long, decrease radius from center
+• Focus on creating perfect circular perimeter
 
-VALIDATION: Before responding, verify your waypoints form a logical loop close to ${targetDistanceMeters}m total distance.
+VALIDATION CHECKLIST:
+✓ Starts and ends at exact same coordinates
+✓ 6 waypoints in clockwise/counterclockwise order
+✓ No backtracking or zigzag patterns
+✓ Total distance within ±200m of target
+✓ Uses only walkable streets/paths
 
 Return ONLY this JSON structure:
 {
