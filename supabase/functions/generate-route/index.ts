@@ -60,9 +60,9 @@ serve(async (req) => {
       }
     }
 
-    // Create a natural loop route with configurable parameters for better distance control
-    const createNaturalLoopWithParams = async (targetDistance, seed, segments, variationFactor) => {
-      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}, ${segments} segments, ${(variationFactor * 100).toFixed(0)}% variation) ===`)
+    // Create a natural loop route with gradual turns to avoid U-turns
+    const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
+      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
       
       // Choose initial direction
       const baseDirection = 45 + (seed * 270) // 45-315 degrees
@@ -74,15 +74,16 @@ serve(async (req) => {
       let currentLat = startLat
       let currentBearing = baseDirection
       
-      // Create a polygon path with configurable segments for better distance matching
+      // Create a pentagon-like path (5 segments) to ensure smooth, no-backtrack loops
+      const segments = 5
       const segmentDistance = targetDistance / segments
-      const turnAngle = 360 / segments
+      const turnAngle = 360 / segments // 72 degrees per turn for pentagon
       
       console.log(`Creating ${segments} segments of ~${segmentDistance}m each with ${turnAngle}° turns`)
       
       for (let i = 0; i < segments; i++) {
-        // Apply configurable variation to segment distances
-        const variation = (seed - 0.5) * variationFactor
+        // Add some variation to segment distances to make it more natural
+        const variation = (seed - 0.5) * 0.3 // ±15% variation
         const thisSegmentDistance = segmentDistance * (1 + variation)
         const thisSegmentDistanceKm = thisSegmentDistance / 1000
         
@@ -110,10 +111,9 @@ serve(async (req) => {
         
         console.log(`After segment ${i + 1}: ${totalDistance.toFixed(0)}m covered, at [${currentLng.toFixed(6)}, ${currentLat.toFixed(6)}]`)
         
-        // Turn for the next segment with configurable variation
+        // Turn for the next segment (except on the last segment)
         if (i < segments - 1) {
-          const turnVariation = (seed - 0.5) * 30 * variationFactor // Scale turn variation
-          currentBearing = (currentBearing + turnAngle + turnVariation) % 360
+          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * 20) % 360 // Add some turn variation
         }
       }
       
@@ -139,34 +139,19 @@ serve(async (req) => {
       }
     }
 
-    // Try multiple variations with strict tolerance enforcement
+    // Try multiple variations to find the best route
+    let bestRoute = null
+    let bestDistanceDiff = Infinity
     const tolerance = 500 // Strict ±500m tolerance as requested
-    const maxAttempts = 15 // More attempts for better success rate
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        // Use different strategies for different attempt ranges
         const seed = (Date.now() + attempt * 1000) % 10000 / 10000
-        let segments = 5 // Default pentagon
-        let variationFactor = 0.3 // Default variation
+        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
         
-        if (attempt >= 5) {
-          // Try different polygon shapes after 5 attempts
-          segments = 4 + (attempt % 4) // 4-7 segments (square to heptagon)
-          variationFactor = 0.1 + (attempt * 0.05) // Increase variation
-        }
-        
-        if (attempt >= 10) {
-          // More aggressive variations for later attempts
-          segments = 3 + (attempt % 6) // 3-8 segments 
-          variationFactor = 0.5 // Higher variation
-        }
-        
-        console.log(`\n--- Attempt ${attempt + 1}/${maxAttempts} (${segments} segments, ${(variationFactor * 100).toFixed(0)}% variation) ---`)
-        
-        const route = await createNaturalLoopWithParams(targetDistanceMeters, seed, segments, variationFactor)
+        const route = await createNaturalLoop(targetDistanceMeters, seed)
         
         if (!route) {
           console.log('No route generated')
@@ -176,28 +161,15 @@ serve(async (req) => {
         const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
         console.log(`Route: ${route.distance}m (diff: ${distanceDiff}m)`)
         
-        // STRICT TOLERANCE: Only accept routes within ±500m
+        if (distanceDiff < bestDistanceDiff) {
+          bestRoute = route
+          bestDistanceDiff = distanceDiff
+          console.log('✓ New best route')
+        }
+        
         if (distanceDiff <= tolerance) {
-          console.log('✓ Within tolerance - accepting route')
-          return new Response(
-            JSON.stringify({
-              success: true,
-              route: {
-                geometry: {
-                  type: 'LineString',
-                  coordinates: route.coordinates
-                },
-                distance: route.distance,
-                duration: route.duration,
-                waypoints: []
-              }
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
-        } else {
-          console.log(`❌ Outside tolerance (${distanceDiff}m > ${tolerance}m) - rejecting`)
+          console.log('✓ Within tolerance - using this route')
+          break
         }
         
       } catch (error) {
@@ -205,8 +177,29 @@ serve(async (req) => {
       }
     }
     
-    // If we get here, no route met the strict tolerance
-    throw new Error(`Could not generate a route within ±${tolerance}m tolerance after ${maxAttempts} attempts. Please try a different location or distance.`)
+    if (!bestRoute) {
+      throw new Error('Could not generate any valid route after 5 attempts')
+    }
+    
+    console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        route: {
+          geometry: {
+            type: 'LineString',
+            coordinates: bestRoute.coordinates
+          },
+          distance: bestRoute.distance,
+          duration: bestRoute.duration,
+          waypoints: []
+        }
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
     
   } catch (error) {
     console.error('Error generating route:', error)
