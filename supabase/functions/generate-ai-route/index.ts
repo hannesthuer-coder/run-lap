@@ -70,9 +70,11 @@ serve(async (req) => {
 Target: ${targetDistanceMeters}m route starting at ${startLat}, ${startLng}
 Location: ${locationContext}
 
-Requirements:
+STRICT Requirements:
 - Create a loop that returns to start
-- Distance within ${targetDistanceMeters - 500}m to ${targetDistanceMeters + 500}m (±500m tolerance)
+- Distance MUST be between ${targetDistanceMeters - 500}m and ${targetDistanceMeters + 500}m 
+- NO LONGER than ${targetDistanceMeters + 500}m
+- NO SHORTER than ${targetDistanceMeters - 500}m
 - Use 4-6 waypoints in sequence (no backtracking)
 - Only walkable streets/paths
 
