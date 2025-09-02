@@ -104,12 +104,12 @@ Return ONLY this JSON structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07', // Use latest GPT-5 for better instruction following
+        model: 'gpt-4o-mini', // Use GPT-4o-mini - proven to work for route generation
         messages: [{ 
           role: 'user', 
           content: aiPrompt 
         }],
-        max_completion_tokens: 800 // Use max_completion_tokens for GPT-5
+        max_tokens: 800 // Use max_tokens for GPT-4o models
       }),
       signal: controller.signal
     })
@@ -206,7 +206,7 @@ Return ONLY this JSON structure:
             description: aiRouteData.aiInsights || `AI-generated route (${route.distance}m)`,
             generationMethod: 'ai',
             processingTimeMs: processingTime,
-            model: 'gpt-5-2025-08-07'
+            model: 'gpt-4o-mini'
           }
         }
       }),
