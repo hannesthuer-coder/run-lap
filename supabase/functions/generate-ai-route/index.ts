@@ -48,11 +48,11 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const requestStart = Date.now()
   let errorType = ErrorType.GENERAL_ERROR
   let errorDetails = ''
 
   try {
-    const requestStart = Date.now()
     const { startLng, startLat, distance, unit } = await req.json()
     
     console.log(`🚀 AI Route Generation Request - Start: [${startLat}, ${startLng}], Distance: ${distance}${unit}`)
@@ -64,7 +64,12 @@ serve(async (req) => {
     }
     
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
-    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN') || 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q'
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    
+    if (!MAPBOX_TOKEN) {
+      errorType = ErrorType.MAPBOX_ERROR
+      throw new Error('MAPBOX_ACCESS_TOKEN environment variable not configured')
+    }
     
     // Convert distance to meters for consistency
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
