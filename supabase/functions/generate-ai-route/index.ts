@@ -77,14 +77,20 @@ LOOP CREATION RULES:
 • End back at the exact starting coordinates ${startLat}, ${startLng}
 • The shape should enclose an area and form a continuous loop
 
-DISTANCE TARGET (CRITICAL - MUST BE PRECISE):
-• Route MUST total between ${targetDistanceMeters - 100}m and ${targetDistanceMeters + 100}m
-• Target: EXACTLY ${targetDistanceMeters}m (±100m maximum deviation)
-• Each side of your shape should be approximately ${Math.round(targetDistanceMeters / 6)}m long
-• For ${targetDistanceMeters}m total: create a shape with perimeter ~${targetDistanceMeters}m
-• CALCULATE: Estimate each segment distance before placing waypoints
-• If estimate is too short: place waypoints further apart
-• If estimate is too long: place waypoints closer together
+DISTANCE TARGET (CRITICAL - STRICT TOLERANCE):
+• Route MUST total between ${targetDistanceMeters - 250}m and ${targetDistanceMeters + 250}m
+• MAXIMUM allowed difference: 250m from target ${targetDistanceMeters}m
+• Each segment should be approximately ${Math.round(targetDistanceMeters / 6)}m long
+• For a 6-sided loop: each side = ${Math.round(targetDistanceMeters / 6)}m
+• BEFORE creating waypoints: Calculate estimated total distance
+• VALIDATION: Sum all segments must equal ${targetDistanceMeters}m (±250m)
+
+MATHEMATICAL PRECISION:
+• Distance between consecutive waypoints should be ~${Math.round(targetDistanceMeters / 6)}m
+• If creating 4 waypoints: each segment = ${Math.round(targetDistanceMeters / 5)}m
+• If creating 5 waypoints: each segment = ${Math.round(targetDistanceMeters / 6)}m  
+• If creating 6 waypoints: each segment = ${Math.round(targetDistanceMeters / 7)}m
+• Choose waypoint count that allows hitting target distance most accurately
 
 WAYPOINT SEQUENCING (CRITICAL):
 • Each waypoint should be the NEXT corner/point of your shape
