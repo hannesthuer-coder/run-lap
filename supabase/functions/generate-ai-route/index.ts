@@ -65,18 +65,21 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `You are a running route planner. Create a practical circular running route.
+    const aiPrompt = `You are a running route planner. Create a practical running route that returns to the starting point.
 
 LOCATION: ${locationContext} (${startLat}, ${startLng})
 TARGET DISTANCE: ${distance} ${unit} (${targetDistanceMeters} meters)
 
-REQUIREMENTS:
-• Create a circular loop that starts and ends at the exact same coordinates
-• Generate 4-6 waypoints that create an efficient route close to ${targetDistanceMeters}m
+CRITICAL REQUIREMENTS:
+• Start and end at the EXACT same coordinates: ${startLat}, ${startLng}
+• Generate 4-6 waypoints that form a logical route close to ${targetDistanceMeters}m
+• NEVER create detours: avoid routes that go off-track then u-turn back to the main path
+• Each waypoint must be the next logical step toward completing the route
+• Avoid backtracking, u-turns, or zigzag patterns
+• Focus on continuous forward progress around a logical perimeter
 • Use walkable/runnable streets, paths, and trails only
 • Avoid highways and busy roads
-• Minimize detours from the main route path
-• Create a flowing, logical path for runners
+• If the natural route is too short, expand the perimeter rather than adding side detours
 
 Return ONLY this JSON structure:
 {
