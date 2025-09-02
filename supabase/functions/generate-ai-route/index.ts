@@ -77,11 +77,14 @@ LOOP CREATION RULES:
 • End back at the exact starting coordinates ${startLat}, ${startLng}
 • The shape should enclose an area and form a continuous loop
 
-DISTANCE TARGET:
-• Route must total between ${targetDistanceMeters - 300}m and ${targetDistanceMeters + 300}m
-• If your shape is too small, make it bigger
-• If your shape is too large, make it smaller
-• Adjust the size of your loop to hit the target distance
+DISTANCE TARGET (CRITICAL - MUST BE PRECISE):
+• Route MUST total between ${targetDistanceMeters - 100}m and ${targetDistanceMeters + 100}m
+• Target: EXACTLY ${targetDistanceMeters}m (±100m maximum deviation)
+• Each side of your shape should be approximately ${Math.round(targetDistanceMeters / 6)}m long
+• For ${targetDistanceMeters}m total: create a shape with perimeter ~${targetDistanceMeters}m
+• CALCULATE: Estimate each segment distance before placing waypoints
+• If estimate is too short: place waypoints further apart
+• If estimate is too long: place waypoints closer together
 
 WAYPOINT SEQUENCING (CRITICAL):
 • Each waypoint should be the NEXT corner/point of your shape
