@@ -65,34 +65,30 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `Create a running loop that starts and ends at the same point with precise distance.
+    const aiPrompt = `Generate a running route as valid JSON only.
 
-TASK: Generate a ${targetDistanceMeters}m running route that forms a loop
-START/END: ${startLat}, ${startLng} (${locationContext})
+Target: ${targetDistanceMeters}m route starting at ${startLat}, ${startLng}
+Location: ${locationContext}
 
-CRITICAL REQUIREMENTS:
-1. DISTANCE: Route must be ${targetDistanceMeters - 250}m to ${targetDistanceMeters + 250}m (±250m max)
-2. LOOP: Must return to exact starting coordinates ${startLat}, ${startLng}
-3. SHAPE: Create 4-6 waypoints that form a geometric shape (square, rectangle, oval, etc.)
-4. NO BACKTRACKING: Never go backward to previous waypoints
-5. NO DETOURS: Each waypoint is next logical step in completing the loop
+Requirements:
+- Create a loop that returns to start
+- Distance within ${targetDistanceMeters - 250}m to ${targetDistanceMeters + 250}m  
+- Use 4-6 waypoints in sequence (no backtracking)
+- Only walkable streets/paths
 
-SIMPLE APPROACH:
-- Place waypoints in clockwise or counterclockwise order around starting point
-- Each segment should be ~${Math.round(targetDistanceMeters / 6)}m long
-- Use walkable streets and paths only
-- Form a closed shape that totals close to ${targetDistanceMeters}m
-
-EXAMPLE: For 5km loop, create waypoints North→East→South→West→Start (like corners of a square)
-
-Return ONLY this JSON structure:
+Respond with ONLY this exact JSON format:
 {
   "waypoints": [
-    {"lat": precise_number, "lng": precise_number, "description": "waypoint location"},
-    ...
+    {"lat": ${startLat}, "lng": ${startLng}, "description": "Start point"},
+    {"lat": 59.271, "lng": 18.087, "description": "North waypoint"},
+    {"lat": 59.272, "lng": 18.089, "description": "East waypoint"},
+    {"lat": 59.269, "lng": 18.088, "description": "South waypoint"},
+    {"lat": 59.268, "lng": 18.085, "description": "West waypoint"}
   ],
-  "aiInsights": "brief route description"
-}`
+  "aiInsights": "Brief description of the route"
+}
+
+Important: Return ONLY valid JSON, no other text.`
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
@@ -157,18 +153,23 @@ Return ONLY this JSON structure:
     
     let aiRouteData
     try {
-      aiRouteData = JSON.parse(aiData.choices[0].message.content)
+      const aiContent = aiData.choices[0].message.content
+      console.log('🔍 Raw AI response content:', aiContent.substring(0, 500) + (aiContent.length > 500 ? '...' : ''))
+      
+      aiRouteData = JSON.parse(aiContent)
       console.log('✅ Parsed AI route data:', aiRouteData)
       
       // Validate AI response structure
       if (!aiRouteData.waypoints || !Array.isArray(aiRouteData.waypoints) || aiRouteData.waypoints.length < 2) {
+        console.error('❌ Invalid waypoints structure:', aiRouteData.waypoints)
         throw new Error('AI response missing valid waypoints array')
       }
       
     } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', aiData.choices[0].message.content)
+      console.error('❌ JSON Parse Error:', parseError.message)
+      console.error('❌ Raw response causing error:', aiData.choices[0].message.content)
       errorType = ErrorType.AI_PARSING_ERROR
-      throw new Error('AI returned invalid JSON format - please try again')
+      throw new Error(`AI returned invalid JSON: ${parseError.message}`)
     }
     
     // Build the route using Mapbox Directions API with waypoints
