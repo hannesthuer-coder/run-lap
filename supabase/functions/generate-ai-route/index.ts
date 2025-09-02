@@ -65,51 +65,25 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `Create a running LOOP that forms a closed shape returning to the starting point.
+    const aiPrompt = `Create a running loop that starts and ends at the same point with precise distance.
 
-LOCATION: Start/End at ${startLat}, ${startLng} in ${locationContext}
-TARGET: Generate a route totaling ${targetDistanceMeters}m (${distance}${unit})
+TASK: Generate a ${targetDistanceMeters}m running route that forms a loop
+START/END: ${startLat}, ${startLng} (${locationContext})
 
-LOOP CREATION RULES:
-• Create a closed geometric shape (square, rectangle, oval, polygon - NOT a circle necessarily)
-• Start at coordinates ${startLat}, ${startLng}
-• Place 4-6 waypoints that form the perimeter of your chosen shape
-• End back at the exact starting coordinates ${startLat}, ${startLng}
-• The shape should enclose an area and form a continuous loop
+CRITICAL REQUIREMENTS:
+1. DISTANCE: Route must be ${targetDistanceMeters - 250}m to ${targetDistanceMeters + 250}m (±250m max)
+2. LOOP: Must return to exact starting coordinates ${startLat}, ${startLng}
+3. SHAPE: Create 4-6 waypoints that form a geometric shape (square, rectangle, oval, etc.)
+4. NO BACKTRACKING: Never go backward to previous waypoints
+5. NO DETOURS: Each waypoint is next logical step in completing the loop
 
-DISTANCE TARGET (CRITICAL - STRICT TOLERANCE):
-• Route MUST total between ${targetDistanceMeters - 250}m and ${targetDistanceMeters + 250}m
-• MAXIMUM allowed difference: 250m from target ${targetDistanceMeters}m
-• Each segment should be approximately ${Math.round(targetDistanceMeters / 6)}m long
-• For a 6-sided loop: each side = ${Math.round(targetDistanceMeters / 6)}m
-• BEFORE creating waypoints: Calculate estimated total distance
-• VALIDATION: Sum all segments must equal ${targetDistanceMeters}m (±250m)
+SIMPLE APPROACH:
+- Place waypoints in clockwise or counterclockwise order around starting point
+- Each segment should be ~${Math.round(targetDistanceMeters / 6)}m long
+- Use walkable streets and paths only
+- Form a closed shape that totals close to ${targetDistanceMeters}m
 
-MATHEMATICAL PRECISION:
-• Distance between consecutive waypoints should be ~${Math.round(targetDistanceMeters / 6)}m
-• If creating 4 waypoints: each segment = ${Math.round(targetDistanceMeters / 5)}m
-• If creating 5 waypoints: each segment = ${Math.round(targetDistanceMeters / 6)}m  
-• If creating 6 waypoints: each segment = ${Math.round(targetDistanceMeters / 7)}m
-• Choose waypoint count that allows hitting target distance most accurately
-
-WAYPOINT SEQUENCING (CRITICAL):
-• Each waypoint should be the NEXT corner/point of your shape
-• Move around the shape in ONE direction only (clockwise or counterclockwise)
-• NEVER go backwards to a previous waypoint
-• NEVER create detours that break the shape's perimeter
-• Each waypoint should form a logical corner or curve of your loop
-
-EXAMPLE GOOD LOOP:
-Start → North corner → East corner → South corner → West corner → Back to Start
-(This creates a roughly square loop)
-
-EXAMPLE BAD PATTERNS TO AVOID:
-• Start → North → South → North → East (zigzag - BAD)
-• Start → East → West → East → South (backtracking - BAD)
-• Start → North → detour South → back North → East (detour - BAD)
-
-VALIDATION:
-Before responding, ensure your waypoints form a continuous shape that loops back to start without any backtracking or detours.
+EXAMPLE: For 5km loop, create waypoints North→East→South→West→Start (like corners of a square)
 
 Return ONLY this JSON structure:
 {
@@ -130,12 +104,12 @@ Return ONLY this JSON structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Use GPT-4 for reliable JSON responses
+        model: 'gpt-5-2025-08-07', // Use latest GPT-5 for better instruction following
         messages: [{ 
           role: 'user', 
           content: aiPrompt 
         }],
-        max_tokens: 800 // Increased for detailed descriptions
+        max_completion_tokens: 800 // Use max_completion_tokens for GPT-5
       }),
       signal: controller.signal
     })
@@ -232,7 +206,7 @@ Return ONLY this JSON structure:
             description: aiRouteData.aiInsights || `AI-generated route (${route.distance}m)`,
             generationMethod: 'ai',
             processingTimeMs: processingTime,
-            model: 'gpt-4o-mini'
+            model: 'gpt-5-2025-08-07'
           }
         }
       }),
