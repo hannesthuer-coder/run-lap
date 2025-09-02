@@ -72,7 +72,7 @@ Location: ${locationContext}
 
 Requirements:
 - Create a loop that returns to start
-- Distance within ${targetDistanceMeters - 250}m to ${targetDistanceMeters + 250}m  
+- Distance within ${targetDistanceMeters - 500}m to ${targetDistanceMeters + 500}m (±500m tolerance)
 - Use 4-6 waypoints in sequence (no backtracking)
 - Only walkable streets/paths
 
