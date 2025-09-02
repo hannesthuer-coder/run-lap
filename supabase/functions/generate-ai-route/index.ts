@@ -65,46 +65,42 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `You are a running route planner. Generate EXACTLY ${targetDistanceMeters} meters.
+    const aiPrompt = `Create a running LOOP that forms a closed shape returning to the starting point.
 
-LOCATION: ${locationContext} (${startLat}, ${startLng})
-TARGET: EXACTLY ${targetDistanceMeters}m (${distance}${unit})
+LOCATION: Start/End at ${startLat}, ${startLng} in ${locationContext}
+TARGET: Generate a route totaling ${targetDistanceMeters}m (${distance}${unit})
 
-MATHEMATICAL CONSTRAINTS:
-• Required radius from center: ${Math.round(targetDistanceMeters / (2 * Math.PI))}m
-• Each waypoint must be roughly ${Math.round(targetDistanceMeters / (2 * Math.PI))}m from start coordinates
-• Place exactly 6 waypoints in perfect sequence around start point
-• Each segment should be ~${Math.round(targetDistanceMeters / 7)}m long
+LOOP CREATION RULES:
+• Create a closed geometric shape (square, rectangle, oval, polygon - NOT a circle necessarily)
+• Start at coordinates ${startLat}, ${startLng}
+• Place 4-6 waypoints that form the perimeter of your chosen shape
+• End back at the exact starting coordinates ${startLat}, ${startLng}
+• The shape should enclose an area and form a continuous loop
 
-STRICT WAYPOINT RULES:
-1. Start: ${startLat}, ${startLng}
-2. Waypoint 1: Go North from start (~${Math.round(targetDistanceMeters / (2 * Math.PI))}m radius)
-3. Waypoint 2: Go Northeast from start
-4. Waypoint 3: Go East from start  
-5. Waypoint 4: Go Southeast from start
-6. Waypoint 5: Go South from start
-7. Waypoint 6: Go Southwest from start
-8. End: Return to exact start ${startLat}, ${startLng}
+DISTANCE TARGET:
+• Route must total between ${targetDistanceMeters - 300}m and ${targetDistanceMeters + 300}m
+• If your shape is too small, make it bigger
+• If your shape is too large, make it smaller
+• Adjust the size of your loop to hit the target distance
 
-ABSOLUTE PROHIBITIONS:
-• NO backtracking (never return to previous waypoint)
-• NO zigzag patterns (never go back and forth)
-• NO detours (never deviate from the main perimeter)
-• NO u-turns within the route
-• Each waypoint MUST be the next logical step in completing the circle
+WAYPOINT SEQUENCING (CRITICAL):
+• Each waypoint should be the NEXT corner/point of your shape
+• Move around the shape in ONE direction only (clockwise or counterclockwise)
+• NEVER go backwards to a previous waypoint
+• NEVER create detours that break the shape's perimeter
+• Each waypoint should form a logical corner or curve of your loop
 
-DISTANCE ACCURACY:
-• Route MUST total between ${targetDistanceMeters - 200}m and ${targetDistanceMeters + 200}m
-• If too short, increase radius from center
-• If too long, decrease radius from center
-• Focus on creating perfect circular perimeter
+EXAMPLE GOOD LOOP:
+Start → North corner → East corner → South corner → West corner → Back to Start
+(This creates a roughly square loop)
 
-VALIDATION CHECKLIST:
-✓ Starts and ends at exact same coordinates
-✓ 6 waypoints in clockwise/counterclockwise order
-✓ No backtracking or zigzag patterns
-✓ Total distance within ±200m of target
-✓ Uses only walkable streets/paths
+EXAMPLE BAD PATTERNS TO AVOID:
+• Start → North → South → North → East (zigzag - BAD)
+• Start → East → West → East → South (backtracking - BAD)
+• Start → North → detour South → back North → East (detour - BAD)
+
+VALIDATION:
+Before responding, ensure your waypoints form a continuous shape that loops back to start without any backtracking or detours.
 
 Return ONLY this JSON structure:
 {
