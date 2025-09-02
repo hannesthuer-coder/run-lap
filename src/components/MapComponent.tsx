@@ -54,7 +54,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           
           console.log(`Attempting route generation (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
-          const { data, error } = await supabase.functions.invoke('generate-ai-route', {
+          const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
@@ -69,16 +69,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           }
           
           if (data.success) {
-            // Update actual distance and AI insights
+            // Update actual distance 
             setActualDistance(data.route.distance);
-            setRouteInsights(data.route.aiInsights);
+            setRouteInsights(null); // No AI insights for geometric routes
             
-            // Show appropriate success message based on generation method
-            if (data.route.aiInsights?.generationMethod === 'fallback') {
-              toast.success("Route generated using geometric algorithm");
-            } else {
-              toast.success("AI-powered route created successfully!");
-            }
+            toast.success("Geometric route generated successfully!");
             
             return data.route.geometry.coordinates;
           } else {
@@ -211,7 +206,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           
           console.log(`Loading initial route (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
-          const { data, error } = await supabase.functions.invoke('generate-ai-route', {
+          const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
@@ -227,14 +222,9 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           
           if (data.success) {
             setActualDistance(data.route.distance);
-            setRouteInsights(data.route.aiInsights);
+            setRouteInsights(null); // No AI insights for geometric routes
             
-            // Show success message with method used
-            if (data.route.aiInsights?.generationMethod === 'fallback') {
-              toast.success("Route loaded using geometric algorithm");
-            } else {
-              toast.success("AI-powered route loaded successfully!");
-            }
+            toast.success("Geometric route loaded successfully!");
             
             return data.route.geometry.coordinates;
           } else {
@@ -362,16 +352,10 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
             {actualDistance 
-              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} AI-generated route`
-              : `${distance} ${unit} AI route (generating...)`
+              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} geometric route`
+              : `${distance} ${unit} route (generating...)`
             }
           </p>
-          {routeInsights && (
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>Style: {routeInsights.routeStyle}</p>
-              <p>Terrain: {routeInsights.estimatedTerrain}</p>
-            </div>
-          )}
           <p className="text-xs text-muted-foreground">
             Starting from: {startLocation}
           </p>

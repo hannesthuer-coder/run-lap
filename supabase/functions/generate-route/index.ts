@@ -142,7 +142,7 @@ serve(async (req) => {
     // Try multiple variations to find the best route
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = Math.max(800, targetDistanceMeters * 0.2) // 20% tolerance
+    const tolerance = 500 // Strict ±500m tolerance as requested
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
     
