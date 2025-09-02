@@ -95,7 +95,13 @@ Return ONLY this JSON structure:
 }`
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 second timeout for enhanced processing
+    const timeoutId = setTimeout(() => {
+      console.error('❌ Request timeout after 60 seconds')
+      controller.abort()
+    }, 60000) // Increased to 60 seconds for more reliability
+    
+    console.log('🔄 Calling OpenAI API...')
+    const apiStartTime = Date.now()
     
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -115,24 +121,29 @@ Return ONLY this JSON structure:
     })
     
     clearTimeout(timeoutId)
+    const apiResponseTime = Date.now() - apiStartTime
+    console.log(`⏱️ OpenAI API response time: ${apiResponseTime}ms`)
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text()
-      console.error(`❌ OpenAI API error: ${aiResponse.status} - ${errorText}`)
+      console.error(`❌ OpenAI API error after ${apiResponseTime}ms: ${aiResponse.status} - ${errorText}`)
       
       // Check for specific error types
       if (aiResponse.status === 429) {
         errorType = ErrorType.API_RATE_LIMITED
-        throw new Error('OpenAI API rate limit exceeded - please try again in a moment')
+        throw new Error('OpenAI API rate limit exceeded - please wait a few seconds and try again')
       } else if (aiResponse.status === 402) {
         errorType = ErrorType.API_QUOTA_EXCEEDED  
         throw new Error('OpenAI API quota exceeded - please upgrade your plan')
       } else if (aiResponse.status === 401) {
         errorType = ErrorType.API_KEY_MISSING
         throw new Error('Invalid OpenAI API key - please check your configuration')
+      } else if (aiResponse.status === 500 || aiResponse.status === 502 || aiResponse.status === 503) {
+        errorType = ErrorType.NETWORK_ERROR
+        throw new Error('OpenAI service temporarily unavailable - please try again in a moment')
       } else {
         errorType = ErrorType.NETWORK_ERROR
-        throw new Error(`OpenAI API error: ${aiResponse.status}`)
+        throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText.substring(0, 200)}`)
       }
     }
 
