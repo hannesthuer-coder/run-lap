@@ -65,42 +65,26 @@ serve(async (req) => {
     
     console.log('🤖 Generating AI-powered route...')
     
-    const aiPrompt = `You are an expert running route planner with local knowledge. Create a dynamic, engaging circular running route.
+    const aiPrompt = `You are a running route planner. Create a practical circular running route.
 
 LOCATION: ${locationContext} (${startLat}, ${startLng})
 TARGET DISTANCE: ${distance} ${unit} (${targetDistanceMeters} meters)
 
-ROUTE REQUIREMENTS:
-• Create a loop that starts and ends at the exact same coordinates
-• Generate 4-6 strategic waypoints for an optimal ${targetDistanceMeters}m route
-• Ensure waypoints form a logical, flowing path for runners
-
-PRIORITIZE (in order):
-1. SAFETY: Avoid busy roads, dangerous intersections, isolated areas
-2. SCENERY: Favor parks, waterfront, tree-lined streets, historic areas  
-3. TERRAIN VARIETY: Mix of surfaces (paths, sidewalks, trails) and elevation
-4. RUNNER EXPERIENCE: Consider foot traffic, lighting, accessibility
-
-SPECIFIC CONSIDERATIONS:
-• Include popular running spots and local landmarks when possible
-• Vary the route style: scenic parks → urban exploration → neighborhood charm
-• Consider time of day: safe, well-lit areas for evening runs
-• Balance challenge with enjoyability based on distance
-
-ROUTE INTELLIGENCE:
-• For shorter routes (≤5km): Focus on concentrated scenic areas
-• For longer routes (>5km): Include more diverse neighborhoods and sights
-• Adapt to local geography: hills, water bodies, green spaces
+REQUIREMENTS:
+• Create a circular loop that starts and ends at the exact same coordinates
+• Generate 4-6 waypoints that create an efficient route close to ${targetDistanceMeters}m
+• Use walkable/runnable streets, paths, and trails only
+• Avoid highways and busy roads
+• Minimize detours from the main route path
+• Create a flowing, logical path for runners
 
 Return ONLY this JSON structure:
 {
   "waypoints": [
-    {"lat": precise_number, "lng": precise_number, "description": "detailed waypoint description with local context"},
+    {"lat": precise_number, "lng": precise_number, "description": "waypoint location"},
     ...
   ],
-  "routeStyle": "scenic/urban/park/mixed/waterfront/historic",
-  "estimatedTerrain": "flat/rolling/hilly/mixed",
-  "aiInsights": "brief description of route highlights and runner experience"
+  "aiInsights": "brief route description"
 }`
 
     const controller = new AbortController()
@@ -212,9 +196,7 @@ Return ONLY this JSON structure:
           duration: route.duration,
           waypoints: waypoints,
           aiInsights: {
-            routeStyle: aiRouteData.routeStyle,
-            estimatedTerrain: aiRouteData.estimatedTerrain,
-            description: aiRouteData.aiInsights || `AI-generated ${aiRouteData.routeStyle} route (${route.distance}m)`,
+            description: aiRouteData.aiInsights || `AI-generated route (${route.distance}m)`,
             generationMethod: 'ai',
             processingTimeMs: processingTime,
             model: 'gpt-5-2025-08-07'
