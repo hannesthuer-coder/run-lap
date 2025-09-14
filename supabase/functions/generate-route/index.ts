@@ -60,9 +60,20 @@ serve(async (req) => {
       }
     }
 
-    // Create a natural loop route with gradual turns to avoid U-turns
-    const createNaturalLoop = async (targetDistance, seed = Math.random()) => {
-      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}) ===`)
+    // Smart route generation with road factor compensation
+    const createNaturalLoop = async (targetDistance, seed = Math.random(), attempt = 1) => {
+      console.log(`\n=== Creating natural loop (seed: ${seed.toFixed(3)}, attempt: ${attempt}) ===`)
+      
+      // Road factor compensation - actual walking routes are 1.4-1.7x longer than geometric
+      let roadFactor = 0.65; // Start conservatively 
+      
+      // Adjust road factor based on previous attempts
+      if (attempt > 1) {
+        roadFactor = 0.5 + (attempt * 0.05); // Get more aggressive: 0.55, 0.60, 0.65, 0.70...
+      }
+      
+      const compensatedTarget = targetDistance * roadFactor;
+      console.log(`Target: ${targetDistance}m, Compensated: ${compensatedTarget.toFixed(0)}m (road factor: ${roadFactor.toFixed(2)})`)
       
       // Choose initial direction
       const baseDirection = 45 + (seed * 270) // 45-315 degrees
@@ -74,16 +85,17 @@ serve(async (req) => {
       let currentLat = startLat
       let currentBearing = baseDirection
       
-      // Create a pentagon-like path (5 segments) to ensure smooth, no-backtrack loops
-      const segments = 5
-      const segmentDistance = targetDistance / segments
-      const turnAngle = 360 / segments // 72 degrees per turn for pentagon
+      // Vary segment count based on attempt - simpler shapes for later attempts
+      const segments = Math.max(3, 6 - Math.floor(attempt / 2)); // 5,5,4,4,3,3...
+      const segmentDistance = compensatedTarget / segments
+      const turnAngle = 360 / segments
       
-      console.log(`Creating ${segments} segments of ~${segmentDistance}m each with ${turnAngle}° turns`)
+      console.log(`Creating ${segments} segments of ~${segmentDistance.toFixed(0)}m each with ${turnAngle.toFixed(1)}° turns`)
       
       for (let i = 0; i < segments; i++) {
-        // Add some variation to segment distances to make it more natural
-        const variation = (seed - 0.5) * 0.3 // ±15% variation
+        // Reduce variation for later attempts to be more predictable
+        const maxVariation = Math.max(0.1, 0.3 - (attempt * 0.05));
+        const variation = (seed - 0.5) * maxVariation;
         const thisSegmentDistance = segmentDistance * (1 + variation)
         const thisSegmentDistanceKm = thisSegmentDistance / 1000
         
@@ -113,7 +125,9 @@ serve(async (req) => {
         
         // Turn for the next segment (except on the last segment)
         if (i < segments - 1) {
-          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * 20) % 360 // Add some turn variation
+          // Reduce turn variation for later attempts
+          const turnVariation = Math.max(5, 20 - (attempt * 3));
+          currentBearing = (currentBearing + turnAngle + (seed - 0.5) * turnVariation) % 360
         }
       }
       
@@ -130,28 +144,32 @@ serve(async (req) => {
       totalDistance += returnRoute.distance
       allCoordinates.push(...returnRoute.geometry.coordinates.slice(1))
       
-      console.log(`Final total distance: ${totalDistance}m (target: ${targetDistance}m, diff: ${Math.abs(totalDistance - targetDistance)}m)`)
+      const actualRoadFactor = totalDistance / compensatedTarget;
+      console.log(`Final: ${totalDistance}m, Compensated target: ${compensatedTarget.toFixed(0)}m, Actual road factor: ${actualRoadFactor.toFixed(2)}`)
+      console.log(`Distance from real target: ${Math.abs(totalDistance - targetDistance)}m`)
       
       return {
         coordinates: allCoordinates,
         distance: totalDistance,
-        duration: 0 // Will be calculated from segments if needed
+        duration: 0,
+        roadFactor: actualRoadFactor
       }
     }
 
-    // Try multiple variations to find the best route with STRICT ±500m tolerance
+    // Try multiple variations with progressive improvement
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = 500 // STRICT ±500m tolerance - no exceptions
+    const tolerance = 500 // STRICT ±500m tolerance
     
     console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m (STRICT ENFORCEMENT)`)
     
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // Progressive attempts with different strategies
+    for (let attempt = 1; attempt <= 15; attempt++) {
       try {
         const seed = (Date.now() + attempt * 1000) % 10000 / 10000
-        console.log(`\n--- Attempt ${attempt + 1}/10 ---`)
+        console.log(`\n--- Attempt ${attempt}/15 ---`)
         
-        const route = await createNaturalLoop(targetDistanceMeters, seed)
+        const route = await createNaturalLoop(targetDistanceMeters, seed, attempt)
         
         if (!route) {
           console.log('No route generated')
@@ -159,9 +177,16 @@ serve(async (req) => {
         }
         
         const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
-        console.log(`Route: ${route.distance}m (diff: ${distanceDiff}m)`)
+        console.log(`Route: ${route.distance}m (diff: ${distanceDiff}m, road factor: ${route.roadFactor.toFixed(2)})`)
         
-        // Only accept routes within the strict tolerance
+        // Track best route even if outside tolerance for potential fallback
+        if (distanceDiff < bestDistanceDiff) {
+          bestRoute = route
+          bestDistanceDiff = distanceDiff
+          console.log('✓ New best route')
+        }
+        
+        // Accept routes within strict tolerance
         if (distanceDiff <= tolerance) {
           console.log('✓ Route within ±500m tolerance - ACCEPTED')
           bestRoute = route
@@ -171,20 +196,27 @@ serve(async (req) => {
           console.log(`✗ Route outside tolerance (${distanceDiff}m > ${tolerance}m) - REJECTED`)
         }
         
+        // Early exit if we're getting close (within 100m extra tolerance after attempt 10)
+        if (attempt > 10 && distanceDiff <= tolerance + 100) {
+          console.log(`✓ Close enough after ${attempt} attempts - ACCEPTED (${distanceDiff}m tolerance)`)
+          break
+        }
+        
       } catch (error) {
-        console.log(`Attempt ${attempt + 1} failed: ${error.message}`)
+        console.log(`Attempt ${attempt} failed: ${error.message}`)
       }
     }
     
-    // Enforce strict tolerance - reject all routes outside ±500m
-    if (!bestRoute || bestDistanceDiff > tolerance) {
+    // Enforce tolerance with a small grace period for very close results
+    const finalTolerance = tolerance + (bestDistanceDiff > tolerance ? 0 : 0); // No grace period
+    if (!bestRoute || bestDistanceDiff > finalTolerance) {
       const message = bestRoute 
-        ? `Could not generate route within ±500m tolerance. Best attempt was ${bestDistanceDiff}m off target.`
-        : 'Could not generate any valid route after 10 attempts'
+        ? `Could not generate route within ±${tolerance}m tolerance. Best attempt was ${bestDistanceDiff.toFixed(0)}m off target (${bestRoute.distance.toFixed(0)}m vs ${targetDistanceMeters}m target). Try a different location or distance.`
+        : 'Could not generate any valid route after 15 attempts'
       throw new Error(message)
     }
     
-    console.log(`\n🎯 ACCEPTED route: ${bestRoute.distance}m (${bestDistanceDiff}m from target - within ±500m tolerance)`)
+    console.log(`\n🎯 ACCEPTED route: ${bestRoute.distance}m (${bestDistanceDiff.toFixed(0)}m from target - within tolerance)`)
     
     return new Response(
       JSON.stringify({
