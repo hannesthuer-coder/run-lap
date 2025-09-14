@@ -139,17 +139,17 @@ serve(async (req) => {
       }
     }
 
-    // Try multiple variations to find the best route
+    // Try multiple variations to find the best route with STRICT ±500m tolerance
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const tolerance = 500 // Strict ±500m tolerance as requested
+    const tolerance = 500 // STRICT ±500m tolerance - no exceptions
     
-    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`)
+    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m (STRICT ENFORCEMENT)`)
     
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 10; attempt++) {
       try {
         const seed = (Date.now() + attempt * 1000) % 10000 / 10000
-        console.log(`\n--- Attempt ${attempt + 1}/5 ---`)
+        console.log(`\n--- Attempt ${attempt + 1}/10 ---`)
         
         const route = await createNaturalLoop(targetDistanceMeters, seed)
         
@@ -161,15 +161,14 @@ serve(async (req) => {
         const distanceDiff = Math.abs(route.distance - targetDistanceMeters)
         console.log(`Route: ${route.distance}m (diff: ${distanceDiff}m)`)
         
-        if (distanceDiff < bestDistanceDiff) {
+        // Only accept routes within the strict tolerance
+        if (distanceDiff <= tolerance) {
+          console.log('✓ Route within ±500m tolerance - ACCEPTED')
           bestRoute = route
           bestDistanceDiff = distanceDiff
-          console.log('✓ New best route')
-        }
-        
-        if (distanceDiff <= tolerance) {
-          console.log('✓ Within tolerance - using this route')
           break
+        } else {
+          console.log(`✗ Route outside tolerance (${distanceDiff}m > ${tolerance}m) - REJECTED`)
         }
         
       } catch (error) {
@@ -177,11 +176,15 @@ serve(async (req) => {
       }
     }
     
-    if (!bestRoute) {
-      throw new Error('Could not generate any valid route after 5 attempts')
+    // Enforce strict tolerance - reject all routes outside ±500m
+    if (!bestRoute || bestDistanceDiff > tolerance) {
+      const message = bestRoute 
+        ? `Could not generate route within ±500m tolerance. Best attempt was ${bestDistanceDiff}m off target.`
+        : 'Could not generate any valid route after 10 attempts'
+      throw new Error(message)
     }
     
-    console.log(`\n🎯 Selected route: ${bestRoute.distance}m (${bestDistanceDiff}m from target)`)
+    console.log(`\n🎯 ACCEPTED route: ${bestRoute.distance}m (${bestDistanceDiff}m from target - within ±500m tolerance)`)
     
     return new Response(
       JSON.stringify({
