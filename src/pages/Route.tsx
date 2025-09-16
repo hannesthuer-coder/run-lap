@@ -87,15 +87,15 @@ const Route = () => {
       )}
 
       {/* Header */}
-      <div className={`text-center py-8 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
+      <div className={`text-center py-4 sm:py-6 md:py-8 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
           Results
         </h1>
       </div>
 
       {/* Map Container */}
-      <div className={`flex-1 relative px-4 transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <div className="bg-card rounded-2xl overflow-hidden shadow-soft h-[500px] mb-8">
+      <div className={`flex-1 relative px-3 sm:px-4 transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+        <div className="bg-card rounded-xl sm:rounded-2xl overflow-hidden shadow-soft h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8">
           <MapComponent 
             startLocation={routeData.location}
             distance={routeData.distance}
@@ -108,19 +108,19 @@ const Route = () => {
       </div>
 
       {/* Not Satisfied Section */}
-      <div className="space-y-6 pb-8">
+      <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
         <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">
+          <h2 className="text-base sm:text-lg font-bold text-foreground uppercase tracking-wide">
             NOT SATISFIED?
           </h2>
         </div>
 
-        <div className={`flex gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
           <Button
             onClick={handleRegenerateRoute}
             disabled={isRegenerating}
             variant="outline"
-            className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
           >
             {isRegenerating ? "GENERATING..." : "GENERATE NEW ROUTE"}
           </Button>
@@ -128,7 +128,7 @@ const Route = () => {
           <Button
             onClick={handleChangePreferences}
             variant="outline"
-            className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
           >
             CHANGE PREFERENCES
           </Button>

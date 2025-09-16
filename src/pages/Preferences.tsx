@@ -93,11 +93,11 @@ const Preferences = () => {
       }
     });
   };
-  return <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-lg space-y-8">
+  return <div className="min-h-screen bg-background flex flex-col justify-center px-4 py-6 sm:py-8">
+      <div className="w-full max-w-lg mx-auto space-y-6 sm:space-y-8">
         {/* Main Title */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">
             WHAT DISTANCE DO YOU WANT TO RUN TODAY?
           </h1>
         </div>
@@ -110,15 +110,15 @@ const Preferences = () => {
               value={distance} 
               onChange={e => setDistance(e.target.value)}
               placeholder="Select Distance" 
-              className="text-center text-lg h-14 rounded-full border-2 pr-20" 
+              className="text-center text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20" 
               min="0"
               step="0.1"
             />
-            <div className="absolute right-3 flex items-center">
+            <div className="absolute right-2 sm:right-3 flex items-center">
               <div className="flex border rounded-full overflow-hidden">
                 <button
                   onClick={() => setIsKm(true)}
-                  className={`px-3 py-1 text-sm font-medium transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors ${
                     isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
                   }`}
                 >
@@ -126,7 +126,7 @@ const Preferences = () => {
                 </button>
                 <button
                   onClick={() => setIsKm(false)}
-                  className={`px-3 py-1 text-sm font-medium transition-colors border-l ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors border-l ${
                     !isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
                   }`}
                 >
@@ -138,18 +138,18 @@ const Preferences = () => {
         </div>
 
         {/* Location Section */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground uppercase tracking-wide">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide">
               WHERE FROM?
             </h2>
           </div>
 
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Button 
               variant={locationMethod === "current" ? "selected" : "outline"} 
               onClick={handleUseCurrentLocation} 
-              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
               disabled={isGenerating}
             >
               CURRENT LOCATION
@@ -158,7 +158,7 @@ const Preferences = () => {
             <Button 
               variant={locationMethod === "map" ? "selected" : "outline"} 
               onClick={handleChooseOnMap} 
-              className="px-8 py-3 h-12 rounded-full border-2 font-semibold uppercase tracking-wide"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
               disabled={isGenerating}
             >
               CHOOSE ON MAP
@@ -167,11 +167,11 @@ const Preferences = () => {
         </div>
 
         {/* Generate Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center pt-2">
           <Button 
             onClick={handleGenerate} 
             disabled={isGenerating || !distance || !selectedLocation} 
-            className="px-8 py-3 h-12 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed" 
+            className="w-full sm:w-auto px-6 sm:px-8 py-3 h-12 sm:h-14 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" 
             size="lg"
           >
             {isGenerating ? "GENERATING..." : "GENERATE RUNNING LAPS"}
