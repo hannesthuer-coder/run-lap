@@ -94,7 +94,7 @@ const Preferences = () => {
     });
   };
   return <div className="min-h-screen bg-background flex flex-col justify-center px-4 py-6 sm:py-8">
-      <div className="w-full max-w-lg mx-auto space-y-6 sm:space-y-8">
+      <div className="w-full max-w-lg mx-auto space-y-8">
         {/* Main Title */}
         <div className="text-center">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">
@@ -103,8 +103,8 @@ const Preferences = () => {
         </div>
 
         {/* Distance Input */}
-        <div className="space-y-4">
-          <div className="relative flex items-center justify-center">
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-sm">
             <Input 
               type="number" 
               value={distance} 
@@ -114,7 +114,7 @@ const Preferences = () => {
               min="0"
               step="0.1"
             />
-            <div className="absolute right-2 sm:right-3 flex items-center">
+            <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 flex items-center">
               <div className="flex border rounded-full overflow-hidden">
                 <button
                   onClick={() => setIsKm(true)}
@@ -138,29 +138,31 @@ const Preferences = () => {
         </div>
 
         {/* Location Section */}
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide">
               WHERE FROM?
             </h2>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 
               variant={locationMethod === "current" ? "selected" : "outline"} 
               onClick={handleUseCurrentLocation} 
-              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+              className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
               disabled={isGenerating}
             >
               CURRENT LOCATION
             </Button>
             
-            <span className="text-xs text-muted-foreground uppercase tracking-wider font-light">or</span>
+            <div className="flex items-center justify-center">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-light">or</span>
+            </div>
             
             <Button 
               variant={locationMethod === "map" ? "selected" : "outline"} 
               onClick={handleChooseOnMap} 
-              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+              className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
               disabled={isGenerating}
             >
               CHOOSE ON MAP
@@ -169,18 +171,16 @@ const Preferences = () => {
         </div>
 
         {/* Generate Button */}
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center">
           <Button 
             onClick={handleGenerate} 
             disabled={isGenerating || !distance || !selectedLocation} 
-            className="w-full sm:w-auto px-6 sm:px-8 py-3 h-12 sm:h-14 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" 
+            className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" 
             size="lg"
           >
             {isGenerating ? "GENERATING..." : "GENERATE RUNNING LAPS"}
           </Button>
         </div>
-
-        
       </div>
     </div>;
 };
