@@ -104,13 +104,13 @@ const Preferences = () => {
 
         {/* Distance Input */}
         <div className="space-y-4">
-          <div className="relative flex items-center">
+          <div className="relative flex items-center justify-center">
             <Input 
               type="number" 
               value={distance} 
               onChange={e => setDistance(e.target.value)}
               placeholder="Select Distance" 
-              className="text-center text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20" 
+              className="text-center text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20 w-full" 
               min="0"
               step="0.1"
             />
@@ -155,7 +155,7 @@ const Preferences = () => {
               CURRENT LOCATION
             </Button>
             
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-light">or</span>
             
             <Button 
               variant={locationMethod === "map" ? "selected" : "outline"} 
