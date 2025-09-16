@@ -145,7 +145,7 @@ const Preferences = () => {
             </h2>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
             <Button 
               variant={locationMethod === "current" ? "selected" : "outline"} 
               onClick={handleUseCurrentLocation} 
@@ -154,6 +154,8 @@ const Preferences = () => {
             >
               CURRENT LOCATION
             </Button>
+            
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
             
             <Button 
               variant={locationMethod === "map" ? "selected" : "outline"} 
