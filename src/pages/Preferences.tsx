@@ -110,7 +110,7 @@ const Preferences = () => {
               value={distance} 
               onChange={e => setDistance(e.target.value)}
               placeholder="Select Distance" 
-              className="text-center text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20 w-full" 
+              className="text-left text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20 w-full pl-4 sm:pl-6" 
               min="0"
               step="0.1"
             />
