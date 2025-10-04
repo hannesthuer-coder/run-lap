@@ -1,10 +1,12 @@
 import { Instagram, Mail } from "lucide-react";
+import logo from "@/assets/logo.png";
+
 const Footer = () => {
   return <footer className="w-full mt-auto py-6 px-4 bg-[#f7eeda]">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center">
-          <img src="https://storage.googleapis.com/gpt-engineer-file-uploads/aK8R2Q90OgU43MKhei8s8SvyANj1/uploads/1758050285866-run-lap.png" alt="Run-Lap Logo" className="h-16 w-16 sm:h-20 sm:w-20" />
+          <img src={logo} alt="Run-Lap Logo" className="h-16 w-16 sm:h-20 sm:w-20" />
         </div>
 
         {/* Links */}
