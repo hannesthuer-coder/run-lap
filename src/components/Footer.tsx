@@ -15,9 +15,8 @@ const Footer = () => {
             <Instagram className="h-6 w-6" />
           </a>
           
-          <a href="mailto:contact@run-lap.com" className="flex items-center gap-2 text-beige-foreground hover:opacity-70 transition-opacity">
-            <Mail className="h-5 w-5" />
-            <span className="text-sm font-medium">contact@run-lap.com</span>
+          <a href="mailto:contact@run-lap.com" className="text-beige-foreground hover:opacity-70 transition-opacity" aria-label="Email us at contact@run-lap.com">
+            <Mail className="h-6 w-6" />
           </a>
         </div>
       </div>
