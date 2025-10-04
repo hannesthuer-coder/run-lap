@@ -1,8 +1,7 @@
 import { Instagram, Mail } from "lucide-react";
 import logo from "@/assets/logo.png";
-
 const Footer = () => {
-  return <footer className="w-full mt-auto py-6 px-4 bg-[#f7eeda]">
+  return <footer className="w-full mt-auto bg-[#f7eeda] py-[30px] px-[25px]">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center">
