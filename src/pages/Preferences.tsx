@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
+import Footer from "@/components/Footer";
 
 const Preferences = () => {
   const navigate = useNavigate();
@@ -93,8 +94,8 @@ const Preferences = () => {
       }
     });
   };
-  return <div className="min-h-screen bg-background flex flex-col justify-center px-4 py-6 sm:py-8">
-      <div className="w-full max-w-lg mx-auto space-y-8">
+  return <div className="min-h-screen bg-background flex flex-col px-4 py-6 sm:py-8">
+      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center">
         {/* Main Title */}
         <div className="text-center">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">
@@ -182,6 +183,7 @@ const Preferences = () => {
           </Button>
         </div>
       </div>
+      <Footer />
     </div>;
 };
 export default Preferences;
