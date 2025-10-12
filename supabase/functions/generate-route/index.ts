@@ -1,53 +1,202 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { startLng, startLat, distance, unit } = await req.json()
+    const { startLng, startLat, distance, unit } = await req.json();
     
-    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN') || 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWVpdmk4cmUwN3YwMmxzZDNtcjF2em54In0.kkCEFz-Lg2PQoLD-OTJp6Q'
-    
-    console.log(`Using Mapbox token: ${MAPBOX_TOKEN ? 'Available' : 'Missing'}`)
-    
-    // Convert distance to meters
-    const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
-    console.log(`Target distance: ${targetDistanceMeters}m`)
-
-    // Simple function to get walking route between two points
-    const getWalkingRoute = async (fromLng, fromLat, toLng, toLat) => {
-      const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
-        `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
-      
-      try {
-        const response = await fetch(url)
-        const data = await response.json()
-        
-        if (data.routes && data.routes.length > 0) {
-          return data.routes[0]
-        }
-        return null
-      } catch (error) {
-        console.log(`Route request failed: ${error.message}`)
-        return null
-      }
+    // Validate inputs
+    if (!startLng || !startLat || !distance || !unit) {
+      throw new Error('Missing required parameters');
     }
 
-    // Function to find a point roughly at given distance in given direction
-    const findPointInDirection = (startLng, startLat, bearingDegrees, distanceKm) => {
-      const R = 6371 // Earth's radius in km
-      const bearing = bearingDegrees * Math.PI / 180
-      const lat1 = startLat * Math.PI / 180
-      const lon1 = startLng * Math.PI / 180
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN');
+    
+    if (!MAPBOX_TOKEN) {
+      throw new Error('MAPBOX_ACCESS_TOKEN not configured');
+    }
+
+    console.log(`🎯 Generating ${distance}${unit} route at [${startLat}, ${startLng}]`);
+    
+    // Convert distance to meters
+    const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34;
+    
+    /**
+     * Generate smooth circular route with optimal waypoints
+     * KEY IMPROVEMENT: Fixed 4 waypoints + single API call = smooth routes
+     */
+    const generateSmoothRoute = async (
+      targetDistance: number,
+      seed: number,
+      attempt: number
+    ) => {
+      console.log(`\n=== Attempt ${attempt} (seed: ${seed.toFixed(3)}) ===`);
       
+      // Dynamic road factor adjustment based on attempt
+      const roadFactor = Math.min(0.55 + (attempt * 0.03), 0.75);
+      const compensatedDistance = targetDistance * roadFactor;
+      
+      console.log(`Target: ${targetDistance}m, Compensated: ${compensatedDistance.toFixed(0)}m (factor: ${roadFactor.toFixed(2)})`);
+      
+      // Use 4 waypoints for smoothest routes (was 5-6 variable)
+      const numWaypoints = 4;
+      const radius = (compensatedDistance / (2 * Math.PI)) / 1000; // km
+      
+      // Generate waypoints in circular pattern with variation
+      const baseAngle = seed * 360;
+      const waypoints: Array<{ lat: number; lng: number }> = [];
+      
+      for (let i = 0; i < numWaypoints; i++) {
+        const angle = ((baseAngle + (i * 360 / numWaypoints)) % 360) * Math.PI / 180;
+        
+        // Add slight radius variation (±15%) for natural shapes
+        const radiusVariation = radius * (1 + (Math.random() - 0.5) * 0.15);
+        
+        const lat = startLat + (radiusVariation * Math.cos(angle)) / 111;
+        const lng = startLng + (radiusVariation * Math.sin(angle)) / (111 * Math.cos(startLat * Math.PI / 180));
+        
+        waypoints.push({ lat, lng });
+      }
+      
+      // Build coordinate string for Mapbox Directions API
+      const allPoints = [
+        { lat: startLat, lng: startLng },
+        ...waypoints,
+        { lat: startLat, lng: startLng }, // Close the loop
+      ];
+      
+      const coordinatesString = allPoints.map(p => `${p.lng},${p.lat}`).join(';');
+      
+      // KEY IMPROVEMENT: Single API call with continue_straight=false for natural turns
+      const directionsUrl = 
+        `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinatesString}?` +
+        `geometries=geojson&` +
+        `access_token=${MAPBOX_TOKEN}&` +
+        `overview=full&` +
+        `continue_straight=false`; // This fixes sharp turns!
+      
+      const response = await fetch(directionsUrl);
+      
+      if (!response.ok) {
+        console.error(`❌ Mapbox API error: ${response.status}`);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.routes || data.routes.length === 0) {
+        console.error('❌ No route found');
+        return null;
+      }
+      
+      const route = data.routes[0];
+      const actualRoadFactor = route.distance / compensatedDistance;
+      
+      console.log(`✓ Generated: ${route.distance}m (road factor: ${actualRoadFactor.toFixed(2)})`);
+      
+      return {
+        coordinates: route.geometry.coordinates,
+        distance: route.distance,
+        duration: route.duration,
+      };
+    };
+    
+    // Try multiple attempts to find best route
+    let bestRoute = null;
+    let bestDistanceDiff = Infinity;
+    const tolerance = 500; // ±500m tolerance
+    const maxAttempts = 12;
+    
+    console.log(`🎯 Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m`);
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const seed = (Date.now() + attempt * 1337) % 10000 / 10000;
+      
+      const route = await generateSmoothRoute(targetDistanceMeters, seed, attempt);
+      
+      if (!route) {
+        console.log(`Attempt ${attempt}: Failed to generate route`);
+        continue;
+      }
+      
+      const distanceDiff = Math.abs(route.distance - targetDistanceMeters);
+      
+      // Track best route
+      if (distanceDiff < bestDistanceDiff) {
+        bestRoute = route;
+        bestDistanceDiff = distanceDiff;
+        console.log(`✓ New best: ${route.distance}m (diff: ${distanceDiff}m)`);
+      }
+      
+      // Accept if within tolerance
+      if (distanceDiff <= tolerance) {
+        console.log(`✅ Accepted within tolerance`);
+        break;
+      }
+      
+      // Be more lenient after 8 attempts
+      if (attempt > 8 && distanceDiff <= tolerance + 200) {
+        console.log(`✅ Accepted with extended tolerance`);
+        break;
+      }
+    }
+    
+    // Validate final route
+    if (!bestRoute) {
+      throw new Error('Could not generate valid route after maximum attempts');
+    }
+    
+    const finalTolerance = tolerance + 200;
+    if (bestDistanceDiff > finalTolerance) {
+      throw new Error(
+        `Best route was ${bestDistanceDiff.toFixed(0)}m off target. ` +
+        `Try a different distance or location.`
+      );
+    }
+    
+    console.log(`\n🎉 Final route: ${bestRoute.distance}m (±${bestDistanceDiff.toFixed(0)}m)`);
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        route: {
+          geometry: {
+            type: 'LineString',
+            coordinates: bestRoute.coordinates,
+          },
+          distance: bestRoute.distance,
+          duration: bestRoute.duration,
+        },
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+      }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
       const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceKm / R) +
                             Math.cos(lat1) * Math.sin(distanceKm / R) * Math.cos(bearing))
       

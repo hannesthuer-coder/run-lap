@@ -1,139 +1,120 @@
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2 } from "lucide-react";
-import MapComponent from "@/components/MapComponent";
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { RouteMap } from '@/components/RouteMap';
+import { useRouteGeneration } from '@/hooks/useRouteGeneration';
+import type { Coordinates } from '@/types';
 
 const Route = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const [regenerateKey, setRegenerateKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showHeader, setShowHeader] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-  const [showNotSatisfied, setShowNotSatisfied] = useState(false);
-  const [showButtons, setShowButtons] = useState(false);
-  const [dots, setDots] = useState('');
-  
-  const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" }; // Default to NYC coordinates
+  const [regenerateCount, setRegenerateCount] = useState(0);
 
-  // Animate dots
+  // Extract route parameters from navigation state
+  const routeParams = location.state as {
+    distance: number;
+    unit: 'km' | 'miles';
+    startLocation: Coordinates;
+  } | null;
+
+  // Redirect if no parameters
   useEffect(() => {
-    if (!isLoading) return;
-    
-    const interval = setInterval(() => {
-      setDots(prev => {
-        if (prev === '') return '.';
-        if (prev === '.') return '..';
-        if (prev === '..') return '...';
-        return '';
-      });
-    }, 500);
-    
-    return () => clearInterval(interval);
-  }, [isLoading]);
+    if (!routeParams) {
+      navigate('/');
+    }
+  }, [routeParams, navigate]);
 
-  const handleRouteGenerated = () => {
-    setIsLoading(false);
-    setIsRegenerating(false);
-    
-    // Sequential fade-in animations
-    setTimeout(() => setShowHeader(true), 100);
-    setTimeout(() => setShowMap(true), 400);
-    setTimeout(() => setShowNotSatisfied(true), 700);
-    setTimeout(() => setShowButtons(true), 1000);
-  };
+  const { route, isLoading, isComplete, generateRoute, reset } = useRouteGeneration({
+    startLocation: routeParams?.startLocation || { lat: 59.3293, lng: 18.0686 },
+    distance: routeParams?.distance || 5,
+    unit: routeParams?.unit || 'km',
+  });
+
+  // Generate initial route
+  useEffect(() => {
+    if (routeParams && !route && !isLoading) {
+      generateRoute();
+    }
+  }, [routeParams, route, isLoading, generateRoute]);
 
   const handleRegenerateRoute = async () => {
-    setIsRegenerating(true);
-    setIsLoading(true);
-    setShowHeader(false);
-    setShowMap(false);
-    setShowNotSatisfied(false);
-    setShowButtons(false);
-    
-    // Trigger route regeneration by incrementing the key
-    setRegenerateKey(prev => prev + 1);
-  };
-
-  const handleRouteError = () => {
-    setIsLoading(false);
-    setIsRegenerating(false);
-    navigate("/");
+    reset();
+    setRegenerateCount(prev => prev + 1);
+    await generateRoute();
   };
 
   const handleChangePreferences = () => {
-    navigate("/");
+    navigate('/');
   };
 
-  // Mock route stats
-  const estimatedTime = Math.round((routeData.distance / (routeData.unit === "km" ? 10 : 6.2)) * 60); // minutes
-  const elevationGain = Math.round(routeData.distance * 15); // rough estimate
+  if (!routeParams) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Loading Screen */}
       {isLoading && (
-        <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider leading-relaxed">
-              Generating your<br />
-              perfect running route<span className="inline-block w-6 text-left">{dots}</span>
+        <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4" />
+            <h2 className="text-sm font-light text-foreground uppercase tracking-wider">
+              Generating your perfect running route...
             </h2>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div className={`text-center py-4 sm:py-6 md:py-8 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
-          Results
-        </h1>
-      </div>
+      {isComplete && (
+        <div className="text-center py-4 sm:py-6 md:py-8 animate-fade-in">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
+            Results
+          </h1>
+        </div>
+      )}
 
       {/* Map Container */}
-      <div className={`flex-1 relative px-3 sm:px-4 transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <div className="bg-card rounded-xl sm:rounded-2xl overflow-hidden shadow-soft h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8">
-          <MapComponent 
-            startLocation={routeData.location}
-            distance={routeData.distance}
-            unit={routeData.unit}
-            regenerateKey={regenerateKey}
-            onRouteGenerated={handleRouteGenerated}
-            onError={handleRouteError}
-          />
+      {isComplete && route && (
+        <div className="flex-1 relative px-3 sm:px-4 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <div className="bg-card rounded-xl sm:rounded-2xl overflow-hidden shadow-soft h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8">
+            <RouteMap
+              route={route}
+              startLocation={routeParams.startLocation}
+              unit={routeParams.unit}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Not Satisfied Section */}
-      <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
-        <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <h2 className="text-base sm:text-lg font-bold text-foreground uppercase tracking-wide">
-            NOT SATISFIED?
-          </h2>
-        </div>
+      {/* Action Buttons */}
+      {isComplete && (
+        <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 animate-fade-in" style={{ animationDelay: '600ms' }}>
+          <div className="text-center">
+            <h2 className="text-base sm:text-lg font-bold text-foreground uppercase tracking-wide">
+              Not Satisfied?
+            </h2>
+          </div>
 
-        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <Button
-            onClick={handleRegenerateRoute}
-            disabled={isRegenerating}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
-          >
-            {isRegenerating ? "GENERATING..." : "GENERATE NEW ROUTE"}
-          </Button>
-          
-          <Button
-            onClick={handleChangePreferences}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
-          >
-            CHANGE PREFERENCES
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <Button
+              onClick={handleRegenerateRoute}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+            >
+              Generate New Route
+            </Button>
+
+            <Button
+              onClick={handleChangePreferences}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+            >
+              Change Preferences
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
