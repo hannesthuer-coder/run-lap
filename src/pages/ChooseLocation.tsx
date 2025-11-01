@@ -1,33 +1,34 @@
-import { useState, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check } from "lucide-react";
-import MapSelector from "@/components/MapSelector";
+import { useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { MapSelector } from '@/components/MapSelector';
+import { MapboxService } from '@/services/mapbox.service';
+import type { Coordinates } from '@/types';
 
-const ChooseLocation = () => {
+export default function ChooseLocation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<Coordinates | null>(null);
 
-  const handleLocationSelect = useCallback((coords: [number, number]) => {
+  const handleLocationSelect = useCallback((coords: Coordinates) => {
     setSelectedCoords(coords);
   }, []);
 
   const handleDone = () => {
     if (selectedCoords) {
-      // Navigate back to preferences with selected location and preserved form data
-      navigate("/", { 
-        state: { 
-          selectedLocation: `${selectedCoords[1].toFixed(4)}, ${selectedCoords[0].toFixed(4)}`,
-          distance: location.state?.distance || "",
-          isKm: location.state?.isKm ?? true
-        } 
+      navigate('/', {
+        state: {
+          selectedLocation: MapboxService.coordinatesToString(selectedCoords),
+          distance: location.state?.distance || '',
+          unit: location.state?.unit || 'km',
+        },
       });
     }
   };
 
   const handleBack = () => {
-    navigate("/");
+    navigate('/');
   };
 
   return (
@@ -42,7 +43,7 @@ const ChooseLocation = () => {
           <span className="font-medium">Back</span>
         </button>
         <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
-          SELECT YOUR STARTING POINT
+          Select Your Starting Point
         </h1>
       </div>
 
@@ -58,13 +59,11 @@ const ChooseLocation = () => {
         <Button
           onClick={handleDone}
           disabled={!selectedCoords}
-          className="px-12 py-3 h-12 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed"
+          className="px-12 py-3 h-12 rounded-full font-semibold uppercase tracking-wide"
         >
-          DONE
+          Done
         </Button>
       </div>
     </div>
   );
-};
-
-export default ChooseLocation;
+}
