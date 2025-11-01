@@ -1,76 +1,105 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
+
+// Error types for better error handling
+enum ErrorType {
+  API_KEY_MISSING = 'API_KEY_MISSING',
+  API_QUOTA_EXCEEDED = 'API_QUOTA_EXCEEDED',
+  API_RATE_LIMITED = 'API_RATE_LIMITED',
+  AI_PARSING_ERROR = 'AI_PARSING_ERROR',
+  MAPBOX_ERROR = 'MAPBOX_ERROR',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  GENERAL_ERROR = 'GENERAL_ERROR'
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
-  const requestStart = Date.now();
+  const requestStart = Date.now()
+  let errorType = ErrorType.GENERAL_ERROR
+  let errorDetails = ''
 
   try {
-    const { startLng, startLat, distance, unit } = await req.json();
+    const { startLng, startLat, distance, unit } = await req.json()
     
-    console.log(`🎯 AI Route Request - Start: [${startLat}, ${startLng}], Distance: ${distance}${unit}`);
+    console.log(`🚀 AI Route Generation Request - Start: [${startLat}, ${startLng}], Distance: ${distance}${unit}`)
     
+    // Validate input parameters
     if (!startLng || !startLat || !distance || !unit) {
-      throw new Error('Missing required parameters');
+      errorType = ErrorType.GENERAL_ERROR
+      throw new Error('Missing required parameters: startLng, startLat, distance, unit')
     }
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+    const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
     
     if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is required for AI route generation');
+      errorType = ErrorType.API_KEY_MISSING
+      throw new Error('OpenAI API key is required for route generation')
     }
     
     if (!MAPBOX_TOKEN) {
-      throw new Error('MAPBOX_ACCESS_TOKEN not configured');
+      errorType = ErrorType.MAPBOX_ERROR
+      throw new Error('MAPBOX_ACCESS_TOKEN environment variable not configured')
     }
     
-    const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34;
-    console.log(`📏 Target distance: ${targetDistanceMeters}m`);
+    // Convert distance to meters for consistency
+    const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
+    console.log(`📏 Target distance: ${targetDistanceMeters}m`)
     
     // Get location context using reverse geocoding
-    const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${startLng},${startLat}.json?access_token=${MAPBOX_TOKEN}&types=neighborhood,locality,place`;
-    const geocodeResponse = await fetch(geocodeUrl);
-    const geocodeData = await geocodeResponse.json();
+    const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${startLng},${startLat}.json?access_token=${MAPBOX_TOKEN}&types=neighborhood,locality,place`
+    const geocodeResponse = await fetch(geocodeUrl)
+    const geocodeData = await geocodeResponse.json()
     
-    const locationContext = geocodeData.features?.[0]?.place_name || `coordinates ${startLat}, ${startLng}`;
-    console.log(`📍 Location: ${locationContext}`);
+    const locationContext = geocodeData.features?.[0]?.place_name || `coordinates ${startLat}, ${startLng}`
+    console.log(`📍 Location context: ${locationContext}`)
     
-    const aiPrompt = `You are a running route expert. Generate a smooth, circular running route.
+    console.log('🤖 Generating AI-powered route...')
+    
+    const aiPrompt = `Generate a running route as valid JSON only.
 
+Target: ${targetDistanceMeters}m route starting at ${startLat}, ${startLng}
 Location: ${locationContext}
-Start coordinates: [${startLat}, ${startLng}]
-Target distance: ${targetDistanceMeters}m (${distance}${unit})
 
-REQUIREMENTS:
-1. Create a loop that returns to start
-2. Use exactly 4-5 waypoints (CRITICAL: more waypoints = jagged route)
-3. Waypoints should form a smooth circle or oval shape
-4. Distance between ${targetDistanceMeters - 500}m and ${targetDistanceMeters + 500}m
-5. Consider parks, waterfronts, or scenic areas if available
-6. Avoid busy highways and dangerous areas
-7. Each waypoint should be roughly equidistant from start
+STRICT Requirements:
+- Create a loop that returns to start
+- Distance MUST be between ${targetDistanceMeters - 500}m and ${targetDistanceMeters + 500}m 
+- NO LONGER than ${targetDistanceMeters + 500}m
+- NO SHORTER than ${targetDistanceMeters - 500}m
+- Use 4-6 waypoints in sequence (no backtracking)
+- Only walkable streets/paths
 
-Respond with ONLY this JSON format (no other text):
+Respond with ONLY this exact JSON format:
 {
   "waypoints": [
-    {"lat": number, "lng": number, "description": "brief landmark or area name"}
+    {"lat": ${startLat}, "lng": ${startLng}, "description": "Start point"},
+    {"lat": 59.271, "lng": 18.087, "description": "North waypoint"},
+    {"lat": 59.272, "lng": 18.089, "description": "East waypoint"},
+    {"lat": 59.269, "lng": 18.088, "description": "South waypoint"},
+    {"lat": 59.268, "lng": 18.085, "description": "West waypoint"}
   ],
-  "aiInsights": "Brief description of why this route is good (scenery, safety, terrain, etc.)"
+  "aiInsights": "Brief description of the route"
 }
 
-CRITICAL: Use only 4-5 waypoints arranged in a smooth circular pattern for a flowing route.`;
+Important: Return ONLY valid JSON, no other text.`
 
-    console.log('🤖 Calling OpenAI API...');
-    const apiStartTime = Date.now();
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      console.error('❌ Request timeout after 60 seconds')
+      controller.abort()
+    }, 60000) // Increased to 60 seconds for more reliability
+    
+    console.log('🔄 Calling OpenAI API...')
+    const apiStartTime = Date.now()
     
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -79,89 +108,105 @@ CRITICAL: Use only 4-5 waypoints arranged in a smooth circular pattern for a flo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: aiPrompt }],
-        max_tokens: 800,
-        temperature: 0.7,
+        model: 'gpt-4o-mini', // Use GPT-4o-mini - proven to work for route generation
+        messages: [{ 
+          role: 'user', 
+          content: aiPrompt 
+        }],
+        max_tokens: 800 // Use max_tokens for GPT-4o models
       }),
-      signal: AbortSignal.timeout(60000),
-    });
+      signal: controller.signal
+    })
     
-    const apiResponseTime = Date.now() - apiStartTime;
-    console.log(`⏱️ OpenAI response time: ${apiResponseTime}ms`);
+    clearTimeout(timeoutId)
+    const apiResponseTime = Date.now() - apiStartTime
+    console.log(`⏱️ OpenAI API response time: ${apiResponseTime}ms`)
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error(`❌ OpenAI API error: ${aiResponse.status} - ${errorText}`);
+      const errorText = await aiResponse.text()
+      console.error(`❌ OpenAI API error after ${apiResponseTime}ms: ${aiResponse.status} - ${errorText}`)
       
+      // Check for specific error types
       if (aiResponse.status === 429) {
-        throw new Error('OpenAI API rate limit exceeded');
+        errorType = ErrorType.API_RATE_LIMITED
+        throw new Error('OpenAI API rate limit exceeded - please wait a few seconds and try again')
       } else if (aiResponse.status === 402) {
-        throw new Error('OpenAI API quota exceeded');
+        errorType = ErrorType.API_QUOTA_EXCEEDED  
+        throw new Error('OpenAI API quota exceeded - please upgrade your plan')
       } else if (aiResponse.status === 401) {
-        throw new Error('Invalid OpenAI API key');
+        errorType = ErrorType.API_KEY_MISSING
+        throw new Error('Invalid OpenAI API key - please check your configuration')
+      } else if (aiResponse.status === 500 || aiResponse.status === 502 || aiResponse.status === 503) {
+        errorType = ErrorType.NETWORK_ERROR
+        throw new Error('OpenAI service temporarily unavailable - please try again in a moment')
+      } else {
+        errorType = ErrorType.NETWORK_ERROR
+        throw new Error(`OpenAI API error: ${aiResponse.status} - ${errorText.substring(0, 200)}`)
       }
-      
-      throw new Error(`OpenAI API error: ${aiResponse.status}`);
     }
 
-    const aiData = await aiResponse.json();
-    console.log('✅ AI Response received');
+    const aiData = await aiResponse.json()
+    console.log('✅ AI Response received:', aiData.usage || 'usage info not available')
     
     if (!aiData.choices?.[0]?.message?.content) {
-      throw new Error('Invalid AI response structure');
+      errorType = ErrorType.AI_PARSING_ERROR
+      throw new Error('Invalid AI response structure')
     }
     
-    let aiRouteData;
+    let aiRouteData
     try {
-      const aiContent = aiData.choices[0].message.content.trim();
-      const jsonContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      aiRouteData = JSON.parse(jsonContent);
+      const aiContent = aiData.choices[0].message.content
+      console.log('🔍 Raw AI response content:', aiContent.substring(0, 500) + (aiContent.length > 500 ? '...' : ''))
       
-      console.log(`✅ Parsed AI data: ${aiRouteData.waypoints?.length || 0} waypoints`);
+      aiRouteData = JSON.parse(aiContent)
+      console.log('✅ Parsed AI route data:', aiRouteData)
       
+      // Validate AI response structure
       if (!aiRouteData.waypoints || !Array.isArray(aiRouteData.waypoints) || aiRouteData.waypoints.length < 2) {
-        throw new Error('AI response missing valid waypoints');
+        console.error('❌ Invalid waypoints structure:', aiRouteData.waypoints)
+        throw new Error('AI response missing valid waypoints array')
       }
       
     } catch (parseError) {
-      console.error('❌ JSON Parse Error:', parseError.message);
-      throw new Error(`AI returned invalid JSON: ${parseError.message}`);
+      console.error('❌ JSON Parse Error:', parseError.message)
+      console.error('❌ Raw response causing error:', aiData.choices[0].message.content)
+      errorType = ErrorType.AI_PARSING_ERROR
+      throw new Error(`AI returned invalid JSON: ${parseError.message}`)
     }
     
+    // Build the route using Mapbox Directions API with waypoints
+    const waypoints = aiRouteData.waypoints
     const allPoints = [
       { lat: startLat, lng: startLng },
-      ...aiRouteData.waypoints,
-      { lat: startLat, lng: startLng },
-    ];
+      ...waypoints,
+      { lat: startLat, lng: startLng } // Return to start
+    ]
     
-    const coordinatesString = allPoints.map(p => `${p.lng},${p.lat}`).join(';');
+    const coordinatesString = allPoints.map(p => `${p.lng},${p.lat}`).join(';')
     
     const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinatesString}?` + 
-      `geometries=geojson&` +
-      `access_token=${MAPBOX_TOKEN}&` +
-      `overview=full&` +
-      `continue_straight=false&` +
-      `steps=false`;
+      `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
     
-    console.log('🗺️ Fetching route from Mapbox...');
+    console.log('🗺️ Fetching route from Mapbox...')
     
-    const routeResponse = await fetch(directionsUrl);
+    const routeResponse = await fetch(directionsUrl)
     
     if (!routeResponse.ok) {
-      throw new Error(`Mapbox API error: ${routeResponse.status}`);
+      errorType = ErrorType.MAPBOX_ERROR
+      throw new Error(`Mapbox API error: ${routeResponse.status} - Unable to calculate route`)
     }
     
-    const routeData = await routeResponse.json();
+    const routeData = await routeResponse.json()
     
     if (!routeData.routes || routeData.routes.length === 0) {
-      throw new Error('No walkable route found');
+      errorType = ErrorType.MAPBOX_ERROR
+      throw new Error('No walkable route found - waypoints may be unreachable or invalid')
     }
     
-    const route = routeData.routes[0];
-    const processingTime = Date.now() - requestStart;
+    const route = routeData.routes[0]
+    const processingTime = Date.now() - requestStart
     
-    console.log(`✅ AI Route generated: ${route.distance}m, ${route.duration}s (${processingTime}ms total)`);
+    console.log(`✅ AI Route generated successfully: ${route.distance}m, ${route.duration}s (${processingTime}ms total)`)
     
     return new Response(
       JSON.stringify({
@@ -170,50 +215,69 @@ CRITICAL: Use only 4-5 waypoints arranged in a smooth circular pattern for a flo
           geometry: route.geometry,
           distance: route.distance,
           duration: route.duration,
-          waypoints: aiRouteData.waypoints,
+          waypoints: waypoints,
           aiInsights: {
-            description: aiRouteData.aiInsights || `AI-generated ${route.distance}m route`,
+            description: aiRouteData.aiInsights || `AI-generated route (${route.distance}m)`,
             generationMethod: 'ai',
             processingTimeMs: processingTime,
-            model: 'gpt-4o-mini',
-          },
-        },
+            model: 'gpt-4o-mini'
+          }
+        }
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
     
   } catch (error) {
-    const processingTime = Date.now() - requestStart;
-    console.error(`❌ Error (${processingTime}ms):`, error.message);
+    const processingTime = Date.now() - (requestStart || Date.now())
+    console.error(`❌ Error generating route (${processingTime}ms):`, error.message)
     
-    let statusCode = 500;
-    let clientMessage = error.message;
+    // Determine error category for better client handling
+    let statusCode = 500
+    let clientMessage = error.message
     
-    if (error.message.includes('OpenAI API key')) {
-      statusCode = 401;
-      clientMessage = 'AI service not configured';
-    } else if (error.message.includes('quota')) {
-      statusCode = 402;
-      clientMessage = 'AI service quota exceeded';
-    } else if (error.message.includes('rate limit')) {
-      statusCode = 429;
-      clientMessage = 'AI service rate limit exceeded';
-    } else if (error.message.includes('Mapbox')) {
-      statusCode = 503;
-      clientMessage = 'Unable to calculate walkable route';
+    switch (errorType) {
+      case ErrorType.API_KEY_MISSING:
+        statusCode = 401
+        clientMessage = 'OpenAI API key is required - please configure your API key to generate routes'
+        break
+      case ErrorType.API_QUOTA_EXCEEDED:
+        statusCode = 402
+        clientMessage = 'OpenAI API quota exceeded - please upgrade your plan or try again later'
+        break
+      case ErrorType.API_RATE_LIMITED:
+        statusCode = 429
+        clientMessage = 'OpenAI API rate limit exceeded - please try again in a moment'
+        break
+      case ErrorType.MAPBOX_ERROR:
+        statusCode = 503
+        clientMessage = 'Unable to calculate walkable route - please try a different location or distance'
+        break
+      case ErrorType.NETWORK_ERROR:
+        statusCode = 503
+        clientMessage = 'AI service unavailable - please check your connection and try again'
+        break
+      case ErrorType.AI_PARSING_ERROR:
+        statusCode = 502
+        clientMessage = 'AI service returned invalid route data - please try generating again'
+        break
+      default:
+        clientMessage = 'AI route generation failed - please try again'
     }
     
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: clientMessage,
-        details: error.message,
-        processingTimeMs: processingTime,
+        errorType,
+        details: errorDetails || error.message,
+        processingTimeMs: processingTime
       }),
       { 
         status: statusCode,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    );
+    )
   }
-});
+})
