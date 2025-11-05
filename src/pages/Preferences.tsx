@@ -8,6 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
+import { RouteLimitService } from "@/services/routeLimit.service";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import type { RouteLimitStatus } from "@/types";
 
 const Preferences = () => {
   const navigate = useNavigate();
@@ -17,6 +20,22 @@ const Preferences = () => {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [locationMethod, setLocationMethod] = useState<"current" | "map" | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [routeLimitStatus, setRouteLimitStatus] = useState<RouteLimitStatus | null>(null);
+
+  // Check route limit on mount
+  useEffect(() => {
+    checkRouteLimit();
+  }, []);
+
+  const checkRouteLimit = async () => {
+    const status = await RouteLimitService.checkRouteLimit();
+    setRouteLimitStatus(status);
+    
+    if (status.needsUpgrade) {
+      setShowUpgradeModal(true);
+    }
+  };
 
   // Handle location selection from map
   useEffect(() => {
@@ -81,7 +100,23 @@ const Preferences = () => {
       toast.error("Please select a starting location.");
       return;
     }
+
+    // Check route limit BEFORE generating
+    const limitStatus = await RouteLimitService.checkRouteLimit();
+    
+    if (!limitStatus.canGenerate) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setIsGenerating(true);
+
+    // Record the generation
+    await RouteLimitService.recordRouteGeneration({
+      distance: parseFloat(distance),
+      unit: isKm ? 'km' : 'miles',
+      location: selectedLocation,
+    });
 
     // Simulate route generation
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -184,6 +219,13 @@ const Preferences = () => {
         </div>
       </div>
       <Footer />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        routesGenerated={routeLimitStatus?.totalGenerated || 0}
+      />
     </div>;
 };
 export default Preferences;
