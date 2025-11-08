@@ -22,13 +22,13 @@ serve(async (req) => {
                       req.headers.get('x-real-ip') || 
                       'unknown';
     
-    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('route_generations')
       .select('id', { count: 'exact', head: false })
       .or(`device_fingerprint.eq.${fingerprint},ip_address.eq.${ipAddress}`)
-      .gte('created_at', last24Hours);
+      .gte('created_at', last30Days);
     
     if (error) {
       console.error('Database error:', error);
