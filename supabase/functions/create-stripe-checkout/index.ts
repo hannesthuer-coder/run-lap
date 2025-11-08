@@ -38,17 +38,7 @@ serve(async (req) => {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Run-Lap Premium',
-              description: 'Unlimited AI-powered running routes',
-            },
-            unit_amount: 295,
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: 'price_1SREfqAzbZd33OOHnovsg1ND',
           quantity: 1,
         },
       ],
