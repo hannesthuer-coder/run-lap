@@ -101,7 +101,7 @@ serve(async (req) => {
       .eq('id', user.id)
       .single()
     
-    const hasActiveSubscription = profile?.subscription_status === 'active' && 
+    const hasActiveSubscription = profile?.subscription_status === 'premium' && 
       profile?.subscription_expires_at && 
       new Date(profile.subscription_expires_at) > new Date()
     

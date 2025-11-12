@@ -24,7 +24,7 @@ serve(async (req) => {
     }
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     const ipAddress = req.headers.get('x-forwarded-for') || 
@@ -34,10 +34,11 @@ serve(async (req) => {
     const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
-      .from('route_generations')
-      .select('id', { count: 'exact', head: false })
-      .or(`device_fingerprint.eq.${fingerprint},ip_address.eq.${ipAddress}`)
-      .gte('created_at', last30Days);
+      .rpc('count_routes_by_fingerprint', {
+        _fingerprint: fingerprint,
+        _ip_address: ipAddress,
+        _since: last30Days
+      });
     
     if (error) {
       console.error('Database error:', error);
@@ -48,7 +49,7 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ count: data?.length || 0 }),
+      JSON.stringify({ count: data || 0 }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     

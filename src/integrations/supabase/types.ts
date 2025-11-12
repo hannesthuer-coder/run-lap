@@ -146,7 +146,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      count_routes_by_fingerprint: {
+        Args: { _fingerprint: string; _ip_address: string; _since: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
