@@ -14,6 +14,31 @@ serve(async (req) => {
   try {
     const { fingerprint, sessionId, userId, routeDistance, routeUnit, startLocation } = await req.json();
     
+    // Validate inputs
+    if (!fingerprint || !sessionId || !routeDistance || !routeUnit || !startLocation) {
+      throw new Error('Missing required parameters')
+    }
+    
+    if (typeof fingerprint !== 'string' || fingerprint.length < 10 || fingerprint.length > 100) {
+      throw new Error('Invalid fingerprint format')
+    }
+    
+    if (typeof sessionId !== 'string' || sessionId.length > 100) {
+      throw new Error('Invalid session ID')
+    }
+    
+    if (typeof routeDistance !== 'number' || routeDistance <= 0 || routeDistance > 500) {
+      throw new Error('Invalid route distance')
+    }
+    
+    if (!['km', 'miles'].includes(routeUnit)) {
+      throw new Error('Invalid route unit')
+    }
+    
+    if (typeof startLocation !== 'string' || startLocation.length > 200) {
+      throw new Error('Invalid start location')
+    }
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);

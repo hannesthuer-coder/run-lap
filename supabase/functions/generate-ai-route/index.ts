@@ -38,6 +38,87 @@ serve(async (req) => {
       throw new Error('Missing required parameters: startLng, startLat, distance, unit')
     }
     
+    if (typeof startLng !== 'number' || typeof startLat !== 'number' || typeof distance !== 'number') {
+      errorType = ErrorType.GENERAL_ERROR
+      throw new Error('Invalid parameter types')
+    }
+    
+    if (distance <= 0 || distance > 500) {
+      errorType = ErrorType.GENERAL_ERROR
+      throw new Error('Distance must be between 0 and 500')
+    }
+    
+    if (!['km', 'miles'].includes(unit)) {
+      errorType = ErrorType.GENERAL_ERROR
+      throw new Error('Unit must be km or miles')
+    }
+    
+    // Import Supabase for auth and limit checking
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
+    
+    // Get auth token from request header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    
+    // Verify JWT and get user
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Check route limit - query last 30 days
+    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: routeGenerations, error: countError } = await supabase
+      .from('route_generations')
+      .select('id', { count: 'exact', head: false })
+      .eq('user_id', user.id)
+      .gte('created_at', last30Days)
+    
+    if (countError) {
+      console.error('Error checking route limit:', countError)
+    }
+    
+    const routeCount = routeGenerations?.length || 0
+    
+    // Check subscription status
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_status, subscription_expires_at')
+      .eq('id', user.id)
+      .single()
+    
+    const hasActiveSubscription = profile?.subscription_status === 'active' && 
+      profile?.subscription_expires_at && 
+      new Date(profile.subscription_expires_at) > new Date()
+    
+    // Enforce 3 route limit for free users
+    if (!hasActiveSubscription && routeCount >= 3) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Route limit reached',
+          limit: 3,
+          used: routeCount,
+          requiresUpgrade: true
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
     

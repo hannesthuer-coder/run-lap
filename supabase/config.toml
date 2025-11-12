@@ -7,16 +7,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-ai-route]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-route]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-route-limit]
 verify_jwt = false
 
 [functions.record-route-generation]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-stripe-checkout]
 verify_jwt = false

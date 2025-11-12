@@ -14,6 +14,15 @@ serve(async (req) => {
   try {
     const { fingerprint, sessionId } = await req.json();
     
+    // Validate inputs
+    if (!fingerprint || typeof fingerprint !== 'string' || fingerprint.length < 10 || fingerprint.length > 100) {
+      throw new Error('Invalid fingerprint')
+    }
+    
+    if (sessionId && (typeof sessionId !== 'string' || sessionId.length > 100)) {
+      throw new Error('Invalid session ID')
+    }
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);

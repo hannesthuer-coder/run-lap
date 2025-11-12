@@ -14,6 +14,16 @@ serve(async (req) => {
   try {
     const { email } = await req.json();
     
+    // Validate email input
+    if (!email || typeof email !== 'string') {
+      throw new Error('Email is required')
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email) || email.length > 255) {
+      throw new Error('Invalid email format')
+    }
+    
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeKey) {
       throw new Error('Stripe not configured');
