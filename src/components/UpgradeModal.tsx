@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Crown, Zap, Infinity, Shield } from 'lucide-react';
+import { Crown, Zap, Infinity, BookmarkCheck } from 'lucide-react';
 import { StripeService } from '@/services/stripe.service';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -14,22 +14,24 @@ interface UpgradeModalProps {
 }
 
 export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalProps) {
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUpgrade = async () => {
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      toast.error('Please enter a valid email address');
+    if (!user) {
+      toast.error('Please sign in first');
+      navigate('/auth');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const sessionUrl = await StripeService.createCheckoutSession(email);
+      const sessionUrl = await StripeService.createCheckoutSession(user.email!);
       
       if (sessionUrl) {
-        window.location.href = sessionUrl;
+        window.open(sessionUrl, '_blank');
       } else {
         toast.error('Failed to start checkout. Please try again.');
       }
@@ -46,33 +48,33 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Crown className="h-6 w-6 text-yellow-500" />
+            <Crown className="h-6 w-6 text-beige" />
             <DialogTitle className="text-2xl">Upgrade to Premium</DialogTitle>
           </div>
           <DialogDescription>
-            You've generated {routesGenerated} free routes. Upgrade to unlock unlimited AI-powered routes!
+            You've generated {routesGenerated} free routes. Upgrade to unlock unlimited routes!
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 my-6">
-          <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
-            <Infinity className="h-5 w-5 text-primary mt-0.5" />
+          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+            <Infinity className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Unlimited Routes</p>
               <p className="text-sm text-muted-foreground">Generate as many routes as you want</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
-            <Zap className="h-5 w-5 text-primary mt-0.5" />
+          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+            <Zap className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Priority AI Generation</p>
               <p className="text-sm text-muted-foreground">Faster route generation with advanced AI</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
-            <Shield className="h-5 w-5 text-primary mt-0.5" />
+          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+            <BookmarkCheck className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Save Your Routes</p>
               <p className="text-sm text-muted-foreground">Access your favorite routes anytime</p>
@@ -81,18 +83,6 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
         </div>
 
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1.5"
-            />
-          </div>
-
           <div className="text-center">
             <p className="text-2xl font-bold mb-1">$2.95/month</p>
             <p className="text-sm text-muted-foreground">Cancel anytime</p>
@@ -101,10 +91,10 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
           <Button 
             onClick={handleUpgrade}
             disabled={isLoading}
-            className="w-full h-12 text-lg"
+            className="w-full h-12 text-lg bg-beige hover:bg-beige-hover text-beige-foreground rounded-full"
             size="lg"
           >
-            {isLoading ? 'Processing...' : 'Upgrade Now'}
+            {isLoading ? 'Processing...' : user ? 'Upgrade Now' : 'Sign In to Upgrade'}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">

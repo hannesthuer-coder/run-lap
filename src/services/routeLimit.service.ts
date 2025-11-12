@@ -91,13 +91,10 @@ export class RouteLimitService {
       
       this.incrementLocalStorageCount();
       
-      const { data: { user } } = await supabase.auth.getUser();
-      
       await supabase.functions.invoke('record-route-generation', {
         body: {
           fingerprint,
           sessionId,
-          userId: user?.id || null,
           routeDistance: routeData.distance,
           routeUnit: routeData.unit,
           startLocation: routeData.location,

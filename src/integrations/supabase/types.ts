@@ -94,6 +94,39 @@ export type Database = {
           },
         ]
       }
+      saved_routes: {
+        Row: {
+          created_at: string | null
+          distance: number
+          id: string
+          route_geometry: Json
+          route_name: string
+          start_location: string
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          distance: number
+          id?: string
+          route_geometry: Json
+          route_name: string
+          start_location: string
+          unit: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          distance?: number
+          id?: string
+          route_geometry?: Json
+          route_name?: string
+          start_location?: string
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null

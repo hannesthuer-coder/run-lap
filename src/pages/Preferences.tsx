@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { useAuth } from "@/contexts/AuthContext";
 import { RouteLimitService } from "@/services/routeLimit.service";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import type { RouteLimitStatus } from "@/types";
@@ -15,6 +17,7 @@ import type { RouteLimitStatus } from "@/types";
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isPremium } = useAuth();
   const [distance, setDistance] = useState("");
   const [isKm, setIsKm] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -129,8 +132,9 @@ const Preferences = () => {
       }
     });
   };
-  return <div className="min-h-screen bg-background flex flex-col px-4 py-6 sm:py-8">
-      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center">
+  return <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 sm:py-8 pt-24">
         {/* Main Title */}
         <div className="text-center">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">

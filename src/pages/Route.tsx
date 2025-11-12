@@ -2,12 +2,26 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2 } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
+import { Header } from "@/components/Header";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Route = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isPremium } = useAuth();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateKey, setRegenerateKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +30,10 @@ const Route = () => {
   const [showNotSatisfied, setShowNotSatisfied] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [dots, setDots] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [routeName, setRouteName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [generatedRoute, setGeneratedRoute] = useState<any>(null);
   
   const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" }; // Default to NYC coordinates
 
@@ -35,15 +53,70 @@ const Route = () => {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const handleRouteGenerated = () => {
+  const handleRouteGenerated = (route?: any) => {
     setIsLoading(false);
     setIsRegenerating(false);
+    if (route) {
+      setGeneratedRoute(route);
+    }
     
     // Sequential fade-in animations
     setTimeout(() => setShowHeader(true), 100);
     setTimeout(() => setShowMap(true), 400);
     setTimeout(() => setShowNotSatisfied(true), 700);
     setTimeout(() => setShowButtons(true), 1000);
+  };
+
+  const handleSaveRoute = async () => {
+    if (!routeName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a name for your route.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('saved_routes')
+        .insert([{
+          route_name: routeName,
+          distance: routeData.distance,
+          unit: routeData.unit,
+          start_location: routeData.location,
+          route_geometry: generatedRoute?.geometry || {},
+        }] as any);
+
+      if (error) {
+        if (error.message.includes('unique')) {
+          toast({
+            title: "Error",
+            description: "You already have a route with this name.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Success!",
+          description: "Route saved successfully.",
+        });
+        setShowSaveDialog(false);
+        setRouteName('');
+      }
+    } catch (error) {
+      console.error('Error saving route:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save route. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRegenerateRoute = async () => {
@@ -74,6 +147,7 @@ const Route = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Header />
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
@@ -86,11 +160,24 @@ const Route = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className={`text-center py-4 sm:py-6 md:py-8 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
-          Results
-        </h1>
+      {/* Page Header */}
+      <div className={`text-center py-4 sm:py-6 md:py-8 pt-20 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+        <div className="flex items-center justify-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
+            Results
+          </h1>
+          {isPremium && !isLoading && (
+            <Button
+              onClick={() => setShowSaveDialog(true)}
+              variant="outline"
+              size="sm"
+              className="rounded-full gap-2"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+              Save Route
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Map Container */}
@@ -134,6 +221,46 @@ const Route = () => {
           </Button>
         </div>
       </div>
+
+      {/* Save Route Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Route</DialogTitle>
+            <DialogDescription>
+              Give your route a name so you can find it easily later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="route-name">Route Name</Label>
+              <Input
+                id="route-name"
+                placeholder="e.g., Morning Park Loop"
+                value={routeName}
+                onChange={(e) => setRouteName(e.target.value)}
+                maxLength={50}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowSaveDialog(false)}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveRoute}
+                disabled={isSaving || !routeName.trim()}
+                className="bg-beige hover:bg-beige-hover text-beige-foreground"
+              >
+                {isSaving ? 'Saving...' : 'Save Route'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

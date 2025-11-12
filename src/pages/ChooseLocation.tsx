@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check } from "lucide-react";
 import MapSelector from "@/components/MapSelector";
+import { Header } from "@/components/Header";
 
 const ChooseLocation = () => {
   const navigate = useNavigate();
@@ -32,8 +33,9 @@ const ChooseLocation = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="relative flex items-center justify-center py-8">
+      <Header />
+      {/* Page Header */}
+      <div className="relative flex items-center justify-center py-8 pt-20">
         <button
           onClick={handleBack}
           className="absolute left-4 flex items-center gap-2 text-foreground hover:text-foreground/80 transition-colors"
