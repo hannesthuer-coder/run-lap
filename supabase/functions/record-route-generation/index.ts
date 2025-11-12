@@ -12,7 +12,32 @@ serve(async (req) => {
   }
 
   try {
-    const { fingerprint, sessionId, userId, routeDistance, routeUnit, startLocation } = await req.json();
+    // Get authenticated user from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { fingerprint, sessionId, routeDistance, routeUnit, startLocation } = await req.json();
     
     // Validate inputs
     if (!fingerprint || !sessionId || !routeDistance || !routeUnit || !startLocation) {
@@ -39,20 +64,17 @@ serve(async (req) => {
       throw new Error('Invalid start location')
     }
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
     const ipAddress = req.headers.get('x-forwarded-for') || 
                       req.headers.get('x-real-ip') || 
                       'unknown';
     
     const userAgent = req.headers.get('user-agent') || 'unknown';
     
+    // Use server-verified user.id - RLS will enforce auth.uid() = user_id
     const { error } = await supabase
       .from('route_generations')
       .insert({
-        user_id: userId,
+        user_id: user.id,
         device_fingerprint: fingerprint,
         ip_address: ipAddress,
         user_agent: userAgent,
