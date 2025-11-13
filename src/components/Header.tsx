@@ -33,7 +33,7 @@ export const Header = () => {
           onClick={() => navigate('/')}
           className="hover:opacity-80 transition-opacity"
         >
-          <img src={runlapLogo} alt="run-lap" className="h-8" />
+          <img src={runlapLogo} alt="run-lap" className="h-16 w-16 sm:h-20 sm:w-20" />
         </button>
 
         {user ? (
