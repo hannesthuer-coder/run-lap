@@ -32,16 +32,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_status, subscription_expires_at')
-        .eq('id', user.id)
-        .single();
+      // Call the check-subscription edge function to get real-time status from Stripe
+      const { data, error } = await supabase.functions.invoke('check-subscription');
 
-      if (profile?.subscription_status === 'premium' && profile?.subscription_expires_at) {
-        const isActive = new Date(profile.subscription_expires_at) > new Date();
+      if (error) {
+        console.error('Error checking subscription:', error);
+        setIsPremium(false);
+        setSubscriptionEnd(null);
+        return;
+      }
+
+      const hasActiveSub = data?.subscribed === true && data?.subscription_end;
+      if (hasActiveSub) {
+        const isActive = new Date(data.subscription_end) > new Date();
         setIsPremium(isActive);
-        setSubscriptionEnd(isActive ? profile.subscription_expires_at : null);
+        setSubscriptionEnd(isActive ? data.subscription_end : null);
       } else {
         setIsPremium(false);
         setSubscriptionEnd(null);
