@@ -1,5 +1,8 @@
 project_id = "rxzubvqznmvvarmfsioe"
 
+[functions.check-subscription]
+verify_jwt = true
+
 [functions.get-mapbox-token]
 verify_jwt = false
 
