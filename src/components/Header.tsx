@@ -71,12 +71,17 @@ export const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button
+          <button
             onClick={() => navigate('/auth')}
-            className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-6"
+            className="hover:opacity-80 transition-opacity"
+            aria-label="Sign in"
           >
-            SIGN IN
-          </Button>
+            <Avatar className="h-9 w-9 border-2 border-border">
+              <AvatarFallback className="bg-muted">
+                <User className="h-5 w-5 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+          </button>
         )}
       </div>
     </header>
