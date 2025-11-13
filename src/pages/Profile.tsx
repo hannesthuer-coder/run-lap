@@ -15,7 +15,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container mx-auto px-4 pt-24 pb-12 max-w-2xl">
+      <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12 max-w-2xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">MY PROFILE</h1>
           <p className="text-muted-foreground">Manage your account and subscription</p>
