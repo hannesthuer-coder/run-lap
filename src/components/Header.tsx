@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User, Crown, BookmarkCheck, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import runlapLogo from '@/assets/runlap-logo.png';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -30,9 +31,9 @@ export const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <button
           onClick={() => navigate('/')}
-          className="text-xl font-bold tracking-tight text-foreground hover:text-beige transition-colors"
+          className="hover:opacity-80 transition-opacity"
         >
-          RUNLAP
+          <img src={runlapLogo} alt="run-lap" className="h-8" />
         </button>
 
         {user ? (
