@@ -134,7 +134,7 @@ const Preferences = () => {
   };
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 sm:py-8 pt-24">
+      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 sm:py-8 pt-28 sm:pt-32">
         {/* Main Title */}
         <div className="text-center">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">

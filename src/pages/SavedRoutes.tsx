@@ -112,7 +112,7 @@ const SavedRoutes = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 pt-24 pb-12">
+        <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-beige"></div>
           </div>
@@ -124,7 +124,7 @@ const SavedRoutes = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container mx-auto px-4 pt-24 pb-12 max-w-4xl">
+      <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2 flex items-center gap-3">
             SAVED ROUTES

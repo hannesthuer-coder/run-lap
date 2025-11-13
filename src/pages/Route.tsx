@@ -161,7 +161,7 @@ const Route = () => {
       )}
 
       {/* Page Header */}
-      <div className={`text-center py-4 sm:py-6 md:py-8 pt-20 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+      <div className={`text-center py-4 sm:py-6 md:py-8 pt-28 sm:pt-32 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
         <div className="flex items-center justify-center gap-4">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
             Results
