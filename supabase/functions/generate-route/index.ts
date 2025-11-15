@@ -107,6 +107,146 @@ serve(async (req) => {
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
     console.log(`Target distance: ${targetDistanceMeters}m`)
 
+    // Helper function to calculate bearing between two points (in degrees)
+    const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+      const dLng = (lng2 - lng1) * Math.PI / 180
+      const lat1Rad = lat1 * Math.PI / 180
+      const lat2Rad = lat2 * Math.PI / 180
+      
+      const y = Math.sin(dLng) * Math.cos(lat2Rad)
+      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - 
+                Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
+      
+      const bearing = Math.atan2(y, x) * 180 / Math.PI
+      return (bearing + 360) % 360
+    }
+
+    // Helper function to calculate distance between two points (in meters)
+    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+      const R = 6371000 // Earth radius in meters
+      const dLat = (lat2 - lat1) * Math.PI / 180
+      const dLng = (lng2 - lng1) * Math.PI / 180
+      
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2)
+      
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      return R * c
+    }
+
+    // Helper function to calculate normalized angle difference
+    const angleDifference = (angle1: number, angle2: number): number => {
+      let diff = Math.abs(angle1 - angle2)
+      if (diff > 180) {
+        diff = 360 - diff
+      }
+      return diff
+    }
+
+    // Function to remove spikes from route coordinates
+    const removeSpikesFromRoute = (coordinates: [number, number][]) => {
+      let cleanedCoords = [...coordinates]
+      let totalSpikesRemoved = 0
+      let originalDistance = 0
+      
+      // Calculate original distance
+      for (let i = 0; i < cleanedCoords.length - 1; i++) {
+        originalDistance += calculateDistance(
+          cleanedCoords[i][1], cleanedCoords[i][0],
+          cleanedCoords[i + 1][1], cleanedCoords[i + 1][0]
+        )
+      }
+      
+      // Multi-pass spike removal (up to 3 passes)
+      for (let pass = 0; pass < 3; pass++) {
+        let foundSpike = false
+        let i = 1
+        
+        while (i < cleanedCoords.length - 2) {
+          const pointBefore = cleanedCoords[i - 1]
+          const currentPoint = cleanedCoords[i]
+          
+          // Look ahead up to 5 points to find potential spike end
+          let maxLookAhead = Math.min(i + 5, cleanedCoords.length - 1)
+          
+          for (let j = i + 1; j <= maxLookAhead; j++) {
+            const pointAfter = cleanedCoords[j]
+            
+            // Calculate bearings
+            const bearingIn = calculateBearing(
+              pointBefore[1], pointBefore[0],
+              currentPoint[1], currentPoint[0]
+            )
+            const bearingOut = calculateBearing(
+              currentPoint[1], currentPoint[0],
+              pointAfter[1], pointAfter[0]
+            )
+            
+            // Check for ~180° reversal (spike indicator)
+            const angleDiff = angleDifference(bearingIn, bearingOut)
+            
+            if (angleDiff > 150 && angleDiff < 210) {
+              // Potential spike detected - verify with distance ratio
+              const straightLineDist = calculateDistance(
+                pointBefore[1], pointBefore[0],
+                pointAfter[1], pointAfter[0]
+              )
+              
+              // Calculate path distance through the spike
+              let pathDist = 0
+              for (let k = i - 1; k < j; k++) {
+                pathDist += calculateDistance(
+                  cleanedCoords[k][1], cleanedCoords[k][0],
+                  cleanedCoords[k + 1][1], cleanedCoords[k + 1][0]
+                )
+              }
+              
+              // If path is much longer than straight line, it's a spike
+              const ratio = straightLineDist > 0 ? pathDist / straightLineDist : 0
+              
+              if (ratio > 2.5) {
+                // Remove spike points (from i to j-1)
+                console.log(`  Spike detected at index ${i}: angle=${angleDiff.toFixed(1)}°, ratio=${ratio.toFixed(2)}, removing ${j - i} points`)
+                cleanedCoords.splice(i, j - i)
+                totalSpikesRemoved++
+                foundSpike = true
+                break
+              }
+            }
+          }
+          
+          if (!foundSpike) {
+            i++
+          } else {
+            // Reset i after spike removal to check the same area again
+            foundSpike = false
+          }
+        }
+        
+        if (totalSpikesRemoved === 0 && pass === 0) {
+          // No spikes found in first pass, no need to continue
+          break
+        }
+      }
+      
+      // Calculate new distance after spike removal
+      let newDistance = 0
+      for (let i = 0; i < cleanedCoords.length - 1; i++) {
+        newDistance += calculateDistance(
+          cleanedCoords[i][1], cleanedCoords[i][0],
+          cleanedCoords[i + 1][1], cleanedCoords[i + 1][0]
+        )
+      }
+      
+      return {
+        coordinates: cleanedCoords,
+        totalDistance: newDistance,
+        spikesRemoved: totalSpikesRemoved,
+        distanceSaved: originalDistance - newDistance
+      }
+    }
+
     // Simple function to get walking route between two points
     const getWalkingRoute = async (fromLng, fromLat, toLng, toLat) => {
       const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
@@ -303,15 +443,19 @@ serve(async (req) => {
     
     console.log(`\n🎯 ACCEPTED route: ${bestRoute.distance}m (${bestDistanceDiff.toFixed(0)}m from target - within tolerance)`)
     
+    // Remove spikes from the route before returning
+    const cleanedResult = removeSpikesFromRoute(bestRoute.coordinates)
+    console.log(`🔧 Spike removal: ${cleanedResult.spikesRemoved} spikes removed, ${cleanedResult.distanceSaved.toFixed(0)}m saved`)
+    
     return new Response(
       JSON.stringify({
         success: true,
         route: {
           geometry: {
             type: 'LineString',
-            coordinates: bestRoute.coordinates
+            coordinates: cleanedResult.coordinates
           },
-          distance: bestRoute.distance,
+          distance: cleanedResult.totalDistance,
           duration: bestRoute.duration,
           waypoints: []
         }
