@@ -352,8 +352,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
             {actualDistance 
-              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} geometric route`
-              : `${distance} ${unit} route (generating...)`
+              ? `${(actualDistance / (unit === 'km' ? 1000 : 1609.34)).toFixed(2)} ${unit} lap`
+              : `${distance} ${unit} lap (generating...)`
             }
           </p>
           <p className="text-xs text-muted-foreground">
