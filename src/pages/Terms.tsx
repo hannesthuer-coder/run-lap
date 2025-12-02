@@ -4,7 +4,7 @@ export default function Terms() {
   return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 max-w-4xl mx-auto px-4 py-12">
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-12 my-[100px]">
         <article className="prose prose-gray max-w-none my-[10px]">
           <h1 className="text-3xl font-bold mb-2">General Terms and Conditions – Run-Lap</h1>
           <p className="text-muted-foreground mb-8">Last updated: 2025-12-01</p>
