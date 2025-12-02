@@ -18,6 +18,139 @@ enum ErrorType {
   GENERAL_ERROR = 'GENERAL_ERROR'
 }
 
+// Helper function to calculate bearing between two points
+function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  const toDeg = (rad: number) => rad * 180 / Math.PI;
+  
+  const dLng = toRad(lng2 - lng1);
+  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - 
+            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  
+  let bearing = toDeg(Math.atan2(y, x));
+  return (bearing + 360) % 360;
+}
+
+// Helper function to calculate distance between two points (Haversine)
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth's radius in meters
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Helper function to calculate angle difference
+function angleDifference(angle1: number, angle2: number): number {
+  let diff = Math.abs(angle1 - angle2);
+  if (diff > 180) diff = 360 - diff;
+  return diff;
+}
+
+// Function to remove spikes from route coordinates
+function removeSpikesFromRoute(coordinates: number[][]): { 
+  coordinates: number[][], 
+  spikesRemoved: number, 
+  distanceSaved: number 
+} {
+  let cleanedCoords = [...coordinates];
+  let totalSpikesRemoved = 0;
+  let originalDistance = 0;
+  
+  // Calculate original distance
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    originalDistance += calculateDistance(
+      coordinates[i][1], coordinates[i][0],
+      coordinates[i + 1][1], coordinates[i + 1][0]
+    );
+  }
+  
+  // Multi-pass spike removal
+  for (let pass = 0; pass < 3; pass++) {
+    let foundSpike = false;
+    let i = 1;
+    
+    while (i < cleanedCoords.length - 2) {
+      const pointBefore = cleanedCoords[i - 1];
+      const currentPoint = cleanedCoords[i];
+      
+      // Look ahead to find potential spike end
+      for (let j = i + 1; j < Math.min(i + 8, cleanedCoords.length - 1); j++) {
+        const pointAfter = cleanedCoords[j];
+        
+        // Calculate bearings
+        const bearingIn = calculateBearing(
+          pointBefore[1], pointBefore[0],
+          currentPoint[1], currentPoint[0]
+        );
+        const bearingOut = calculateBearing(
+          currentPoint[1], currentPoint[0],
+          pointAfter[1], pointAfter[0]
+        );
+        
+        // Check for ~180° reversal
+        const angleDiff = angleDifference(bearingIn, bearingOut);
+        
+        if (angleDiff > 150 && angleDiff < 210) {
+          // Calculate distance ratio to verify spike
+          const straightLineDist = calculateDistance(
+            pointBefore[1], pointBefore[0],
+            pointAfter[1], pointAfter[0]
+          );
+          
+          let pathDist = 0;
+          for (let k = i - 1; k < j; k++) {
+            pathDist += calculateDistance(
+              cleanedCoords[k][1], cleanedCoords[k][0],
+              cleanedCoords[k + 1][1], cleanedCoords[k + 1][0]
+            );
+          }
+          
+          const ratio = straightLineDist > 0 ? pathDist / straightLineDist : Infinity;
+          
+          // If path is much longer than straight line, it's a spike - remove ALL spikes
+          if (ratio > 2.5) {
+            // Remove spike points
+            cleanedCoords.splice(i, j - i);
+            totalSpikesRemoved++;
+            foundSpike = true;
+            break;
+          }
+        }
+      }
+      
+      if (!foundSpike) {
+        i++;
+      }
+    }
+    
+    if (!foundSpike) break;
+  }
+  
+  // Calculate new distance
+  let newDistance = 0;
+  for (let i = 0; i < cleanedCoords.length - 1; i++) {
+    newDistance += calculateDistance(
+      cleanedCoords[i][1], cleanedCoords[i][0],
+      cleanedCoords[i + 1][1], cleanedCoords[i + 1][0]
+    );
+  }
+  
+  return {
+    coordinates: cleanedCoords,
+    spikesRemoved: totalSpikesRemoved,
+    distanceSaved: originalDistance - newDistance
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -286,6 +419,27 @@ Important: Return ONLY valid JSON, no other text.`
     }
     
     const route = routeData.routes[0]
+    
+    // Apply spike removal to clean the route
+    console.log('🔧 Checking for spikes in route...')
+    const spikeResult = removeSpikesFromRoute(route.geometry.coordinates)
+    
+    if (spikeResult.spikesRemoved > 0) {
+      console.log(`✂️ Removed ${spikeResult.spikesRemoved} spike(s), saved ${spikeResult.distanceSaved.toFixed(1)}m`)
+      route.geometry.coordinates = spikeResult.coordinates
+      // Recalculate distance after spike removal
+      let newDistance = 0
+      for (let i = 0; i < spikeResult.coordinates.length - 1; i++) {
+        newDistance += calculateDistance(
+          spikeResult.coordinates[i][1], spikeResult.coordinates[i][0],
+          spikeResult.coordinates[i + 1][1], spikeResult.coordinates[i + 1][0]
+        )
+      }
+      route.distance = newDistance
+    } else {
+      console.log('✅ No spikes detected in route')
+    }
+    
     const processingTime = Date.now() - requestStart
     
     console.log(`✅ AI Route generated successfully: ${route.distance}m, ${route.duration}s (${processingTime}ms total)`)
@@ -302,7 +456,8 @@ Important: Return ONLY valid JSON, no other text.`
             description: aiRouteData.aiInsights || `AI-generated route (${route.distance}m)`,
             generationMethod: 'ai',
             processingTimeMs: processingTime,
-            model: 'gpt-4o-mini'
+            model: 'gpt-4o-mini',
+            spikesRemoved: spikeResult.spikesRemoved
           }
         }
       }),
