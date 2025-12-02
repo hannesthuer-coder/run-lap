@@ -151,8 +151,8 @@ const Route = () => {
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="flex flex-col items-end justify-center text-right">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider leading-relaxed">
+          <div className="flex flex-col items-center justify-center">
+            <h2 className="text-xs font-light text-foreground uppercase tracking-wider leading-relaxed text-left">
               Generating your<br />
               perfect running route<span className="inline-block w-6 text-left">{dots}</span>
             </h2>
