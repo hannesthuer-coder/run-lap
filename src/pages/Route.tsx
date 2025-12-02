@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
+import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -261,6 +262,8 @@ const Route = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };
