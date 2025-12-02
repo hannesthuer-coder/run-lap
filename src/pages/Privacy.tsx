@@ -1,15 +1,13 @@
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
-
 export default function Privacy() {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 max-w-4xl mx-auto px-4 py-12">
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-12 my-[95px]">
         <article className="prose prose-gray max-w-none">
           <h1 className="text-3xl font-bold mb-2">Privacy Policy – Run-Lap</h1>
-          <p className="text-muted-foreground mb-8">Valid from: 2025-11-22</p>
+          <p className="text-muted-foreground mb-8">Valid from: 2025-12-01</p>
 
           <p className="mb-8">
             This Privacy Policy explains how Run-Lap collects and uses your personal data when you use our service.
@@ -122,6 +120,5 @@ export default function Privacy() {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 }
