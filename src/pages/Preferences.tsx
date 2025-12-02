@@ -128,7 +128,7 @@ const Preferences = () => {
       }
     });
   };
-  return <div className="min-h-screen bg-background flex flex-col">
+  return <div className="min-h-screen bg-background flex flex-col pt-[100px]">
       <Header />
       <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 pt-28 sm:pt-32 sm:py-[200px]">
         {/* Main Title */}
