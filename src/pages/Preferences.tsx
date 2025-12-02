@@ -13,11 +13,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RouteLimitService } from "@/services/routeLimit.service";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import type { RouteLimitStatus } from "@/types";
-
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isPremium } = useAuth();
+  const {
+    user,
+    isPremium
+  } = useAuth();
   const [distance, setDistance] = useState("");
   const [isKm, setIsKm] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -30,11 +32,9 @@ const Preferences = () => {
   useEffect(() => {
     checkRouteLimit();
   }, []);
-
   const checkRouteLimit = async () => {
     const status = await RouteLimitService.checkRouteLimit();
     setRouteLimitStatus(status);
-    
     if (status.needsUpgrade) {
       setShowUpgradeModal(true);
     }
@@ -63,7 +63,6 @@ const Preferences = () => {
       setSelectedLocation("");
       return;
     }
-    
     setLocationMethod("current");
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
@@ -85,7 +84,6 @@ const Preferences = () => {
       setSelectedLocation("");
       return;
     }
-    
     setLocationMethod("map");
     navigate("/choose-location", {
       state: {
@@ -106,19 +104,17 @@ const Preferences = () => {
 
     // Check route limit BEFORE generating
     const limitStatus = await RouteLimitService.checkRouteLimit();
-    
     if (!limitStatus.canGenerate) {
       setShowUpgradeModal(true);
       return;
     }
-
     setIsGenerating(true);
 
     // Record the generation
     await RouteLimitService.recordRouteGeneration({
       distance: parseFloat(distance),
       unit: isKm ? 'km' : 'miles',
-      location: selectedLocation,
+      location: selectedLocation
     });
 
     // Simulate route generation
@@ -134,7 +130,7 @@ const Preferences = () => {
   };
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 sm:py-8 pt-28 sm:pt-32">
+      <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 pt-28 sm:pt-32 sm:py-[200px]">
         {/* Main Title */}
         <div className="text-center">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground uppercase tracking-wide leading-tight">
@@ -145,31 +141,13 @@ const Preferences = () => {
         {/* Distance Input */}
         <div className="flex justify-center">
           <div className="relative w-full max-w-sm">
-            <Input 
-              type="number" 
-              value={distance} 
-              onChange={e => setDistance(e.target.value)}
-              placeholder="Select Distance" 
-              className="text-left text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20 w-full pl-4 sm:pl-6" 
-              min="0"
-              step="0.1"
-            />
+            <Input type="number" value={distance} onChange={e => setDistance(e.target.value)} placeholder="Select Distance" className="text-left text-base sm:text-lg h-12 sm:h-14 rounded-full border-2 pr-16 sm:pr-20 w-full pl-4 sm:pl-6" min="0" step="0.1" />
             <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 flex items-center">
               <div className="flex border rounded-full overflow-hidden">
-                <button
-                  onClick={() => setIsKm(true)}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors ${
-                    isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
-                  }`}
-                >
+                <button onClick={() => setIsKm(true)} className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors ${isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'}`}>
                   KM
                 </button>
-                <button
-                  onClick={() => setIsKm(false)}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors border-l ${
-                    !isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'
-                  }`}
-                >
+                <button onClick={() => setIsKm(false)} className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors border-l ${!isKm ? 'bg-beige text-beige-foreground' : 'bg-background hover:bg-beige-hover'}`}>
                   MILES
                 </button>
               </div>
@@ -186,12 +164,7 @@ const Preferences = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button 
-              variant={locationMethod === "current" ? "selected" : "outline"} 
-              onClick={handleUseCurrentLocation} 
-              className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
-              disabled={isGenerating}
-            >
+            <Button variant={locationMethod === "current" ? "selected" : "outline"} onClick={handleUseCurrentLocation} className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
               CURRENT LOCATION
             </Button>
             
@@ -199,12 +172,7 @@ const Preferences = () => {
               <span className="text-xs text-muted-foreground uppercase tracking-wider font-light">or</span>
             </div>
             
-            <Button 
-              variant={locationMethod === "map" ? "selected" : "outline"} 
-              onClick={handleChooseOnMap} 
-              className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
-              disabled={isGenerating}
-            >
+            <Button variant={locationMethod === "map" ? "selected" : "outline"} onClick={handleChooseOnMap} className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
               CHOOSE ON MAP
             </Button>
           </div>
@@ -212,12 +180,7 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex justify-center">
-          <Button 
-            onClick={handleGenerate} 
-            disabled={isGenerating || !distance || !selectedLocation} 
-            className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" 
-            size="lg"
-          >
+          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" size="lg">
             {isGenerating ? "GENERATING..." : "GENERATE RUNNING LAPS"}
           </Button>
         </div>
@@ -225,11 +188,7 @@ const Preferences = () => {
       <Footer />
 
       {/* Upgrade Modal */}
-      <UpgradeModal
-        open={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        routesGenerated={routeLimitStatus?.totalGenerated || 0}
-      />
+      <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} routesGenerated={routeLimitStatus?.totalGenerated || 0} />
     </div>;
 };
 export default Preferences;
