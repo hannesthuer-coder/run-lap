@@ -53,7 +53,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom: Copyright */}
-        <div className="text-center mt-8 pt-6 border-t border-beige-foreground/10">
+        <div className="text-center mt-8 pt-6">
           <p className="text-xs text-beige-foreground/70">©run-lap</p>
         </div>
       </div>
