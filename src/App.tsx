@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { CookieBanner } from "./components/CookieBanner";
 import Preferences from "./pages/Preferences";
 import RoutePage from "./pages/Route";
 import ChooseLocation from "./pages/ChooseLocation";
@@ -12,6 +13,8 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import SavedRoutes from "./pages/SavedRoutes";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +29,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Preferences />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/route" element={<ProtectedRoute><RoutePage /></ProtectedRoute>} />
             <Route path="/choose-location" element={<ProtectedRoute><ChooseLocation /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -34,6 +39,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

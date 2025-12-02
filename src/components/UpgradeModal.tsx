@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Crown, Zap, Infinity, BookmarkCheck } from 'lucide-react';
 import { StripeService } from '@/services/stripe.service';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -17,11 +18,17 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const handleUpgrade = async () => {
     if (!user) {
       toast.error('Please sign in first');
       navigate('/auth');
+      return;
+    }
+
+    if (!consentChecked) {
+      toast.error('Please agree to the Terms and Conditions');
       return;
     }
 
@@ -88,10 +95,31 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             <p className="text-sm text-muted-foreground">Cancel anytime</p>
           </div>
 
+          {/* Consent Checkbox */}
+          <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+            <Checkbox
+              id="consent"
+              checked={consentChecked}
+              onCheckedChange={(checked) => setConsentChecked(checked === true)}
+              className="mt-0.5"
+            />
+            <label htmlFor="consent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              I agree to Run-Lap's{" "}
+              <Link to="/terms" className="text-beige-foreground hover:underline font-medium" target="_blank">
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="text-beige-foreground hover:underline font-medium" target="_blank">
+                Privacy Policy
+              </Link>
+              . I consent to the immediate delivery of the service and acknowledge that I thereby lose my right of withdrawal.
+            </label>
+          </div>
+
           <Button 
             onClick={handleUpgrade}
-            disabled={isLoading}
-            className="w-full h-12 text-lg bg-beige hover:bg-beige-hover text-beige-foreground rounded-full"
+            disabled={isLoading || !consentChecked}
+            className="w-full h-12 text-lg bg-beige hover:bg-beige-hover text-beige-foreground rounded-full disabled:opacity-50"
             size="lg"
           >
             {isLoading ? 'Processing...' : user ? 'Upgrade Now' : 'Sign In to Upgrade'}
