@@ -91,7 +91,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
 
         <div className="space-y-4">
           <div className="text-center">
-            <p className="text-2xl font-bold mb-1">$2.95/month</p>
+            <p className="text-2xl font-bold mb-1">$3/month</p>
             <p className="text-sm text-muted-foreground">Cancel anytime</p>
           </div>
 
