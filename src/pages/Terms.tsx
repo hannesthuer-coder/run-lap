@@ -138,6 +138,17 @@ export default function Terms() {
               Consumer Disputes (ARN) in Sweden or, ultimately, by a Swedish general court.
             </p>
           </section>
+
+          {/* Company Information */}
+          <div className="mt-12 pt-8 border-t border-beige/30 text-center text-sm text-muted-foreground space-y-1">
+            <p><strong>Run-Lap</strong> Reg. no: 20060915-3432</p>
+            <p>Hägerstensvägen 163, 126 53 Hägersten, Sweden</p>
+            <p>
+              <a href="mailto:Contact@run-lap.com" className="hover:underline">Contact@run-lap.com</a>
+              <span className="mx-2">•</span>
+              Registered for F-tax (F-skatt)
+            </p>
+          </div>
         </article>
       </main>
 

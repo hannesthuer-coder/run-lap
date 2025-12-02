@@ -4,14 +4,33 @@ import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
-    <footer className="w-full mt-auto bg-[#f7eeda] py-10 px-6">
+    <footer className="w-full mt-auto bg-[#f7eeda] py-8 px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Top Row: Logo and Social Links */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+        {/* Main Row: Logo | Legal Links | Social Icons */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          {/* Left: Logo */}
           <div className="flex items-center">
             <img src={logo} alt="Run-Lap Logo" className="h-16 w-16 sm:h-20 sm:w-20" />
           </div>
 
+          {/* Center: Legal Links */}
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/terms" 
+              className="text-sm text-beige-foreground hover:underline"
+            >
+              Terms and Conditions
+            </Link>
+            <span className="text-beige-foreground/50">|</span>
+            <Link 
+              to="/privacy" 
+              className="text-sm text-beige-foreground hover:underline"
+            >
+              Privacy Policy
+            </Link>
+          </div>
+
+          {/* Right: Social Icons */}
           <div className="flex items-center gap-6">
             <a 
               href="https://www.instagram.com/run.lap/" 
@@ -33,36 +52,9 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Middle Row: Legal Links */}
-        <div className="flex items-center justify-center gap-6 mb-6">
-          <Link 
-            to="/terms" 
-            className="text-sm text-beige-foreground hover:underline"
-          >
-            Terms and Conditions
-          </Link>
-          <span className="text-beige-foreground/50">|</span>
-          <Link 
-            to="/privacy" 
-            className="text-sm text-beige-foreground hover:underline"
-          >
-            Privacy Policy
-          </Link>
-        </div>
-
-        {/* Bottom Row: Company Information */}
-        <div className="text-center text-xs text-beige-foreground/80 space-y-1">
-          <p>
-            <strong>Run-Lap</strong> Reg. no: 20060915-3432
-          </p>
-          <p>
-            Hägerstensvägen 163, 126 53 Hägersten, Sweden
-          </p>
-          <p>
-            <a href="mailto:Contact@run-lap.com" className="hover:underline">Contact@run-lap.com</a>
-            <span className="mx-2">•</span>
-            Registered for F-tax (F-skatt)
-          </p>
+        {/* Bottom: Copyright */}
+        <div className="text-center mt-4 pb-2">
+          <p className="text-xs text-beige-foreground/70">©run-lap</p>
         </div>
       </div>
     </footer>
