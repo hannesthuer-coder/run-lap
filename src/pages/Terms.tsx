@@ -7,7 +7,7 @@ export default function Terms() {
       <main className="flex-1 max-w-4xl mx-auto px-4 py-12">
         <article className="prose prose-gray max-w-none my-[10px]">
           <h1 className="text-3xl font-bold mb-2">General Terms and Conditions – Run-Lap</h1>
-          <p className="text-muted-foreground mb-8">Last updated: 2025-11-22</p>
+          <p className="text-muted-foreground mb-8">Last updated: 2025-12-01</p>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">1. General</h2>
