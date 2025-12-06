@@ -44,11 +44,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const hasActiveSub = data?.subscribed === true && data?.subscription_end;
+      // Check if subscribed - subscription_end may be null even with active subscription
+      const hasActiveSub = data?.subscribed === true;
       if (hasActiveSub) {
-        const isActive = new Date(data.subscription_end) > new Date();
-        setIsPremium(isActive);
-        setSubscriptionEnd(isActive ? data.subscription_end : null);
+        // If we have a subscription end date, verify it's still valid
+        if (data?.subscription_end) {
+          const isActive = new Date(data.subscription_end) > new Date();
+          setIsPremium(isActive);
+          setSubscriptionEnd(isActive ? data.subscription_end : null);
+        } else {
+          // No end date but subscription is active
+          setIsPremium(true);
+          setSubscriptionEnd(null);
+        }
       } else {
         setIsPremium(false);
         setSubscriptionEnd(null);
