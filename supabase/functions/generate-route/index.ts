@@ -77,9 +77,13 @@ serve(async (req) => {
       .eq('id', user.id)
       .single()
     
+    // Premium is valid if status is 'premium' AND either:
+    // 1. No expiration date set (indefinite subscription), OR
+    // 2. Expiration date is in the future
     const hasActiveSubscription = profile?.subscription_status === 'premium' && 
-      profile?.subscription_expires_at && 
-      new Date(profile.subscription_expires_at) > new Date()
+      (profile?.subscription_expires_at === null || 
+       !profile?.subscription_expires_at ||
+       new Date(profile.subscription_expires_at) > new Date())
     
     // Enforce 3 route limit for free users
     if (!hasActiveSubscription && routeCount >= 3) {
