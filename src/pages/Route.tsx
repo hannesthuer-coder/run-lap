@@ -163,22 +163,9 @@ const Route = () => {
 
       {/* Page Header */}
       <div className={`text-center py-4 sm:py-6 md:py-8 pt-28 sm:pt-32 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <div className="flex items-center justify-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
-            Results
-          </h1>
-          {isPremium && !isLoading && (
-            <Button
-              onClick={() => setShowSaveDialog(true)}
-              variant="outline"
-              size="sm"
-              className="rounded-full gap-2"
-            >
-              <BookmarkPlus className="h-4 w-4" />
-              Save Route
-            </Button>
-          )}
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
+          Results
+        </h1>
       </div>
 
       {/* Map Container */}
@@ -219,6 +206,24 @@ const Route = () => {
             className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
           >
             CHANGE PREFERENCES
+          </Button>
+
+          <Button
+            onClick={() => {
+              if (isPremium) {
+                setShowSaveDialog(true);
+              } else {
+                toast({
+                  title: "Premium Feature",
+                  description: "Save routes is a premium feature. Upgrade to unlock!",
+                });
+              }
+            }}
+            variant="outline"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+          >
+            <BookmarkPlus className="h-4 w-4 mr-2" />
+            SAVE ROUTE
           </Button>
         </div>
       </div>
