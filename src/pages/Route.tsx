@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 const Route = () => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const Route = () => {
   const [showButtons, setShowButtons] = useState(false);
   const [dots, setDots] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
@@ -213,10 +215,7 @@ const Route = () => {
               if (isPremium) {
                 setShowSaveDialog(true);
               } else {
-                toast({
-                  title: "Premium Feature",
-                  description: "Save routes is a premium feature. Upgrade to unlock!",
-                });
+                setShowUpgradeModal(true);
               }
             }}
             variant="outline"
@@ -267,6 +266,12 @@ const Route = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        routesGenerated={0}
+      />
 
       <Footer />
     </div>
