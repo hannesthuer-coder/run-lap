@@ -13,18 +13,17 @@ export class RouteLimitService {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_status, subscription_expires_at')
-          .eq('id', user.id)
-          .single();
+        // Use the check-subscription edge function for accurate Stripe status
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (profile?.subscription_status === 'premium') {
-          const isActive = profile.subscription_expires_at 
-            ? new Date(profile.subscription_expires_at) > new Date()
-            : false;
+        if (session?.access_token) {
+          const { data, error } = await supabase.functions.invoke('check-subscription', {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
           
-          if (isActive) {
+          if (!error && data?.subscribed === true) {
             return {
               canGenerate: true,
               remainingRoutes: Infinity,

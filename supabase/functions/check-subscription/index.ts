@@ -47,6 +47,18 @@ serve(async (req) => {
     
     if (customers.data.length === 0) {
       logStep("No customer found, updating unsubscribed state");
+      // Sync profiles table - mark as free
+      await supabaseClient
+        .from('profiles')
+        .update({
+          subscription_status: 'free',
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          subscription_expires_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -64,9 +76,11 @@ serve(async (req) => {
     const hasActiveSub = subscriptions.data.length > 0;
     let productId = null;
     let subscriptionEnd = null;
+    let stripeSubscriptionId = null;
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
+      stripeSubscriptionId = subscription.id;
       // Safely handle subscription end date - current_period_end is a Unix timestamp
       if (subscription.current_period_end) {
         try {
@@ -78,8 +92,37 @@ serve(async (req) => {
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       productId = subscription.items.data[0].price.product as string;
       logStep("Determined subscription tier", { productId });
+      
+      // Sync profiles table with premium status
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({
+          subscription_status: 'premium',
+          stripe_customer_id: customerId,
+          stripe_subscription_id: stripeSubscriptionId,
+          subscription_expires_at: subscriptionEnd,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        logStep("Warning: Failed to sync profile", { error: updateError.message });
+      } else {
+        logStep("Profile synced with premium status");
+      }
     } else {
       logStep("No active subscription found");
+      // Sync profiles table - mark as free
+      await supabaseClient
+        .from('profiles')
+        .update({
+          subscription_status: 'free',
+          stripe_customer_id: customerId,
+          stripe_subscription_id: null,
+          subscription_expires_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
     }
 
     return new Response(JSON.stringify({
