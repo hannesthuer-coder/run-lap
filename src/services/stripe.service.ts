@@ -1,13 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 
+export type PlanType = 'monthly' | 'annual';
+
 export class StripeService {
   
-  static async createCheckoutSession(email: string): Promise<string | null> {
+  static async createCheckoutSession(email: string, plan: PlanType = 'monthly'): Promise<string | null> {
     try {
       const { data, error } = await supabase.functions.invoke<{
         sessionUrl: string;
       }>('create-stripe-checkout', {
-        body: { email }
+        body: { email, plan }
       });
       
       if (error) throw error;

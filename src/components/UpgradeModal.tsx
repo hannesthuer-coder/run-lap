@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Crown, Zap, Infinity, BookmarkCheck } from 'lucide-react';
+import { Crown, Zap, Infinity, BookmarkCheck, Check } from 'lucide-react';
 import { StripeService } from '@/services/stripe.service';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,11 +14,14 @@ interface UpgradeModalProps {
   routesGenerated: number;
 }
 
+type PlanType = 'monthly' | 'annual';
+
 export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
 
   const handleUpgrade = async () => {
     if (!user) {
@@ -35,7 +38,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
     setIsLoading(true);
     
     try {
-      const sessionUrl = await StripeService.createCheckoutSession(user.email!);
+      const sessionUrl = await StripeService.createCheckoutSession(user.email!, selectedPlan);
       
       if (sessionUrl) {
         window.open(sessionUrl, '_blank');
@@ -89,12 +92,51 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold mb-1">$3/month</p>
-            <p className="text-sm text-muted-foreground">Cancel anytime</p>
-          </div>
+        {/* Plan Selection */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-center">Choose your plan</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setSelectedPlan('monthly')}
+              className={`relative p-4 rounded-xl border-2 transition-all ${
+                selectedPlan === 'monthly'
+                  ? 'border-beige bg-beige/10'
+                  : 'border-border hover:border-beige/50'
+              }`}
+            >
+              {selectedPlan === 'monthly' && (
+                <div className="absolute -top-2 -right-2 bg-beige rounded-full p-1">
+                  <Check className="h-3 w-3 text-beige-foreground" />
+                </div>
+              )}
+              <p className="text-xl font-bold">$3</p>
+              <p className="text-sm text-muted-foreground">/month</p>
+            </button>
 
+            <button
+              onClick={() => setSelectedPlan('annual')}
+              className={`relative p-4 rounded-xl border-2 transition-all ${
+                selectedPlan === 'annual'
+                  ? 'border-beige bg-beige/10'
+                  : 'border-border hover:border-beige/50'
+              }`}
+            >
+              {selectedPlan === 'annual' && (
+                <div className="absolute -top-2 -right-2 bg-beige rounded-full p-1">
+                  <Check className="h-3 w-3 text-beige-foreground" />
+                </div>
+              )}
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                Save $6
+              </div>
+              <p className="text-xl font-bold">$30</p>
+              <p className="text-sm text-muted-foreground">/year</p>
+            </button>
+          </div>
+          <p className="text-xs text-center text-muted-foreground">Cancel anytime</p>
+        </div>
+
+        <div className="space-y-4 mt-4">
           {/* Consent Checkbox */}
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
             <Checkbox
