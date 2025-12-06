@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Crown, Calendar, Mail, CreditCard, User, Loader2, ExternalLink, Pencil, Check, X } from 'lucide-react';
+import { Crown, Calendar, Mail, CreditCard, User, Loader2, ExternalLink, Pencil, Check, X, Phone, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -17,15 +16,30 @@ import { UpgradeModal } from '@/components/UpgradeModal';
 interface ProfileData {
   avatar_url: string | null;
   display_name: string | null;
+  phone_number: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
 }
+
+type EditableField = 'display_name' | 'phone_number' | 'address' | 'city' | 'postal_code' | 'country' | null;
 
 const Profile = () => {
   const { user, isPremium, subscriptionEnd } = useAuth();
-  const [profileData, setProfileData] = useState<ProfileData>({ avatar_url: null, display_name: null });
+  const [profileData, setProfileData] = useState<ProfileData>({
+    avatar_url: null,
+    display_name: null,
+    phone_number: null,
+    address: null,
+    city: null,
+    postal_code: null,
+    country: null,
+  });
   const [loading, setLoading] = useState(true);
-  const [editingName, setEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState('');
-  const [savingName, setSavingName] = useState(false);
+  const [editingField, setEditingField] = useState<EditableField>(null);
+  const [editValue, setEditValue] = useState('');
+  const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [shareRoute, setShareRoute] = useState<any>(null);
@@ -42,7 +56,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('avatar_url, display_name')
+        .select('avatar_url, display_name, phone_number, address, city, postal_code, country')
         .eq('id', user.id)
         .single();
 
@@ -50,8 +64,12 @@ const Profile = () => {
       setProfileData({
         avatar_url: data?.avatar_url || null,
         display_name: data?.display_name || null,
+        phone_number: data?.phone_number || null,
+        address: data?.address || null,
+        city: data?.city || null,
+        postal_code: data?.postal_code || null,
+        country: data?.country || null,
       });
-      setDisplayName(data?.display_name || '');
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -59,33 +77,45 @@ const Profile = () => {
     }
   };
 
-  const handleSaveDisplayName = async () => {
-    if (!user) return;
+  const handleStartEdit = (field: EditableField) => {
+    if (!field) return;
+    setEditingField(field);
+    setEditValue(profileData[field] || '');
+  };
 
-    setSavingName(true);
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const handleSaveField = async () => {
+    if (!user || !editingField) return;
+
+    setSaving(true);
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: displayName.trim() || null })
+        .update({ [editingField]: editValue.trim() || null })
         .eq('id', user.id);
 
       if (error) throw error;
 
-      setProfileData(prev => ({ ...prev, display_name: displayName.trim() || null }));
-      setEditingName(false);
+      setProfileData(prev => ({ ...prev, [editingField]: editValue.trim() || null }));
+      setEditingField(null);
+      setEditValue('');
       toast({
         title: "success",
-        description: "display name updated",
+        description: "profile updated",
       });
     } catch (error) {
-      console.error('Error updating display name:', error);
+      console.error('Error updating profile:', error);
       toast({
         title: "error",
-        description: "failed to update display name",
+        description: "failed to update profile",
         variant: "destructive",
       });
     } finally {
-      setSavingName(false);
+      setSaving(false);
     }
   };
 
@@ -117,6 +147,68 @@ const Profile = () => {
 
   const handleAvatarChange = (url: string) => {
     setProfileData(prev => ({ ...prev, avatar_url: url }));
+  };
+
+  const renderEditableField = (
+    field: EditableField,
+    label: string,
+    icon: React.ReactNode,
+    placeholder: string
+  ) => {
+    if (!field) return null;
+    const isEditing = editingField === field;
+    const value = profileData[field];
+
+    return (
+      <div className="flex items-center gap-3">
+        <div className="text-muted-foreground">{icon}</div>
+        <div className="flex-1">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          {isEditing ? (
+            <div className="flex items-center gap-2 mt-1">
+              <Input
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                placeholder={placeholder}
+                className="h-8 text-sm"
+                maxLength={100}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={handleSaveField}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={handleCancelEdit}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">
+                {value || <span className="text-muted-foreground italic">not set</span>}
+              </p>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={() => handleStartEdit(field)}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -178,57 +270,8 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">display name</p>
-                  {editingName ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="enter display name"
-                        className="h-8 text-sm"
-                        maxLength={30}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={handleSaveDisplayName}
-                        disabled={savingName}
-                      >
-                        {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          setEditingName(false);
-                          setDisplayName(profileData.display_name || '');
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">
-                        {profileData.display_name || <span className="text-muted-foreground italic">not set</span>}
-                      </p>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => setEditingName(true)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderEditableField('display_name', 'display name', <User className="h-4 w-4" />, 'enter display name')}
+              {renderEditableField('phone_number', 'phone number', <Phone className="h-4 w-4" />, 'enter phone number')}
 
               {user?.created_at && (
                 <div className="flex items-center gap-3">
@@ -239,6 +282,22 @@ const Profile = () => {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Address Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="h-5 w-5" />
+                address
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {renderEditableField('address', 'street address', <MapPin className="h-4 w-4" />, 'enter street address')}
+              {renderEditableField('city', 'city', <MapPin className="h-4 w-4" />, 'enter city')}
+              {renderEditableField('postal_code', 'postal code', <MapPin className="h-4 w-4" />, 'enter postal code')}
+              {renderEditableField('country', 'country', <MapPin className="h-4 w-4" />, 'enter country')}
             </CardContent>
           </Card>
 
