@@ -28,11 +28,24 @@ const Preferences = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [routeLimitStatus, setRouteLimitStatus] = useState<RouteLimitStatus | null>(null);
 
-  // Check route limit on mount
+  // Check route limit on mount, but skip if already premium from AuthContext
   useEffect(() => {
     checkRouteLimit();
-  }, []);
+  }, [isPremium]);
+  
   const checkRouteLimit = async () => {
+    // If AuthContext already knows user is premium, skip the limit check
+    if (isPremium) {
+      setRouteLimitStatus({
+        canGenerate: true,
+        remainingRoutes: Infinity,
+        totalGenerated: 0,
+        isPremium: true,
+        needsUpgrade: false,
+      });
+      return;
+    }
+    
     const status = await RouteLimitService.checkRouteLimit();
     setRouteLimitStatus(status);
     if (status.needsUpgrade) {
