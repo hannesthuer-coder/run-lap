@@ -16,11 +16,16 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          city: string | null
+          country: string | null
           created_at: string | null
           display_name: string | null
           email: string
           id: string
+          phone_number: string | null
+          postal_code: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_expires_at: string | null
@@ -28,11 +33,16 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           display_name?: string | null
           email: string
           id: string
+          phone_number?: string | null
+          postal_code?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_expires_at?: string | null
@@ -40,11 +50,16 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           display_name?: string | null
           email?: string
           id?: string
+          phone_number?: string | null
+          postal_code?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_expires_at?: string | null
