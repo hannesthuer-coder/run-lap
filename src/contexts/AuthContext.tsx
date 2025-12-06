@@ -24,8 +24,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isPremium, setIsPremium] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
-  const checkSubscriptionStatus = async () => {
-    if (!user) {
+  const checkSubscriptionStatus = async (userOverride?: User | null) => {
+    const currentUser = userOverride ?? user;
+    
+    if (!currentUser) {
       setIsPremium(false);
       setSubscriptionEnd(null);
       return;
@@ -64,10 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Defer subscription check
+      // Defer subscription check - pass user directly to avoid state race condition
       if (session?.user) {
         setTimeout(() => {
-          checkSubscriptionStatus();
+          checkSubscriptionStatus(session.user);
         }, 0);
       } else {
         setIsPremium(false);
@@ -83,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         setTimeout(() => {
-          checkSubscriptionStatus();
+          checkSubscriptionStatus(session.user);
         }, 0);
       }
     });
