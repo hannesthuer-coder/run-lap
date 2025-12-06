@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
+          display_name: string | null
           email: string
           id: string
           stripe_customer_id: string | null
@@ -26,7 +28,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
+          display_name?: string | null
           email: string
           id: string
           stripe_customer_id?: string | null
@@ -36,7 +40,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
+          display_name?: string | null
           email?: string
           id?: string
           stripe_customer_id?: string | null
@@ -121,6 +127,45 @@ export type Database = {
           id?: string
           route_geometry?: Json
           route_name?: string
+          start_location?: string
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shared_routes: {
+        Row: {
+          created_at: string | null
+          distance: number
+          expires_at: string | null
+          id: string
+          route_geometry: Json
+          route_name: string | null
+          share_code: string
+          start_location: string
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          distance: number
+          expires_at?: string | null
+          id?: string
+          route_geometry: Json
+          route_name?: string | null
+          share_code: string
+          start_location: string
+          unit: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          distance?: number
+          expires_at?: string | null
+          id?: string
+          route_geometry?: Json
+          route_name?: string | null
+          share_code?: string
           start_location?: string
           unit?: string
           user_id?: string

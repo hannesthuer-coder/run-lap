@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2 } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { ShareRouteDialog } from "@/components/profile/ShareRouteDialog";
 
 const Route = () => {
   const location = useLocation();
@@ -34,6 +35,7 @@ const Route = () => {
   const [dots, setDots] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
@@ -224,6 +226,21 @@ const Route = () => {
             <BookmarkPlus className="h-4 w-4 mr-2" />
             save route
           </Button>
+
+          <Button
+            onClick={() => {
+              if (isPremium) {
+                setShowShareDialog(true);
+              } else {
+                setShowUpgradeModal(true);
+              }
+            }}
+            variant="outline"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            share route
+          </Button>
         </div>
       </div>
 
@@ -271,6 +288,17 @@ const Route = () => {
         open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         routesGenerated={0}
+      />
+
+      <ShareRouteDialog
+        open={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        route={generatedRoute ? {
+          distance: routeData.distance,
+          unit: routeData.unit,
+          start_location: routeData.location,
+          route_geometry: generatedRoute.geometry || {},
+        } : null}
       />
 
       <Footer />
