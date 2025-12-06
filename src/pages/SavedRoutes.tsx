@@ -127,25 +127,25 @@ const SavedRoutes = () => {
       <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2 flex items-center gap-3">
-            SAVED ROUTES
+            saved routes
             <Crown className="h-8 w-8 text-beige" />
           </h1>
-          <p className="text-muted-foreground">Your collection of favorite running routes</p>
+          <p className="text-muted-foreground">your collection of favorite running routes</p>
         </div>
 
         {routes.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <MapPin className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No saved routes yet</h3>
+              <h3 className="text-xl font-semibold mb-2">no saved routes yet</h3>
               <p className="text-muted-foreground text-center mb-6">
-                Generate and save your first route to see it here!
+                generate and save your first route to see it here!
               </p>
               <Button
                 onClick={() => navigate('/')}
                 className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-6"
               >
-                GENERATE A ROUTE
+                generate a route
               </Button>
             </CardContent>
           </Card>
@@ -192,7 +192,7 @@ const SavedRoutes = () => {
                     onClick={() => handleViewRoute(route)}
                     className="w-full bg-beige hover:bg-beige-hover text-beige-foreground rounded-full"
                   >
-                    VIEW ROUTE
+                    view route
                   </Button>
                 </CardContent>
               </Card>

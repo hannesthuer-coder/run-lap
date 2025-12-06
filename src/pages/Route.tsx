@@ -155,8 +155,8 @@ const Route = () => {
       {isLoading && (
         <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center">
-            <h2 className="text-xs font-light text-foreground uppercase tracking-wider leading-relaxed text-left">
-              Generating your<br />
+            <h2 className="text-xs font-light text-foreground tracking-wider leading-relaxed text-left">
+              generating your<br />
               perfect running route<span className="inline-block w-6 text-left">{dots}</span>
             </h2>
           </div>
@@ -165,8 +165,8 @@ const Route = () => {
 
       {/* Page Header */}
       <div className={`text-center py-4 sm:py-6 md:py-8 pt-28 sm:pt-32 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground uppercase tracking-wide">
-          Results
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-wide">
+          results
         </h1>
       </div>
 
@@ -187,8 +187,8 @@ const Route = () => {
       {/* Not Satisfied Section */}
       <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
         <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <h2 className="text-base sm:text-lg font-bold text-foreground uppercase tracking-wide">
-            NOT SATISFIED?
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-wide">
+            not satisfied?
           </h2>
         </div>
 
@@ -197,17 +197,17 @@ const Route = () => {
             onClick={handleRegenerateRoute}
             disabled={isRegenerating}
             variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
           >
-            {isRegenerating ? "GENERATING..." : "GENERATE NEW ROUTE"}
+            {isRegenerating ? "generating..." : "generate new route"}
           </Button>
           
           <Button
             onClick={handleChangePreferences}
             variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
           >
-            CHANGE PREFERENCES
+            change preferences
           </Button>
 
           <Button
@@ -219,10 +219,10 @@ const Route = () => {
               }
             }}
             variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold uppercase tracking-wide text-xs sm:text-sm"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
           >
             <BookmarkPlus className="h-4 w-4 mr-2" />
-            SAVE ROUTE
+            save route
           </Button>
         </div>
       </div>
