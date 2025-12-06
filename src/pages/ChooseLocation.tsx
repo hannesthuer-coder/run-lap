@@ -43,8 +43,8 @@ const ChooseLocation = () => {
           <ArrowLeft size={20} />
           <span className="font-medium">Back</span>
         </button>
-        <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
-          SELECT YOUR STARTING POINT
+        <h1 className="text-2xl font-bold text-foreground tracking-wide">
+          select your starting point
         </h1>
       </div>
 
@@ -60,9 +60,9 @@ const ChooseLocation = () => {
         <Button
           onClick={handleDone}
           disabled={!selectedCoords}
-          className="px-12 py-3 h-12 rounded-full font-semibold uppercase tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed"
+          className="px-12 py-3 h-12 rounded-full font-semibold tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed"
         >
-          DONE
+          done
         </Button>
       </div>
     </div>
