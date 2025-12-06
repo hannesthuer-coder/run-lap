@@ -8,11 +8,12 @@ interface MapComponentProps {
   distance: number;
   unit: string;
   regenerateKey?: number;
-  onRouteGenerated?: () => void;
+  onRouteGenerated?: (route?: any) => void;
   onError?: () => void;
+  preloadedRoute?: any;
 }
 
-const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError }: MapComponentProps) => {
+const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError, preloadedRoute }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
@@ -260,7 +261,14 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
 
       mapInstance.on('load', async () => {
         try {
-          const routeCoords = await generateAIRoute([lng, lat], distance);
+          // Use preloaded route if available, otherwise generate new one
+          let routeCoords;
+          if (preloadedRoute?.coordinates) {
+            routeCoords = preloadedRoute.coordinates;
+            setActualDistance(distance * (unit === 'km' ? 1000 : 1609.34));
+          } else {
+            routeCoords = await generateAIRoute([lng, lat], distance);
+          }
           
           mapInstance.addSource('route', {
             type: 'geojson',

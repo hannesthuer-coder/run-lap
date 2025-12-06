@@ -12,6 +12,7 @@ import ChooseLocation from "./pages/ChooseLocation";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import SavedRoutes from "./pages/SavedRoutes";
+import SharedRoute from "./pages/SharedRoute";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/shared/:shareCode" element={<SharedRoute />} />
             <Route path="/route" element={<ProtectedRoute><RoutePage /></ProtectedRoute>} />
             <Route path="/choose-location" element={<ProtectedRoute><ChooseLocation /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
