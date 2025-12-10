@@ -24,7 +24,7 @@ import { ShareRouteDialog } from "@/components/profile/ShareRouteDialog";
 const Route = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isPremium } = useAuth();
+  const { isPremium, user } = useAuth();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateKey, setRegenerateKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +87,7 @@ const Route = () => {
       const { error } = await supabase
         .from('saved_routes')
         .insert([{
+          user_id: user?.id,
           route_name: routeName,
           distance: routeData.distance,
           unit: routeData.unit,
