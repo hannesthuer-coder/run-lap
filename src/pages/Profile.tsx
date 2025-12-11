@@ -4,7 +4,10 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crown, Calendar, Mail, CreditCard, User, Loader2, ExternalLink, Pencil, Check, X, Phone, MapPin } from 'lucide-react';
+import { Crown, Calendar, Mail, CreditCard, User, Loader2, ExternalLink, Pencil, Check, X, Phone, MapPin, Settings } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -27,6 +30,7 @@ type EditableField = 'display_name' | 'phone_number' | 'address' | 'city' | 'pos
 
 const Profile = () => {
   const { user, isPremium, subscriptionEnd } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [profileData, setProfileData] = useState<ProfileData>({
     avatar_url: null,
     display_name: null,
@@ -298,6 +302,35 @@ const Profile = () => {
               {renderEditableField('city', 'city', <MapPin className="h-4 w-4" />, 'enter city')}
               {renderEditableField('postal_code', 'postal code', <MapPin className="h-4 w-4" />, 'enter postal code')}
               {renderEditableField('country', 'country', <MapPin className="h-4 w-4" />, 'enter country')}
+            </CardContent>
+          </Card>
+
+          {/* Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Settings className="h-5 w-5" />
+                settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-3">theme</p>
+                <RadioGroup value={theme} onValueChange={setTheme} className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="system" id="system" />
+                    <Label htmlFor="system" className="text-sm font-normal cursor-pointer">system (follow device)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="light" id="light" />
+                    <Label htmlFor="light" className="text-sm font-normal cursor-pointer">light</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="dark" id="dark" />
+                    <Label htmlFor="dark" className="text-sm font-normal cursor-pointer">dark</Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </CardContent>
           </Card>
 
