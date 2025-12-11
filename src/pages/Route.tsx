@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2 } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -18,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ShareRouteDialog } from "@/components/profile/ShareRouteDialog";
 
@@ -38,6 +48,8 @@ const Route = () => {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
   
   const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
@@ -147,6 +159,36 @@ const Route = () => {
 
   const handleChangePreferences = () => {
     navigate("/");
+  };
+
+  const handleDeleteSavedRoute = async () => {
+    if (!routeData.savedRouteId) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('saved_routes')
+        .delete()
+        .eq('id', routeData.savedRouteId);
+
+      if (error) throw error;
+
+      toast({
+        title: "success",
+        description: "route deleted successfully.",
+      });
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error deleting route:', error);
+      toast({
+        title: "error",
+        description: "failed to delete route. please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   // Mock route stats
@@ -270,8 +312,39 @@ const Route = () => {
             <Share2 className="h-4 w-4 mr-2" />
             share route
           </Button>
+
+          <Button
+            onClick={() => setShowDeleteDialog(true)}
+            variant="outline"
+            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            delete route
+          </Button>
         </div>
       )}
+
+      {/* Delete Route Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>delete saved route?</AlertDialogTitle>
+            <AlertDialogDescription>
+              are you sure you want to delete "{routeData.savedRouteName || 'this route'}"? this action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSavedRoute}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'deleting...' : 'delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Save Route Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
