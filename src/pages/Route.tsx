@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2 } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -42,6 +42,7 @@ const Route = () => {
   
   const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
   const preloadedRoute = routeData.isPreloaded ? routeData.route?.geometry : undefined;
+  const isViewingSavedRoute = routeData.isPreloaded === true;
 
   // Animate dots
   useEffect(() => {
@@ -189,55 +190,80 @@ const Route = () => {
         </div>
       </div>
 
-      {/* Not Satisfied Section */}
-      <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
-        <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-wide">
-            not satisfied?
-          </h2>
+      {/* Not Satisfied Section - Only show for newly generated routes */}
+      {!isViewingSavedRoute && (
+        <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
+          <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-wide">
+              not satisfied?
+            </h2>
+          </div>
+
+          <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+            <Button
+              onClick={handleRegenerateRoute}
+              disabled={isRegenerating}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              {isRegenerating ? "generating..." : "generate new route"}
+            </Button>
+            
+            <Button
+              onClick={handleChangePreferences}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              change preferences
+            </Button>
+
+            <Button
+              onClick={() => {
+                if (isPremium) {
+                  setShowSaveDialog(true);
+                } else {
+                  setShowUpgradeModal(true);
+                }
+              }}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              <BookmarkPlus className="h-4 w-4 mr-2" />
+              save route
+            </Button>
+
+            <Button
+              onClick={() => {
+                if (isPremium) {
+                  setShowShareDialog(true);
+                } else {
+                  setShowUpgradeModal(true);
+                }
+              }}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              share route
+            </Button>
+          </div>
         </div>
+      )}
 
-        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+      {/* Saved Route Options - Only show for saved routes */}
+      {isViewingSavedRoute && (
+        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 pb-6 sm:pb-8 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
           <Button
-            onClick={handleRegenerateRoute}
-            disabled={isRegenerating}
+            onClick={() => navigate('/profile')}
             variant="outline"
             className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
           >
-            {isRegenerating ? "generating..." : "generate new route"}
-          </Button>
-          
-          <Button
-            onClick={handleChangePreferences}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
-          >
-            change preferences
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            back to saved routes
           </Button>
 
           <Button
-            onClick={() => {
-              if (isPremium) {
-                setShowSaveDialog(true);
-              } else {
-                setShowUpgradeModal(true);
-              }
-            }}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
-          >
-            <BookmarkPlus className="h-4 w-4 mr-2" />
-            save route
-          </Button>
-
-          <Button
-            onClick={() => {
-              if (isPremium) {
-                setShowShareDialog(true);
-              } else {
-                setShowUpgradeModal(true);
-              }
-            }}
+            onClick={() => setShowShareDialog(true)}
             variant="outline"
             className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
           >
@@ -245,7 +271,7 @@ const Route = () => {
             share route
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Save Route Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
