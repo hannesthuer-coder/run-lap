@@ -27,7 +27,7 @@ export function CookieBanner() {
         <p className="text-sm text-foreground text-center sm:text-left">
           We use cookies to ensure the service functions correctly and to provide you with the best experience. 
           By continuing to use Run-Lap, you agree to our use of cookies.{" "}
-          <Link to="/privacy" className="text-beige-foreground hover:underline font-medium">
+          <Link to="/privacy" className="text-primary hover:underline font-medium">
             Read more in our Privacy Policy
           </Link>
         </p>

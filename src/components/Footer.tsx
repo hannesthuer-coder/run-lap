@@ -1,8 +1,9 @@
 import { Instagram, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
-import logo from "@/assets/logo.png";
+
 const Footer = () => {
-  return <footer className="w-full mt-auto bg-[#f7eeda] py-8 px-6">
+  return (
+    <footer className="w-full mt-auto bg-beige py-8 px-6">
       <div className="max-w-6xl mx-auto">
         {/* Main Row: Logo | Legal Links | Social Icons */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -39,6 +40,8 @@ const Footer = () => {
           <p className="text-xs text-beige-foreground/70">©run-lap</p>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 };
+
 export default Footer;

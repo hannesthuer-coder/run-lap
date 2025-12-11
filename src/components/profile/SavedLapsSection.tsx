@@ -113,7 +113,7 @@ export const SavedLapsSection = ({ isPremium, onShare }: SavedLapsSectionProps) 
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-8">
-          <Crown className="h-12 w-12 text-beige mb-3" />
+          <Crown className="h-12 w-12 text-primary mb-3" />
           <h3 className="text-lg font-semibold mb-2">saved laps</h3>
           <p className="text-muted-foreground text-center text-sm mb-4">
             upgrade to premium to save your favorite routes
@@ -132,7 +132,7 @@ export const SavedLapsSection = ({ isPremium, onShare }: SavedLapsSectionProps) 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-beige" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -142,7 +142,7 @@ export const SavedLapsSection = ({ isPremium, onShare }: SavedLapsSectionProps) 
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           saved laps
-          <Crown className="h-5 w-5 text-beige" />
+          <Crown className="h-5 w-5 text-primary" />
         </h3>
         {routes.length > 0 && (
           <Button
