@@ -263,9 +263,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         try {
           // Use preloaded route if available, otherwise generate new one
           let routeCoords;
-          if (preloadedRoute?.coordinates) {
-            routeCoords = preloadedRoute.coordinates;
+          if (preloadedRoute) {
+            // Handle different geometry formats: { coordinates: [...] } or direct array
+            routeCoords = preloadedRoute.coordinates || preloadedRoute;
             setActualDistance(distance * (unit === 'km' ? 1000 : 1609.34));
+            toast.success("Saved route loaded successfully!");
           } else {
             routeCoords = await generateAIRoute([lng, lat], distance);
           }
