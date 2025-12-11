@@ -103,6 +103,8 @@ export const SavedLapsSection = ({ isPremium, onShare }: SavedLapsSectionProps) 
         unit: route.unit,
         location: route.start_location,
         isPreloaded: true,
+        savedRouteId: route.id,
+        savedRouteName: route.route_name,
       },
     });
   };
