@@ -58,7 +58,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Crown className="h-6 w-6 text-beige" />
+            <Crown className="h-6 w-6 text-primary" />
             <DialogTitle className="text-2xl">Upgrade to Premium</DialogTitle>
           </div>
           <DialogDescription>
@@ -67,7 +67,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
         </DialogHeader>
 
         <div className="space-y-4 my-6">
-          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
             <Infinity className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Unlimited Routes</p>
@@ -75,7 +75,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
             <Zap className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Priority AI Generation</p>
@@ -83,7 +83,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-beige/10 rounded-lg">
+          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
             <BookmarkCheck className="h-5 w-5 text-beige-foreground mt-0.5" />
             <div>
               <p className="font-medium">Save Your Routes</p>
@@ -100,13 +100,13 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
               onClick={() => setSelectedPlan('monthly')}
               className={`relative p-4 rounded-xl border-2 transition-all ${
                 selectedPlan === 'monthly'
-                  ? 'border-beige bg-beige/10'
-                  : 'border-border hover:border-beige/50'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
               }`}
             >
               {selectedPlan === 'monthly' && (
-                <div className="absolute -top-2 -right-2 bg-beige rounded-full p-1">
-                  <Check className="h-3 w-3 text-beige-foreground" />
+                <div className="absolute -top-2 -right-2 bg-primary rounded-full p-1">
+                  <Check className="h-3 w-3 text-primary-foreground" />
                 </div>
               )}
               <p className="text-xl font-bold">$3</p>
@@ -117,16 +117,16 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
               onClick={() => setSelectedPlan('annual')}
               className={`relative p-4 rounded-xl border-2 transition-all ${
                 selectedPlan === 'annual'
-                  ? 'border-beige bg-beige/10'
-                  : 'border-border hover:border-beige/50'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
               }`}
             >
               {selectedPlan === 'annual' && (
-                <div className="absolute -top-2 -right-2 bg-beige rounded-full p-1">
-                  <Check className="h-3 w-3 text-beige-foreground" />
+                <div className="absolute -top-2 -right-2 bg-primary rounded-full p-1">
+                  <Check className="h-3 w-3 text-primary-foreground" />
                 </div>
               )}
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-success text-success-foreground text-[10px] px-2 py-0.5 rounded-full font-medium">
                 Save $6
               </div>
               <p className="text-xl font-bold">$30</p>
@@ -147,11 +147,11 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             />
             <label htmlFor="consent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
               I agree to Run-Lap's{" "}
-              <Link to="/terms" className="text-beige-foreground hover:underline font-medium" target="_blank">
+              <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">
                 Terms and Conditions
               </Link>{" "}
               and{" "}
-              <Link to="/privacy" className="text-beige-foreground hover:underline font-medium" target="_blank">
+              <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank">
                 Privacy Policy
               </Link>
               . I consent to the immediate delivery of the service and acknowledge that I thereby lose my right of withdrawal.

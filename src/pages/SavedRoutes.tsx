@@ -114,7 +114,7 @@ const SavedRoutes = () => {
         <Header />
         <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-beige"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </div>
       </div>
@@ -128,7 +128,7 @@ const SavedRoutes = () => {
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2 flex items-center gap-3">
             saved routes
-            <Crown className="h-8 w-8 text-beige" />
+            <Crown className="h-8 w-8 text-primary" />
           </h1>
           <p className="text-muted-foreground">your collection of favorite running routes</p>
         </div>

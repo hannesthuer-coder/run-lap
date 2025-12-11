@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RouteLimitService } from "@/services/routeLimit.service";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import type { RouteLimitStatus } from "@/types";
+
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,6 +70,7 @@ const Preferences = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
   const handleUseCurrentLocation = () => {
     // Toggle selection state
     if (locationMethod === "current") {
@@ -90,6 +92,7 @@ const Preferences = () => {
       setLocationMethod(null);
     }
   };
+
   const handleChooseOnMap = () => {
     // Toggle selection state
     if (locationMethod === "map") {
@@ -105,6 +108,7 @@ const Preferences = () => {
       }
     });
   };
+
   const handleGenerate = async () => {
     if (!distance || parseFloat(distance) <= 0) {
       toast.error("Please enter a valid distance.");
@@ -141,7 +145,9 @@ const Preferences = () => {
       }
     });
   };
-  return <div className="min-h-screen bg-background flex flex-col pt-[100px]">
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col pt-[100px]">
       <Header />
       <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 pt-28 sm:pt-32 sm:py-[200px]">
         {/* Main Title */}
@@ -193,7 +199,7 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex justify-center">
-          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed text-sm sm:text-base" size="lg">
+          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">
             {isGenerating ? "generating..." : "generate running laps"}
           </Button>
         </div>
@@ -202,6 +208,8 @@ const Preferences = () => {
 
       {/* Upgrade Modal */}
       <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} routesGenerated={routeLimitStatus?.totalGenerated || 0} />
-    </div>;
+    </div>
+  );
 };
+
 export default Preferences;

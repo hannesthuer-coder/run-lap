@@ -60,7 +60,7 @@ const ChooseLocation = () => {
         <Button
           onClick={handleDone}
           disabled={!selectedCoords}
-          className="px-12 py-3 h-12 rounded-full font-semibold tracking-wide bg-beige-hover text-beige-foreground hover:bg-beige active:bg-beige-pressed"
+          className="px-12 py-3 h-12 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground"
         >
           done
         </Button>

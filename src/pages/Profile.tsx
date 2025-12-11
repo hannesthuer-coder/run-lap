@@ -217,7 +217,7 @@ const Profile = () => {
         <Header />
         <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12">
           <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-12 w-12 animate-spin text-beige" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </div>
         </div>
       </div>
@@ -316,7 +316,7 @@ const Profile = () => {
                   <p className="text-sm font-semibold">
                     {isPremium ? (
                       <span className="flex items-center gap-1">
-                        premium <Crown className="h-4 w-4 text-beige" />
+                        premium <Crown className="h-4 w-4 text-primary" />
                       </span>
                     ) : (
                       'free'
@@ -367,15 +367,15 @@ const Profile = () => {
                     <h4 className="font-semibold text-sm mb-2">upgrade to premium</h4>
                     <ul className="space-y-1 text-xs text-muted-foreground">
                       <li className="flex items-center gap-2">
-                        <Crown className="h-3 w-3 text-beige" />
+                        <Crown className="h-3 w-3 text-primary" />
                         unlimited route generation
                       </li>
                       <li className="flex items-center gap-2">
-                        <Crown className="h-3 w-3 text-beige" />
+                        <Crown className="h-3 w-3 text-primary" />
                         save your favorite routes
                       </li>
                       <li className="flex items-center gap-2">
-                        <Crown className="h-3 w-3 text-beige" />
+                        <Crown className="h-3 w-3 text-primary" />
                         share routes with friends
                       </li>
                     </ul>
