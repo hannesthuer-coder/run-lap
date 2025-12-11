@@ -1,7 +1,13 @@
 import { Instagram, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTheme } from "next-themes";
+import logoBlack from "@/assets/logo-black.png";
+import logoWhite from "@/assets/logo-white.png";
 
 const Footer = () => {
+  const { theme, resolvedTheme } = useTheme();
+  const currentTheme = resolvedTheme || theme;
+  const logo = currentTheme === 'dark' ? logoWhite : logoBlack;
   return (
     <footer className="w-full mt-auto bg-beige py-8 px-6">
       <div className="max-w-6xl mx-auto">
@@ -9,7 +15,7 @@ const Footer = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           {/* Left: Logo */}
           <div className="flex items-center">
-            <img alt="Run-Lap Logo" className="h-16 w-16 sm:h-20 sm:w-20" src="/lovable-uploads/b35bfa11-8b56-4091-afc5-b2ccb5070c59.png" />
+            <img alt="Run-Lap Logo" className="h-12 sm:h-16 w-auto" src={logo} />
           </div>
 
           {/* Center: Legal Links */}
