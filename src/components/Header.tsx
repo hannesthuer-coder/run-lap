@@ -3,16 +3,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { User, Crown, BookmarkCheck, LogOut } from 'lucide-react';
-import runlapLogo from '@/assets/runlap-logo.png';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTheme } from 'next-themes';
+import logoBlack from '@/assets/logo-black.png';
+import logoWhite from '@/assets/logo-white.png';
 
 export const Header = () => {
   const navigate = useNavigate();
+  const { theme, resolvedTheme } = useTheme();
   const {
     user,
     isPremium,
     signOut
   } = useAuth();
+  
+  const currentTheme = resolvedTheme || theme;
+  const logo = currentTheme === 'dark' ? logoWhite : logoBlack;
   
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
@@ -27,7 +33,7 @@ export const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
       <div className="container mx-auto px-4 h-20 sm:h-24 flex items-center justify-between my-0 py-0 pb-0 mb-0">
         <button onClick={() => navigate('/')} className="hover:opacity-80 transition-opacity">
-          <img src={runlapLogo} alt="run-lap" className="h-16 w-16 sm:h-20 sm:w-20" />
+          <img src={logo} alt="run-lap" className="h-12 sm:h-16 w-auto" />
         </button>
 
         <div className="flex items-center gap-2">
