@@ -40,7 +40,8 @@ const Route = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
   
-  const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" }; // Default to NYC coordinates
+  const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
+  const preloadedRoute = routeData.isPreloaded ? routeData.route?.geometry : undefined;
 
   // Animate dots
   useEffect(() => {
@@ -183,6 +184,7 @@ const Route = () => {
             regenerateKey={regenerateKey}
             onRouteGenerated={handleRouteGenerated}
             onError={handleRouteError}
+            preloadedRoute={preloadedRoute}
           />
         </div>
       </div>

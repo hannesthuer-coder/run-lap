@@ -101,7 +101,8 @@ export const SavedLapsSection = ({ isPremium, onShare }: SavedLapsSectionProps) 
         },
         distance: route.distance,
         unit: route.unit,
-        startLocation: { lat: 0, lng: 0 },
+        location: route.start_location,
+        isPreloaded: true,
       },
     });
   };
