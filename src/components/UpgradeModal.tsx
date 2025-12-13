@@ -38,7 +38,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
     setIsLoading(true);
     
     try {
-      const sessionUrl = await StripeService.createCheckoutSession(user.email!, selectedPlan);
+      const sessionUrl = await StripeService.createCheckoutSession(selectedPlan);
       
       if (sessionUrl) {
         window.open(sessionUrl, '_blank');
