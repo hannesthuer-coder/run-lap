@@ -91,6 +91,11 @@ const Landing = () => {
           throw error;
         }
       } else {
+        // Send confirmation email (non-blocking)
+        supabase.functions.invoke("send-waitlist-email", {
+          body: { email: email.toLowerCase().trim() }
+        }).catch(err => console.error("Failed to send waitlist email:", err));
+
         setIsSubmitted(true);
         toast({
           title: "you're on the list!",
