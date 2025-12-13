@@ -24,18 +24,35 @@ serve(async (req) => {
   }
 
   try {
-    const { email, plan = 'monthly' } = await req.json();
-    logStep("Request received", { email, plan });
+    logStep("Request received");
     
-    // Validate email input
-    if (!email || typeof email !== 'string') {
-      throw new Error('Email is required');
+    // Authenticate user via JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header required');
     }
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email) || email.length > 255) {
-      throw new Error('Invalid email format');
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user?.email) {
+      logStep("Authentication failed", { error: authError?.message });
+      throw new Error('Authentication required');
     }
+    
+    logStep("User authenticated", { userId: user.id, email: user.email });
+    
+    // Use the verified email from the authenticated session
+    const email = user.email;
+    
+    // Get plan from request body
+    const body = await req.json().catch(() => ({}));
+    const plan = body.plan || 'monthly';
 
     // Validate plan
     if (!['monthly', 'annual'].includes(plan)) {
@@ -81,6 +98,7 @@ serve(async (req) => {
       metadata: {
         email,
         plan,
+        user_id: user.id,
       },
     });
     
