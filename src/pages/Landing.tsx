@@ -124,31 +124,55 @@ const Landing = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         {/* Logo */}
-        <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8 animate-fade-in opacity-0" style={{ animationDelay: '0ms', animationFillMode: 'forwards' }} />
+        <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8 animate-fade-in opacity-0" style={{
+        animationDelay: '0ms',
+        animationFillMode: 'forwards'
+      }} />
 
         {/* Headline */}
-        <h1 className="text-3xl text-foreground text-center mb-4 font-semibold sm:text-2xl animate-fade-in opacity-0" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>whatever distance you want to run, we will find a way.</h1>
+        <h1 className="text-3xl text-foreground text-center mb-4 font-semibold sm:text-2xl animate-fade-in opacity-0" style={{
+        animationDelay: '100ms',
+        animationFillMode: 'forwards'
+      }}>whatever distance you want to run, we will find a way.</h1>
 
         {/* Subheadline */}
-        <p className="text-muted-foreground mb-8 font-normal text-sm text-center animate-fade-in opacity-0" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>select your distance and generate a running lap in seconds</p>
+        <p className="text-muted-foreground mb-8 font-normal text-sm text-center animate-fade-in opacity-0" style={{
+        animationDelay: '200ms',
+        animationFillMode: 'forwards'
+      }}>select your distance and generate a running lap in seconds</p>
 
         {/* Email Signup */}
-        <p className="text-muted-foreground mb-2 text-base animate-fade-in opacity-0" style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}>gain early access:</p>
-        {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-10 animate-fade-in opacity-0" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
+        <p style={{
+        animationDelay: '300ms',
+        animationFillMode: 'forwards'
+      }} className="text-muted-foreground mb-2 animate-fade-in opacity-0 text-sm">gain early access:</p>
+        {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-10 animate-fade-in opacity-0" style={{
+        animationDelay: '400ms',
+        animationFillMode: 'forwards'
+      }}>
             <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1 rounded-full" disabled={isSubmitting} />
             <Button type="submit" disabled={isSubmitting} className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full">
               {isSubmitting ? "..." : "submit"}
             </Button>
-          </form> : <div className="flex items-center gap-2 text-beige-foreground mb-10 bg-beige px-6 py-3 rounded-lg animate-fade-in opacity-0" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
+          </form> : <div className="flex items-center gap-2 text-beige-foreground mb-10 bg-beige px-6 py-3 rounded-lg animate-fade-in opacity-0" style={{
+        animationDelay: '400ms',
+        animationFillMode: 'forwards'
+      }}>
             <Check className="h-5 w-5" />
             <span className="font-medium">you're on the list!</span>
           </div>}
 
         {/* Launch Date */}
-        <p className="text-xl text-muted-foreground text-center mb-4 sm:text-lg animate-fade-in opacity-0" style={{ animationDelay: '500ms', animationFillMode: 'forwards' }}>launching on the first of march</p>
+        <p className="text-xl text-muted-foreground text-center mb-4 sm:text-lg animate-fade-in opacity-0" style={{
+        animationDelay: '500ms',
+        animationFillMode: 'forwards'
+      }}>launching on the first of march</p>
 
         {/* Countdown Timer */}
-        <div className="flex gap-3 sm:gap-4 mb-12 text-beige-foreground animate-fade-in opacity-0" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
+        <div className="flex gap-3 sm:gap-4 mb-12 text-beige-foreground animate-fade-in opacity-0" style={{
+        animationDelay: '600ms',
+        animationFillMode: 'forwards'
+      }}>
           <TimeBlock value={timeLeft.days} label="days" />
           <TimeBlock value={timeLeft.hours} label="hours" />
           <TimeBlock value={timeLeft.minutes} label="mins" />
