@@ -141,6 +141,9 @@ const Landing = () => {
             <span className="font-medium">you're on the list!</span>
           </div>}
 
+        {/* Subheadline */}
+        <p className="text-muted-foreground mb-6 font-normal text-sm text-center">select your distance and generate a running lap in seconds</p>
+
         {/* Launch Date */}
         <p className="text-xl text-muted-foreground text-center mb-4 sm:text-lg">launching on the first of march</p>
 
@@ -151,9 +154,6 @@ const Landing = () => {
           <TimeBlock value={timeLeft.minutes} label="mins" />
           <TimeBlock value={timeLeft.seconds} label="secs" />
         </div>
-
-        {/* Subheadline */}
-        <p className="text-muted-foreground mb-8 font-normal text-sm text-center">select your distance and generate a running lap in seconds</p>
 
         {/* Feature Cards */}
         
