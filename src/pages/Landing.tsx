@@ -127,9 +127,22 @@ const Landing = () => {
         <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8" />
 
         {/* Headline */}
-        <h1 className="text-3xl text-foreground text-center mb-2 font-semibold sm:text-2xl">whatever distance you want to run, we will find a way.
-      </h1>
-        <p className="text-xl text-muted-foreground text-center mb-10 sm:text-lg">launching on the first of march</p>
+        <h1 className="text-3xl text-foreground text-center mb-10 font-semibold sm:text-2xl">whatever distance you want to run, we will find a way.</h1>
+
+        {/* Email Signup */}
+        <p className="text-muted-foreground mb-2 text-base">gain early access:</p>
+        {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-10">
+            <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1 rounded-full" disabled={isSubmitting} />
+            <Button type="submit" disabled={isSubmitting} className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full">
+              {isSubmitting ? "..." : "submit"}
+            </Button>
+          </form> : <div className="flex items-center gap-2 text-beige-foreground mb-10 bg-beige px-6 py-3 rounded-lg">
+            <Check className="h-5 w-5" />
+            <span className="font-medium">you're on the list!</span>
+          </div>}
+
+        {/* Launch Date */}
+        <p className="text-xl text-muted-foreground text-center mb-4 sm:text-lg">launching on the first of march</p>
 
         {/* Countdown Timer */}
         <div className="flex gap-3 sm:gap-4 mb-12 text-beige-foreground">
@@ -139,20 +152,8 @@ const Landing = () => {
           <TimeBlock value={timeLeft.seconds} label="secs" />
         </div>
 
-        {/* Email Signup */}
-        <p className="text-muted-foreground mb-2 text-base">gain early access:</p>
-        {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-12">
-            <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1 rounded-full" disabled={isSubmitting} />
-            <Button type="submit" disabled={isSubmitting} className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full">
-              {isSubmitting ? "..." : "submit"}
-            </Button>
-          </form> : <div className="flex items-center gap-2 text-beige-foreground mb-12 bg-beige px-6 py-3 rounded-lg">
-            <Check className="h-5 w-5" />
-            <span className="font-medium">you're on the list!</span>
-          </div>}
-
         {/* Subheadline */}
-        <p className="text-muted-foreground mb-8 font-normal text-sm text-center">select your distance and generate a running lap in seconds </p>
+        <p className="text-muted-foreground mb-8 font-normal text-sm text-center">select your distance and generate a running lap in seconds</p>
 
         {/* Feature Cards */}
         
