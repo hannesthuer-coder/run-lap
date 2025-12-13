@@ -127,9 +127,9 @@ const Landing = () => {
         <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8" />
 
         {/* Headline */}
-        <h1 className="text-3xl text-foreground text-center mb-2 sm:text-3xl font-semibold">whatever distance you want to run, we will find a way.
+        <h1 className="text-3xl text-foreground text-center mb-2 font-semibold sm:text-2xl">whatever distance you want to run, we will find a way.
       </h1>
-        <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">launching on the first of march</p>
+        <p className="text-xl text-muted-foreground text-center mb-10 sm:text-lg">launching on the first of march</p>
 
         {/* Countdown Timer */}
         <div className="flex gap-3 sm:gap-4 mb-12 text-beige-foreground">
