@@ -42,29 +42,35 @@ serve(async (req) => {
 
     const { fingerprint, sessionId, routeDistance, routeUnit, startLocation } = await req.json();
     
-    // Validate inputs
+    // Validate inputs - log details server-side, return generic message to client
     if (!fingerprint || !sessionId || !routeDistance || !routeUnit || !startLocation) {
-      throw new Error('Missing required parameters')
+      console.error('Missing required parameters', { fingerprint: !!fingerprint, sessionId: !!sessionId, routeDistance: !!routeDistance, routeUnit: !!routeUnit, startLocation: !!startLocation })
+      throw new Error('Invalid request')
     }
     
     if (typeof fingerprint !== 'string' || fingerprint.length < 10 || fingerprint.length > 100) {
-      throw new Error('Invalid fingerprint format')
+      console.error('Invalid fingerprint format')
+      throw new Error('Invalid request')
     }
     
     if (typeof sessionId !== 'string' || sessionId.length > 100) {
-      throw new Error('Invalid session ID')
+      console.error('Invalid session ID')
+      throw new Error('Invalid request')
     }
     
     if (typeof routeDistance !== 'number' || routeDistance <= 0 || routeDistance > 500) {
-      throw new Error('Invalid route distance')
+      console.error('Invalid route distance:', routeDistance)
+      throw new Error('Invalid request')
     }
     
     if (!['km', 'miles'].includes(routeUnit)) {
-      throw new Error('Invalid route unit')
+      console.error('Invalid route unit:', routeUnit)
+      throw new Error('Invalid request')
     }
     
     if (typeof startLocation !== 'string' || startLocation.length > 200) {
-      throw new Error('Invalid start location')
+      console.error('Invalid start location length')
+      throw new Error('Invalid request')
     }
     
     const ipAddress = req.headers.get('x-forwarded-for') || 
