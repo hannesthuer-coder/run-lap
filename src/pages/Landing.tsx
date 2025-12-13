@@ -129,7 +129,8 @@ const Landing = () => {
         {/* Headline */}
         <h1 className="text-3xl text-foreground text-center mb-2 sm:text-3xl font-semibold">whatever distance you want to run, we will find a way.
       </h1>
-        <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">coming on march 1</p>
+        <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">
+coming on march 1</p>
 
         {/* Countdown Timer */}
         <div className="flex gap-3 sm:gap-4 mb-12">
@@ -151,7 +152,7 @@ const Landing = () => {
           </div>}
 
         {/* Subheadline */}
-        <p className="text-muted-foreground text-center mb-8">select your preferred distance and find a running lap on the spot</p>
+        <p className="text-muted-foreground text-center mb-8 text-xs font-extralight">select your distance and generate a running lap in seconds </p>
 
         {/* Feature Cards */}
         
