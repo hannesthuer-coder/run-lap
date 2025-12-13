@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CookieBanner } from "./components/CookieBanner";
+import Landing from "./pages/Landing";
 import Preferences from "./pages/Preferences";
 import RoutePage from "./pages/Route";
 import ChooseLocation from "./pages/ChooseLocation";
@@ -28,8 +29,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Preferences />} />
-            <Route path="/auth" element={<Auth />} />
+            {/* Pre-launch landing page */}
+            <Route path="/" element={<Landing />} />
+            {/* Hidden app routes for testing */}
+            <Route path="/app" element={<Preferences />} />
+            <Route path="/early-access" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/shared/:shareCode" element={<SharedRoute />} />
