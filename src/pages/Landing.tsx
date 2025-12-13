@@ -158,7 +158,7 @@ const Landing = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t px-4 py-[50px] border-slate-950">
+      <footer className="border-t px-4 py-[50px] border-secondary">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Social Links */}
           <div className="flex items-center gap-4">
