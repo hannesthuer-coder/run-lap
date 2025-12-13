@@ -152,7 +152,7 @@ coming on march 1</p>
           </div>}
 
         {/* Subheadline */}
-        <p className="text-muted-foreground text-center mb-8 text-xs font-extralight">select your distance and generate a running lap in seconds </p>
+        <p className="text-muted-foreground text-center mb-8 text-xs font-normal">select your distance and generate a running lap in seconds </p>
 
         {/* Feature Cards */}
         
