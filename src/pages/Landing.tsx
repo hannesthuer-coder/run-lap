@@ -115,7 +115,7 @@ const Landing = () => {
     value: number;
     label: string;
   }) => <div className="flex flex-col items-center">
-      <span className="text-2xl sm:text-4xl font-bold text-primary tabular-nums">
+      <span className="text-2xl sm:text-4xl font-bold text-beige-foreground tabular-nums">
         {String(value).padStart(2, "0")}
       </span>
       <span className="text-xs sm:text-sm text-muted-foreground mt-1">{label}</span>
@@ -142,10 +142,10 @@ const Landing = () => {
         {/* Email Signup */}
         {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-12">
             <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1" disabled={isSubmitting} />
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="bg-beige hover:bg-beige-hover text-beige-foreground">
               {isSubmitting ? "..." : "gain early access"}
             </Button>
-          </form> : <div className="flex items-center gap-2 text-primary mb-12 bg-primary/10 px-6 py-3 rounded-lg">
+          </form> : <div className="flex items-center gap-2 text-beige-foreground mb-12 bg-beige px-6 py-3 rounded-lg">
             <Check className="h-5 w-5" />
             <span className="font-medium">you're on the list!</span>
           </div>}
