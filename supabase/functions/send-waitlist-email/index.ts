@@ -31,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`[WAITLIST-EMAIL] Sending confirmation to: ${email}`);
 
     const emailResponse = await resend.emails.send({
-      from: "Run-Lap <onboarding@resend.dev>",
+      from: "Run-Lap <hello@run-lap.com>",
       to: [email],
       subject: "you're on the list! 🏃",
       html: `
