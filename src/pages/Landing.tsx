@@ -127,7 +127,10 @@ const Landing = () => {
         <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8" />
 
         {/* Headline */}
-        <h1 className="text-3xl text-foreground text-center mb-10 font-semibold sm:text-2xl">whatever distance you want to run, we will find a way.</h1>
+        <h1 className="text-3xl text-foreground text-center mb-4 font-semibold sm:text-2xl">whatever distance you want to run, we will find a way.</h1>
+
+        {/* Subheadline */}
+        <p className="text-muted-foreground mb-8 font-normal text-sm text-center">select your distance and generate a running lap in seconds</p>
 
         {/* Email Signup */}
         <p className="text-muted-foreground mb-2 text-base">gain early access:</p>
@@ -140,9 +143,6 @@ const Landing = () => {
             <Check className="h-5 w-5" />
             <span className="font-medium">you're on the list!</span>
           </div>}
-
-        {/* Subheadline */}
-        <p className="text-muted-foreground mb-6 font-normal text-sm text-center">select your distance and generate a running lap in seconds</p>
 
         {/* Launch Date */}
         <p className="text-xl text-muted-foreground text-center mb-4 sm:text-lg">launching on the first of march</p>
