@@ -130,10 +130,10 @@ const Landing = () => {
       }} />
 
         {/* Headline */}
-        <h1 className="text-3xl text-foreground text-center mb-4 font-semibold sm:text-2xl animate-fade-in opacity-0" style={{
+        <h1 style={{
         animationDelay: '100ms',
         animationFillMode: 'forwards'
-      }}>whatever distance you want to run, we will find a way.</h1>
+      }} className="text-3xl text-foreground text-center mb-4 font-semibold animate-fade-in opacity-0 sm:text-3xl">whatever distance you want to run, we will find a way.</h1>
 
         {/* Subheadline */}
         <p style={{
