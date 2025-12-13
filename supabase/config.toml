@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.send-waitlist-email]
 verify_jwt = false
+
+[functions.send-launch-reminder]
+verify_jwt = false
