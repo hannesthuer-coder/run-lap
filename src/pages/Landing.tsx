@@ -146,7 +146,7 @@ const Landing = () => {
         {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-12">
             <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1" disabled={isSubmitting} />
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "..." : "notify me"}
+              {isSubmitting ? "..." : "gain early access"}
             </Button>
           </form> : <div className="flex items-center gap-2 text-primary mb-12 bg-primary/10 px-6 py-3 rounded-lg">
             <Check className="h-5 w-5" />
