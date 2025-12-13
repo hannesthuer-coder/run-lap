@@ -115,12 +115,10 @@ const Landing = () => {
     value: number;
     label: string;
   }) => <div className="flex flex-col items-center">
-      <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 min-w-[70px] sm:min-w-[80px]">
-        <span className="text-2xl sm:text-4xl font-bold text-primary tabular-nums">
-          {String(value).padStart(2, "0")}
-        </span>
-      </div>
-      <span className="text-xs sm:text-sm text-muted-foreground mt-2">{label}</span>
+      <span className="text-2xl sm:text-4xl font-bold text-primary tabular-nums">
+        {String(value).padStart(2, "0")}
+      </span>
+      <span className="text-xs sm:text-sm text-muted-foreground mt-1">{label}</span>
     </div>;
   return <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content */}
