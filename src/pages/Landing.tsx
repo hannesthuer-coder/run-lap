@@ -144,7 +144,7 @@ const Landing = () => {
         {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-12">
             <Input type="email" placeholder="enter your email" value={email} onChange={e => setEmail(e.target.value)} className="flex-1" disabled={isSubmitting} />
             <Button type="submit" disabled={isSubmitting} className="bg-beige hover:bg-beige-hover text-beige-foreground">
-              {isSubmitting ? "..." : "gain early access"}
+              {isSubmitting ? "..." : "submit"}
             </Button>
           </form> : <div className="flex items-center gap-2 text-beige-foreground mb-12 bg-beige px-6 py-3 rounded-lg">
             <Check className="h-5 w-5" />
