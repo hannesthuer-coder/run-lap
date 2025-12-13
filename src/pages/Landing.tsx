@@ -130,7 +130,7 @@ const Landing = () => {
         <h1 className="text-3xl text-foreground text-center mb-2 sm:text-3xl font-semibold">whatever distance you want to run, we will find a way.
       </h1>
         <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">
-coming on march 1</p>
+coming on the first of march</p>
 
         {/* Countdown Timer */}
         <div className="flex gap-3 sm:gap-4 mb-12">
