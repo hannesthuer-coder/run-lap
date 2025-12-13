@@ -503,13 +503,13 @@ Important: Return ONLY valid JSON, no other text.`
         clientMessage = 'AI route generation failed - please try again'
     }
     
+    // Log detailed error info server-side only
+    console.error('Route generation failed:', { errorType, details: errorDetails || error.message })
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: clientMessage,
-        errorType,
-        details: errorDetails || error.message,
-        processingTimeMs: processingTime
+        error: clientMessage
       }),
       { 
         status: statusCode,

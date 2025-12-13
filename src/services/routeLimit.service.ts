@@ -40,8 +40,9 @@ export class RouteLimitService {
       
       const localCount = this.getLocalStorageCount();
       
-      const { data: dbGenerations, error } = await supabase.functions.invoke<{
-        count: number;
+      const { data: dbResult, error } = await supabase.functions.invoke<{
+        canGenerate: boolean;
+        limitReached: boolean;
       }>('check-route-limit', {
         body: {
           fingerprint,
@@ -53,18 +54,17 @@ export class RouteLimitService {
         console.error('Error checking route limit:', error);
       }
       
-      const dbCount = dbGenerations?.count || 0;
-      
-      const totalGenerated = Math.max(localCount, dbCount);
-      const canGenerate = totalGenerated < FREE_ROUTE_LIMIT;
-      const remainingRoutes = Math.max(0, FREE_ROUTE_LIMIT - totalGenerated);
+      // Use server response combined with local count for defense in depth
+      const serverLimitReached = dbResult?.limitReached || false;
+      const localLimitReached = localCount >= FREE_ROUTE_LIMIT;
+      const limitReached = serverLimitReached || localLimitReached;
       
       return {
-        canGenerate,
-        remainingRoutes,
-        totalGenerated,
+        canGenerate: !limitReached,
+        remainingRoutes: limitReached ? 0 : Math.max(0, FREE_ROUTE_LIMIT - localCount),
+        totalGenerated: localCount,
         isPremium: false,
-        needsUpgrade: !canGenerate,
+        needsUpgrade: limitReached,
       };
       
     } catch (error) {

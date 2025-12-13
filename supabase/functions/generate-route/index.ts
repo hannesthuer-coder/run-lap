@@ -24,11 +24,13 @@ serve(async (req) => {
     }
     
     if (distance <= 0 || distance > 500) {
-      throw new Error('Distance must be between 0 and 500')
+      console.error('Invalid distance:', distance)
+      throw new Error('Invalid parameters')
     }
     
     if (!['km', 'miles'].includes(unit)) {
-      throw new Error('Unit must be km or miles')
+      console.error('Invalid unit:', unit)
+      throw new Error('Invalid parameters')
     }
     
     // Get auth token from request header
@@ -470,11 +472,11 @@ serve(async (req) => {
     )
     
   } catch (error) {
-    console.error('Error generating route:', error)
+    console.error('Error generating route:', error.message, error.stack)
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: 'Route generation failed. Please try again.' 
       }),
       { 
         status: 500,

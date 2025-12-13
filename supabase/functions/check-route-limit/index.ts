@@ -43,20 +43,25 @@ serve(async (req) => {
     if (error) {
       console.error('Database error:', error);
       return new Response(
-        JSON.stringify({ count: 0 }),
+        JSON.stringify({ canGenerate: true, limitReached: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
+    // Only return whether user can generate, not exact counts
+    const count = data || 0
     return new Response(
-      JSON.stringify({ count: data || 0 }),
+      JSON.stringify({ 
+        canGenerate: count < 3,
+        limitReached: count >= 3
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ count: 0 }),
+      JSON.stringify({ canGenerate: true, limitReached: false }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
