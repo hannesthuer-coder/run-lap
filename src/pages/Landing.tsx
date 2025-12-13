@@ -150,25 +150,10 @@ const Landing = () => {
           </div>}
 
         {/* Subheadline */}
-        <p className="text-muted-foreground text-center mb-8">
-          be the first to generate custom running routes with ai
-        </p>
+        <p className="text-muted-foreground text-center mb-8">select your preferred distance and find a running lap on the spot</p>
 
         {/* Feature Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full">
-          <div className="bg-card border border-border rounded-lg p-4 text-center">
-            <p className="font-medium text-foreground">custom loops</p>
-            <p className="text-sm text-muted-foreground">from any starting point</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4 text-center">
-            <p className="font-medium text-foreground">ai-optimized</p>
-            <p className="text-sm text-muted-foreground">routes for any distance</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4 text-center">
-            <p className="font-medium text-foreground">works worldwide</p>
-            <p className="text-sm text-muted-foreground">run anywhere on earth</p>
-          </div>
-        </div>
+        
       </main>
 
       {/* Footer */}
