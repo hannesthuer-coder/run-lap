@@ -132,7 +132,7 @@ const Landing = () => {
         <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">launching on the first of march</p>
 
         {/* Countdown Timer */}
-        <div className="flex gap-3 sm:gap-4 mb-12">
+        <div className="flex gap-3 sm:gap-4 mb-12 text-beige-foreground">
           <TimeBlock value={timeLeft.days} label="days" />
           <TimeBlock value={timeLeft.hours} label="hours" />
           <TimeBlock value={timeLeft.minutes} label="mins" />
