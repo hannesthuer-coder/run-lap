@@ -127,7 +127,8 @@ const Landing = () => {
         <img src={logo} alt="run-lap logo" className="h-20 w-20 sm:h-24 sm:w-24 mb-8" />
 
         {/* Headline */}
-        <h1 className="text-3xl sm:text-5xl font-bold text-foreground text-center mb-2">generate running laps using ai</h1>
+        <h1 className="text-3xl text-foreground text-center mb-2 sm:text-3xl font-semibold">whatever distance you want to run, we will find a way.
+      </h1>
         <p className="text-xl sm:text-2xl text-muted-foreground text-center mb-10">coming on march 1</p>
 
         {/* Countdown Timer */}
