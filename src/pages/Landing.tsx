@@ -136,16 +136,16 @@ const Landing = () => {
       }}>whatever distance you want to run, we will find a way.</h1>
 
         {/* Subheadline */}
-        <p className="text-muted-foreground mb-8 font-normal text-sm text-center animate-fade-in opacity-0" style={{
+        <p style={{
         animationDelay: '200ms',
         animationFillMode: 'forwards'
-      }}>select your distance and generate a running lap in seconds</p>
+      }} className="text-muted-foreground mb-8 font-normal text-center animate-fade-in opacity-0 text-base">select your distance and generate a running lap in seconds</p>
 
         {/* Email Signup */}
         <p style={{
         animationDelay: '300ms',
         animationFillMode: 'forwards'
-      }} className="text-muted-foreground mb-2 animate-fade-in opacity-0 text-sm">gain early access:</p>
+      }} className="text-muted-foreground mb-2 animate-fade-in opacity-0 text-base">gain early access:</p>
         {!isSubmitted ? <form onSubmit={handleSubmit} className="w-full max-w-md flex gap-2 mb-10 animate-fade-in opacity-0" style={{
         animationDelay: '400ms',
         animationFillMode: 'forwards'
