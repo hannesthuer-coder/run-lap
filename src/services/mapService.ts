@@ -1,9 +1,10 @@
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 let mapboxgl: any = null;
 
-// Use direct token like in working MapTest
+// Fetch Mapbox token securely from edge function
 export const initializeMapbox = async (): Promise<any> => {
   console.log('mapService: initializeMapbox called');
   
@@ -16,8 +17,15 @@ export const initializeMapbox = async (): Promise<any> => {
     console.log('mapService: importing mapbox-gl...');
     mapboxgl = (await import('mapbox-gl')).default;
     
-    console.log('mapService: setting access token...');
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWV2cTk2Y2kwY3J4MmpzN2N3YWFpdXRtIn0.HMwsWwD4VsglAlp3kjultg';
+    console.log('mapService: fetching access token from edge function...');
+    const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+    
+    if (error || !data?.token) {
+      console.error('mapService: failed to fetch token:', error);
+      throw new Error('Failed to retrieve Mapbox token');
+    }
+    
+    mapboxgl.accessToken = data.token;
     
     console.log('mapService: mapbox initialized successfully');
     return mapboxgl;
