@@ -17,24 +17,24 @@ const getEmailContent = (reminderType: string) => {
   switch (reminderType) {
     case "one_week":
       return {
-        subject: "one week to go! 🏃",
+        subject: "One week to go!",
         heading: "run-lap launches in 7 days!",
-        body: "the countdown is almost over. in just one week, you'll be able to discover new running routes tailored to your exact distance preferences.",
-        cta: "get ready to lace up your shoes and explore your neighborhood like never before.",
+        body: "The wait is almost over. In just one week, you'll be able to discover new running laps tailored to your exact distance preferences.",
+        cta: "Get ready to lace up your shoes and explore your neighborhood like never before.",
       };
     case "one_day":
       return {
-        subject: "tomorrow's the day! 🎉",
+        subject: "tomorrow's the day!",
         heading: "run-lap launches tomorrow!",
-        body: "we're just 24 hours away from launch. tomorrow at midnight, run-lap goes live and you'll be among the first to use it.",
-        cta: "set your alarm and get those running shoes ready!",
+        body: "We're just 24 hours away from launch. tomorrow at midnight, run-lap goes live and you'll be one of the first people to use it.",
+        cta: "Lace up your running shoes and get ready!",
       };
     case "launch_day":
       return {
-        subject: "we're live! start running now 🚀",
+        subject: "We're live! Time to go for a run.",
         heading: "run-lap is officially live!",
-        body: "the wait is over. run-lap is now available and ready to help you discover the perfect running routes.",
-        cta: "click below to create your first route and start your running journey today!",
+        body: "The wait is over. run-lap is now available and ready to help you find the perfect running laps.",
+        cta: "Click below to generate a new running lap and start your journey today!",
         buttonText: "start running",
         buttonUrl: "https://run-lap.com/app",
       };
@@ -64,9 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch all waitlist emails
-    const { data: waitlistEntries, error: fetchError } = await supabase
-      .from("waitlist")
-      .select("email");
+    const { data: waitlistEntries, error: fetchError } = await supabase.from("waitlist").select("email");
 
     if (fetchError) {
       console.error("[LAUNCH-REMINDER] Error fetching waitlist:", fetchError);
@@ -137,13 +135,17 @@ const handler = async (req: Request): Promise<Response> => {
                                 </span>
                               </div>
 
-                              ${content.buttonUrl ? `
+                              ${
+                                content.buttonUrl
+                                  ? `
                               <div style="text-align: center; margin: 32px 0;">
                                 <a href="${content.buttonUrl}" style="display: inline-block; background-color: #1a73e8; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none;">
                                   ${content.buttonText}
                                 </a>
                               </div>
-                              ` : ""}
+                              `
+                                  : ""
+                              }
                             </td>
                           </tr>
                           
@@ -182,19 +184,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[LAUNCH-REMINDER] Campaign complete. Sent: ${sentCount}, Errors: ${errorCount}`);
 
-    return new Response(
-      JSON.stringify({ success: true, sent: sentCount, errors: errorCount }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, sent: sentCount, errors: errorCount }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   } catch (error: any) {
     console.error("[LAUNCH-REMINDER] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
