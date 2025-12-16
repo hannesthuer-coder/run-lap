@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
                               </p>
                               
                               <div style="text-align: center; margin: 32px 0;">
-                                <span style="display: inline-block; background-color: #e8d5b7; color: #1a1a1a; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500;">
+                                <span style="display: inline-block; background-color: #3366CC; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500;">
                                   ${content.cta}
                                 </span>
                               </div>
