@@ -4,10 +4,10 @@ project_id = "rxzubvqznmvvarmfsioe"
 verify_jwt = true
 
 [functions.get-mapbox-token]
-verify_jwt = true
+verify_jwt = false
 
 [functions.test-mapbox-token]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-ai-route]
 verify_jwt = true
@@ -22,16 +22,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.create-stripe-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.customer-portal]
 verify_jwt = true
-
-[functions.send-waitlist-email]
-verify_jwt = false
-
-[functions.send-launch-reminder]
-verify_jwt = false
