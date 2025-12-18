@@ -1,20 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
+import logoBlack from '@/assets/logo-black.png';
+import logoWhite from '@/assets/logo-white.png';
 
 const Auth = () => {
   const navigate = useNavigate();
   const { signUp, signIn, user } = useAuth();
+  const { theme, systemTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+  const logo = currentTheme === 'dark' ? logoWhite : logoBlack;
 
   // Redirect if already logged in
   useEffect(() => {
@@ -124,8 +130,10 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold tracking-tight">RUNLAP</CardTitle>
-          <CardDescription>Create an account or sign in to continue</CardDescription>
+          <div className="flex justify-center">
+            <img src={logo} alt="Run-Lap" className="h-16 w-auto" />
+          </div>
+          <p className="text-sm text-muted-foreground">create an account or sign in to continue</p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
