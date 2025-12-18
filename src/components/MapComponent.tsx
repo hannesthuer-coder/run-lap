@@ -74,7 +74,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             setActualDistance(data.route.distance);
             setRouteInsights(null); // No AI insights for geometric routes
             
-            toast.success("Geometric route generated successfully!");
+            // Route generated successfully - no toast needed
             
             return data.route.geometry.coordinates;
           } else {
@@ -160,7 +160,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         map.fitBounds(bounds, { padding: 50 });
       }
 
-      onRouteGenerated?.();
+      onRouteGenerated?.({ geometry: { type: 'LineString', coordinates: routeCoords } });
 
     } catch (error) {
       console.error('Error generating new route:', error);
@@ -225,7 +225,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             setActualDistance(data.route.distance);
             setRouteInsights(null); // No AI insights for geometric routes
             
-            toast.success("Geometric route loaded successfully!");
+            // Route loaded successfully - no toast needed
             
             return data.route.geometry.coordinates;
           } else {
@@ -267,7 +267,6 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
             // Handle different geometry formats: { coordinates: [...] } or direct array
             routeCoords = preloadedRoute.coordinates || preloadedRoute;
             setActualDistance(distance * (unit === 'km' ? 1000 : 1609.34));
-            toast.success("Saved route loaded successfully!");
           } else {
             routeCoords = await generateAIRoute([lng, lat], distance);
           }
@@ -310,7 +309,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           routeCoords.forEach(coord => bounds.extend(coord));
           mapInstance.fitBounds(bounds, { padding: 50 });
 
-          onRouteGenerated?.();
+          onRouteGenerated?.({ geometry: { type: 'LineString', coordinates: routeCoords } });
         } catch (error) {
           console.error('Error loading initial route:', error);
           
@@ -332,7 +331,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       });
 
       setMap(mapInstance);
-      toast.success("Map loaded successfully!");
+      // Map loaded successfully - no toast needed
 
     } catch (error) {
       console.error('Error initializing map:', error);

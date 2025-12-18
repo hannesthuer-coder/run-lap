@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2 } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2, Maximize2, X } from "lucide-react";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -51,6 +51,7 @@ const Route = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
   const preloadedRoute = routeData.isPreloaded ? routeData.route?.geometry : undefined;
@@ -218,8 +219,18 @@ const Route = () => {
       </div>
 
       {/* Map Container */}
-      <div className={`flex-1 relative px-3 sm:px-4 transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-        <div className="bg-card rounded-xl sm:rounded-2xl overflow-hidden shadow-soft h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8">
+      <div className={`transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'} ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'flex-1 relative px-3 sm:px-4'}`}>
+        {isFullscreen && (
+          <Button
+            onClick={() => setIsFullscreen(false)}
+            variant="outline"
+            size="icon"
+            className="absolute top-4 right-4 z-50 rounded-full bg-background/80 backdrop-blur-sm"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <div className={`bg-card overflow-hidden shadow-soft ${isFullscreen ? 'h-full' : 'rounded-xl sm:rounded-2xl h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8'}`}>
           <MapComponent 
             startLocation={routeData.location}
             distance={routeData.distance}
@@ -230,6 +241,16 @@ const Route = () => {
             preloadedRoute={preloadedRoute}
           />
         </div>
+        {!isFullscreen && (
+          <Button
+            onClick={() => setIsFullscreen(true)}
+            variant="outline"
+            size="icon"
+            className="absolute bottom-8 right-6 sm:bottom-10 sm:right-8 z-10 rounded-full bg-background/80 backdrop-blur-sm"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Not Satisfied Section - Only show for newly generated routes */}
