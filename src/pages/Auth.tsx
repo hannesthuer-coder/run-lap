@@ -137,9 +137,9 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 rounded-full">
+              <TabsTrigger value="signin" className="rounded-full">sign in</TabsTrigger>
+              <TabsTrigger value="signup" className="rounded-full">sign up</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
@@ -154,6 +154,7 @@ const Auth = () => {
                     onChange={(e) => setSignInForm({ ...signInForm, email: e.target.value })}
                     disabled={loading}
                     required
+                    className="rounded-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -167,6 +168,7 @@ const Auth = () => {
                       onChange={(e) => setSignInForm({ ...signInForm, password: e.target.value })}
                       disabled={loading}
                       required
+                      className="rounded-full"
                     />
                     <button
                       type="button"
@@ -182,7 +184,7 @@ const Auth = () => {
                   className="w-full bg-beige hover:bg-beige-hover text-beige-foreground rounded-full font-semibold tracking-wide"
                   disabled={loading}
                 >
-                  {loading ? 'SIGNING IN...' : 'SIGN IN'}
+                  {loading ? 'signing in...' : 'sign in'}
                 </Button>
               </form>
             </TabsContent>
@@ -199,6 +201,7 @@ const Auth = () => {
                     onChange={(e) => setSignUpForm({ ...signUpForm, email: e.target.value })}
                     disabled={loading}
                     required
+                    className="rounded-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -213,6 +216,7 @@ const Auth = () => {
                       disabled={loading}
                       required
                       minLength={8}
+                      className="rounded-full"
                     />
                     <button
                       type="button"
@@ -234,6 +238,7 @@ const Auth = () => {
                     onChange={(e) => setSignUpForm({ ...signUpForm, confirmPassword: e.target.value })}
                     disabled={loading}
                     required
+                    className="rounded-full"
                   />
                 </div>
                 <Button
@@ -241,7 +246,7 @@ const Auth = () => {
                   className="w-full bg-beige hover:bg-beige-hover text-beige-foreground rounded-full font-semibold tracking-wide"
                   disabled={loading}
                 >
-                  {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                  {loading ? 'creating account...' : 'create account'}
                 </Button>
               </form>
             </TabsContent>
