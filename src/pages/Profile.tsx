@@ -81,6 +81,54 @@ const Profile = () => {
     }
   };
 
+  // Validation patterns for structured fields
+  const validateField = (field: EditableField, value: string): { valid: boolean; error?: string } => {
+    if (!field) return { valid: true };
+    
+    const trimmedValue = value.trim();
+    
+    // Check max length
+    if (trimmedValue.length > 100) {
+      return { valid: false, error: 'Value must be less than 100 characters' };
+    }
+    
+    switch (field) {
+      case 'phone_number':
+        // Allow only phone number characters
+        if (trimmedValue && !/^[+\d\s()\-]*$/.test(trimmedValue)) {
+          return { valid: false, error: 'Phone number can only contain digits, +, -, (), and spaces' };
+        }
+        break;
+      case 'postal_code':
+        // Allow alphanumeric, spaces, and hyphens for international postal codes
+        if (trimmedValue && !/^[A-Za-z0-9\s\-]*$/.test(trimmedValue)) {
+          return { valid: false, error: 'Postal code can only contain letters, numbers, spaces, and hyphens' };
+        }
+        break;
+      case 'display_name':
+        // Allow unicode letters, numbers, spaces, apostrophes, hyphens
+        if (trimmedValue && !/^[\p{L}\p{N}\s'\-]*$/u.test(trimmedValue)) {
+          return { valid: false, error: 'Display name can only contain letters, numbers, spaces, apostrophes, and hyphens' };
+        }
+        break;
+      case 'city':
+      case 'country':
+        // Allow unicode letters, spaces, apostrophes, hyphens
+        if (trimmedValue && !/^[\p{L}\s'\-]*$/u.test(trimmedValue)) {
+          return { valid: false, error: 'This field can only contain letters, spaces, apostrophes, and hyphens' };
+        }
+        break;
+      case 'address':
+        // Allow common address characters
+        if (trimmedValue && !/^[\p{L}\p{N}\s,.\-#/]*$/u.test(trimmedValue)) {
+          return { valid: false, error: 'Address contains invalid characters' };
+        }
+        break;
+    }
+    
+    return { valid: true };
+  };
+
   const handleStartEdit = (field: EditableField) => {
     if (!field) return;
     setEditingField(field);
@@ -95,16 +143,29 @@ const Profile = () => {
   const handleSaveField = async () => {
     if (!user || !editingField) return;
 
+    // Validate before saving
+    const validation = validateField(editingField, editValue);
+    if (!validation.valid) {
+      toast({
+        title: "validation error",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
+      const sanitizedValue = editValue.trim() || null;
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ [editingField]: editValue.trim() || null })
+        .update({ [editingField]: sanitizedValue })
         .eq('id', user.id);
 
       if (error) throw error;
 
-      setProfileData(prev => ({ ...prev, [editingField]: editValue.trim() || null }));
+      setProfileData(prev => ({ ...prev, [editingField]: sanitizedValue }));
       setEditingField(null);
       setEditValue('');
       toast({
