@@ -254,7 +254,7 @@ const Route = () => {
             }}
             variant="outline"
             size="icon"
-            className="absolute bottom-8 right-6 sm:bottom-10 sm:right-8 z-10 rounded-full bg-background/80 backdrop-blur-sm"
+            className="absolute top-4 right-4 z-10 rounded-full bg-background/80 backdrop-blur-sm"
           >
             <Maximize2 className="h-4 w-4" />
           </Button>
