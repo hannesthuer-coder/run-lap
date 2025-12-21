@@ -390,9 +390,9 @@ serve(async (req) => {
     // Try multiple variations with progressive improvement
     let bestRoute = null
     let bestDistanceDiff = Infinity
-    const baseTolerance = 500 // Base ±500m tolerance
+    const tolerance = 500 // STRICT ±500m tolerance
     
-    console.log(`Target: ${targetDistanceMeters}m, Base tolerance: ±${baseTolerance}m`)
+    console.log(`Target: ${targetDistanceMeters}m, Tolerance: ±${tolerance}m (STRICT ENFORCEMENT)`)
     
     // Progressive attempts with different strategies
     for (let attempt = 1; attempt <= 15; attempt++) {
@@ -417,15 +417,20 @@ serve(async (req) => {
           console.log('✓ New best route')
         }
         
-        // Accept routes within tolerance (increases with attempts for difficult areas)
-        const currentTolerance = baseTolerance + (attempt > 8 ? (attempt - 8) * 500 : 0)
-        if (distanceDiff <= currentTolerance) {
-          console.log(`✓ Route within ±${currentTolerance}m tolerance - ACCEPTED`)
+        // Accept routes within strict tolerance
+        if (distanceDiff <= tolerance) {
+          console.log('✓ Route within ±500m tolerance - ACCEPTED')
           bestRoute = route
           bestDistanceDiff = distanceDiff
           break
         } else {
-          console.log(`✗ Route outside tolerance (${distanceDiff}m > ${currentTolerance}m) - continuing`)
+          console.log(`✗ Route outside tolerance (${distanceDiff}m > ${tolerance}m) - REJECTED`)
+        }
+        
+        // Early exit if we're getting close (within 100m extra tolerance after attempt 10)
+        if (attempt > 10 && distanceDiff <= tolerance + 100) {
+          console.log(`✓ Close enough after ${attempt} attempts - ACCEPTED (${distanceDiff}m tolerance)`)
+          break
         }
         
       } catch (error) {
@@ -433,19 +438,13 @@ serve(async (req) => {
       }
     }
     
-    // Accept best route found - use percentage-based tolerance for flexibility
-    // Allow up to 50% deviation for difficult terrain/remote areas
-    const maxAllowedDiff = Math.max(baseTolerance * 5, targetDistanceMeters * 0.5)
-    if (!bestRoute || bestDistanceDiff > maxAllowedDiff) {
+    // Enforce tolerance with a small grace period for very close results
+    const finalTolerance = tolerance + (bestDistanceDiff > tolerance ? 0 : 0); // No grace period
+    if (!bestRoute || bestDistanceDiff > finalTolerance) {
       const message = bestRoute 
-        ? `Could not generate accurate route. Best attempt was ${bestDistanceDiff.toFixed(0)}m off target. This area may have limited walking paths.`
-        : 'Could not generate any valid route. This area may not have walkable paths.'
+        ? `Could not generate route within ±${tolerance}m tolerance. Best attempt was ${bestDistanceDiff.toFixed(0)}m off target (${bestRoute.distance.toFixed(0)}m vs ${targetDistanceMeters}m target). Try a different location or distance.`
+        : 'Could not generate any valid route after 15 attempts'
       throw new Error(message)
-    }
-    
-    // Log if we're using a less accurate route
-    if (bestDistanceDiff > baseTolerance) {
-      console.log(`⚠ Using best available route (${bestDistanceDiff.toFixed(0)}m off target) - limited paths in area`)
     }
     
     console.log(`\n🎯 ACCEPTED route: ${bestRoute.distance}m (${bestDistanceDiff.toFixed(0)}m from target - within tolerance)`)
