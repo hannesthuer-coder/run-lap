@@ -52,6 +52,7 @@ const Route = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [resizeTrigger, setResizeTrigger] = useState(0);
   
   const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
   const preloadedRoute = routeData.isPreloaded ? routeData.route?.geometry : undefined;
@@ -222,15 +223,18 @@ const Route = () => {
       <div className={`transition-all duration-500 ${showMap ? 'opacity-100 animate-fade-in' : 'opacity-0'} ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'flex-1 relative px-3 sm:px-4'}`}>
         {isFullscreen && (
           <Button
-            onClick={() => setIsFullscreen(false)}
+            onClick={() => {
+              setIsFullscreen(false);
+              setTimeout(() => setResizeTrigger(prev => prev + 1), 100);
+            }}
             variant="outline"
             size="icon"
-            className="absolute top-4 right-4 z-50 rounded-full bg-background/80 backdrop-blur-sm"
+            className="absolute top-4 right-4 z-[60] rounded-full bg-background/80 backdrop-blur-sm"
           >
             <X className="h-4 w-4" />
           </Button>
         )}
-        <div className={`bg-card overflow-hidden shadow-soft ${isFullscreen ? 'h-full' : 'rounded-xl sm:rounded-2xl h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8'}`}>
+        <div className={`bg-card overflow-hidden shadow-soft ${isFullscreen ? 'h-full w-full' : 'rounded-xl sm:rounded-2xl h-[300px] sm:h-[400px] md:h-[500px] mb-4 sm:mb-6 md:mb-8'}`}>
           <MapComponent 
             startLocation={routeData.location}
             distance={routeData.distance}
@@ -239,11 +243,15 @@ const Route = () => {
             onRouteGenerated={handleRouteGenerated}
             onError={handleRouteError}
             preloadedRoute={preloadedRoute}
+            triggerResize={resizeTrigger}
           />
         </div>
         {!isFullscreen && (
           <Button
-            onClick={() => setIsFullscreen(true)}
+            onClick={() => {
+              setIsFullscreen(true);
+              setTimeout(() => setResizeTrigger(prev => prev + 1), 100);
+            }}
             variant="outline"
             size="icon"
             className="absolute bottom-8 right-6 sm:bottom-10 sm:right-8 z-10 rounded-full bg-background/80 backdrop-blur-sm"
