@@ -11,9 +11,10 @@ interface MapComponentProps {
   onRouteGenerated?: (route?: any) => void;
   onError?: () => void;
   preloadedRoute?: any;
+  triggerResize?: number;
 }
 
-const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError, preloadedRoute }: MapComponentProps) => {
+const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGenerated, onError, preloadedRoute, triggerResize }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const mapboxglRef = useRef<any>(null);
@@ -349,6 +350,17 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       generateNewRoute();
     }
   }, [regenerateKey]);
+
+  // Handle map resize when container size changes (e.g., fullscreen toggle)
+  useEffect(() => {
+    if (triggerResize && triggerResize > 0 && map) {
+      // Small delay to ensure CSS transitions complete
+      const timeoutId = setTimeout(() => {
+        map.resize();
+      }, 150);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [triggerResize, map]);
 
   return (
     <div className="h-full w-full relative">
