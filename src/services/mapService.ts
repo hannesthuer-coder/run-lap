@@ -38,6 +38,6 @@ export const createMap = async (container: HTMLElement, options: any) => {
     ...options
   });
   
-  map.addControl(new mapboxglLib.NavigationControl(), 'top-right');
+  map.addControl(new mapboxglLib.NavigationControl(), 'bottom-right');
   return map;
 };
