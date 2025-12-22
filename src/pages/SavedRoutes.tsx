@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Trash2, MapPin, Calendar, Crown } from 'lucide-react';
+import RoutePreview from '@/components/RoutePreview';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -155,40 +156,38 @@ const SavedRoutes = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {routes.map((route) => (
-              <Card key={route.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1">{route.route_name}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {route.start_location}
+              <Card key={route.id} className="hover:shadow-md transition-shadow overflow-hidden">
+                <RoutePreview 
+                  geometry={route.route_geometry} 
+                  className="h-32 w-full"
+                />
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg mb-1 truncate">{route.route_name}</h3>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{route.start_location}</span>
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setDeleteRouteId(route.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Distance</span>
-                      <span className="font-semibold">
-                        {route.distance} {route.unit}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Saved
-                      </span>
-                      <span>{format(new Date(route.created_at), 'MMM d, yyyy')}</span>
-                    </div>
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <span className="font-semibold text-foreground">
+                      {route.distance} {route.unit}
+                    </span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(route.created_at), 'MMM d, yyyy')}
+                    </span>
                   </div>
 
                   <Button
