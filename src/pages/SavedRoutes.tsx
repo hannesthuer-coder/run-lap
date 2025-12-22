@@ -103,7 +103,10 @@ const SavedRoutes = () => {
         },
         distance: route.distance,
         unit: route.unit,
-        startLocation: { lat: 0, lng: 0 },
+        location: route.start_location,
+        isPreloaded: true,
+        savedRouteId: route.id,
+        savedRouteName: route.route_name,
       },
     });
   };
