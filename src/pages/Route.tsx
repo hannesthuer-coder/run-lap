@@ -54,8 +54,18 @@ const Route = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [resizeTrigger, setResizeTrigger] = useState(0);
   
-  const routeData = location.state || { distance: 5, unit: "km", location: "40.7128,-74.0060" };
-  const preloadedRoute = routeData.isPreloaded ? routeData.route?.geometry : undefined;
+  // Normalize route state from various possible navigation sources
+  const rawState = location.state || {};
+  const routeData = {
+    distance: rawState.distance || 5,
+    unit: rawState.unit || "km",
+    location: rawState.location || rawState.start_location || rawState.route?.start_location || "40.7128,-74.0060",
+    isPreloaded: rawState.isPreloaded || !!(rawState.route?.geometry || rawState.route_geometry),
+    route: rawState.route,
+    savedRouteId: rawState.savedRouteId,
+    savedRouteName: rawState.savedRouteName,
+  };
+  const preloadedRoute = routeData.isPreloaded ? (routeData.route?.geometry || rawState.route_geometry) : undefined;
   const isViewingSavedRoute = routeData.isPreloaded === true;
 
   // Animate dots

@@ -22,8 +22,15 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [routeInsights, setRouteInsights] = useState<any>(null);
 
   // Parse startLocation coordinates from string format "lat,lng"
-  const parseLocation = (locationStr: string): [number, number] => {
+  const parseLocation = (locationStr: string | undefined | null): [number, number] => {
     try {
+      // Validate input is a proper string
+      if (!locationStr || typeof locationStr !== 'string') {
+        console.warn('Missing or invalid location string:', locationStr);
+        toast.error('Missing start location for this route');
+        return [-74.0060, 40.7128]; // Default to NYC (lng, lat)
+      }
+      
       console.log('Parsing location:', locationStr);
       const [lat, lng] = locationStr.split(',').map(coord => parseFloat(coord.trim()));
       if (isNaN(lat) || isNaN(lng)) {
