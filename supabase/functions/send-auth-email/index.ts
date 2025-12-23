@@ -6,8 +6,17 @@ import { ConfirmSignupEmail } from '../_templates/confirm-signup.tsx'
 import { ResetPasswordEmail } from '../_templates/reset-password.tsx'
 import { MagicLinkEmail } from '../_templates/magic-link.tsx'
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
-const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string
+const resendApiKey = Deno.env.get('RESEND_API_KEY')
+const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET')
+
+if (!resendApiKey) {
+  console.error('[SEND-AUTH-EMAIL] RESEND_API_KEY is not configured')
+}
+if (!hookSecret) {
+  console.error('[SEND-AUTH-EMAIL] SEND_EMAIL_HOOK_SECRET is not configured')
+}
+
+const resend = new Resend(resendApiKey as string)
 
 interface AuthEmailPayload {
   user: {
@@ -126,7 +135,7 @@ Deno.serve(async (req) => {
     console.log('[SEND-AUTH-EMAIL] Sending email via Resend...')
 
     const { data, error } = await resend.emails.send({
-      from: 'Run-Lap <noreply@runlap.app>',
+      from: 'Run-Lap <noreply@run-lap.com>',
       to: [user.email],
       subject: subject,
       html: html,
