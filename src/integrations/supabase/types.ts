@@ -68,6 +68,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          call_count: number
+          created_at: string | null
+          endpoint: string
+          id: string
+          ip_address: string
+          window_start: string
+        }
+        Insert: {
+          call_count?: number
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          ip_address: string
+          window_start?: string
+        }
+        Update: {
+          call_count?: number
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          ip_address?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       route_generations: {
         Row: {
           created_at: string | null
@@ -260,6 +287,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       count_routes_by_fingerprint: {
         Args: { _fingerprint: string; _ip_address: string; _since: string }
         Returns: number
