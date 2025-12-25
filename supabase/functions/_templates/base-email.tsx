@@ -13,14 +13,22 @@ import * as React from 'npm:react@18.3.1'
 
 // Brand colors from Run-Lap design system
 export const brandColors = {
-  primary: '#3b82f6',        // HSL 220 75% 50%
-  accent: '#0ea5e9',         // HSL 200 85% 50%
-  background: '#f8fafc',     // HSL 210 30% 98%
-  foreground: '#1e293b',     // HSL 220 40% 15%
-  muted: '#64748b',          // HSL 220 15% 50%
-  border: '#e2e8f0',         // HSL 210 25% 90%
-  beige: '#dce8f5',          // HSL 210 45% 88%
+  // Light mode
+  primary: '#3b82f6',
+  accent: '#0ea5e9',
+  background: '#f8fafc',
+  foreground: '#1e293b',
+  muted: '#64748b',
+  border: '#e2e8f0',
+  beige: '#dce8f5',
   white: '#ffffff',
+  // Dark mode
+  darkBackground: '#0f172a',
+  darkForeground: '#f1f5f9',
+  darkMuted: '#94a3b8',
+  darkBorder: '#334155',
+  darkCard: '#1e293b',
+  darkFooter: '#1a2744',
 }
 
 export const styles = {
@@ -136,6 +144,48 @@ export const styles = {
   },
 }
 
+// Dark mode CSS overrides
+const darkModeStyles = `
+  @media (prefers-color-scheme: dark) {
+    body, .email-body {
+      background-color: ${brandColors.darkBackground} !important;
+    }
+    .email-container {
+      background-color: ${brandColors.darkCard} !important;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+    }
+    .email-content {
+      background-color: ${brandColors.darkCard} !important;
+    }
+    .email-heading {
+      color: ${brandColors.darkForeground} !important;
+    }
+    .email-text {
+      color: ${brandColors.darkForeground} !important;
+    }
+    .email-secondary-text {
+      color: ${brandColors.darkMuted} !important;
+    }
+    .email-code-box {
+      background-color: ${brandColors.darkBackground} !important;
+      border-color: ${brandColors.darkBorder} !important;
+      color: ${brandColors.darkForeground} !important;
+    }
+    .email-divider {
+      background-color: ${brandColors.darkBorder} !important;
+    }
+    .email-footer {
+      background-color: ${brandColors.darkFooter} !important;
+    }
+    .email-footer-text, .email-social-link {
+      color: ${brandColors.darkMuted} !important;
+    }
+    .email-link {
+      color: ${brandColors.accent} !important;
+    }
+  }
+`
+
 interface BaseEmailProps {
   preview: string
   children: React.ReactNode
@@ -143,10 +193,12 @@ interface BaseEmailProps {
 
 export const BaseEmail = ({ preview, children }: BaseEmailProps) => (
   <Html>
-    <Head />
+    <Head>
+      <style dangerouslySetInnerHTML={{ __html: darkModeStyles }} />
+    </Head>
     <Preview>{preview}</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
+    <Body style={styles.main} className="email-body">
+      <Container style={styles.container} className="email-container">
         {/* Header with gradient and logo */}
         <Section style={styles.header}>
           <Img
@@ -159,35 +211,37 @@ export const BaseEmail = ({ preview, children }: BaseEmailProps) => (
         </Section>
 
         {/* Main content */}
-        <Section style={styles.content}>
+        <Section style={styles.content} className="email-content">
           {children}
         </Section>
 
         {/* Footer with social links */}
-        <Section style={styles.footer}>
+        <Section style={styles.footer} className="email-footer">
           <div style={styles.socialContainer}>
             <Link 
               href="https://www.instagram.com/run.lap/" 
               style={styles.socialLink}
+              className="email-social-link"
             >
               Instagram
             </Link>
             <Link 
               href="mailto:Contact@run-lap.com" 
               style={styles.socialLink}
+              className="email-social-link"
             >
               Contact Us
             </Link>
           </div>
-          <Text style={styles.footerText}>
+          <Text style={styles.footerText} className="email-footer-text">
             © {new Date().getFullYear()} Run-Lap. All rights reserved.
           </Text>
-          <Text style={{ ...styles.footerText, marginTop: '8px' }}>
-            <Link href="https://run-lap.com/privacy" style={styles.footerLink}>
+          <Text style={{ ...styles.footerText, marginTop: '8px' }} className="email-footer-text">
+            <Link href="https://run-lap.com/privacy" style={styles.footerLink} className="email-link">
               Privacy Policy
             </Link>
             {' • '}
-            <Link href="https://run-lap.com/terms" style={styles.footerLink}>
+            <Link href="https://run-lap.com/terms" style={styles.footerLink} className="email-link">
               Terms of Service
             </Link>
           </Text>
