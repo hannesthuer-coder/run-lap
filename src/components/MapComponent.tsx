@@ -1,7 +1,7 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { createMap, initializeMapbox } from '@/services/mapService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MapComponentProps {
   startLocation: string;
@@ -20,6 +20,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const mapboxglRef = useRef<any>(null);
   const [actualDistance, setActualDistance] = useState<number | null>(null);
   const [routeInsights, setRouteInsights] = useState<any>(null);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string | undefined | null): [number, number] => {
@@ -194,16 +195,31 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     if (!mapContainer.current) return;
 
     try {
+      // Fetch Mapbox token from secure edge function
+      let token = mapboxToken;
+      if (!token) {
+        console.log('Fetching Mapbox token from edge function...');
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (error || !data?.success || !data?.token) {
+          console.error('Failed to fetch Mapbox token:', error || data?.error);
+          toast.error("Failed to load map. Please sign in and try again.");
+          onError?.();
+          return;
+        }
+        token = data.token;
+        setMapboxToken(token);
+      }
+
       const [lng, lat] = parseLocation(startLocation);
       
-      // Create map using shared service
+      // Create map using shared service with fetched token
       const mapInstance = await createMap(mapContainer.current, {
         center: [lng, lat],
         zoom: 12
-      });
+      }, token);
 
-      // Initialize Mapbox library for markers
-      const mapboxgl = await initializeMapbox();
+      // Initialize Mapbox library for markers with token
+      const mapboxgl = await initializeMapbox(token);
       mapboxglRef.current = mapboxgl;
 
       // Generate initial AI route with enhanced error handling
