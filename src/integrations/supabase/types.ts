@@ -255,39 +255,6 @@ export type Database = {
         }
         Relationships: []
       }
-      waitlist: {
-        Row: {
-          campaign: string | null
-          created_at: string | null
-          email: string
-          id: string
-          ip_address: string | null
-          medium: string | null
-          referrer: string | null
-          source: string | null
-        }
-        Insert: {
-          campaign?: string | null
-          created_at?: string | null
-          email: string
-          id?: string
-          ip_address?: string | null
-          medium?: string | null
-          referrer?: string | null
-          source?: string | null
-        }
-        Update: {
-          campaign?: string | null
-          created_at?: string | null
-          email?: string
-          id?: string
-          ip_address?: string | null
-          medium?: string | null
-          referrer?: string | null
-          source?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
