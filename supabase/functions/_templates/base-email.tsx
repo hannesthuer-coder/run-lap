@@ -7,7 +7,6 @@ import {
   Preview,
   Section,
   Text,
-  Hr,
   Link,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
@@ -20,6 +19,7 @@ export const brandColors = {
   foreground: '#1e293b',     // HSL 220 40% 15%
   muted: '#64748b',          // HSL 220 15% 50%
   border: '#e2e8f0',         // HSL 210 25% 90%
+  beige: '#dce8f5',          // HSL 210 45% 88%
   white: '#ffffff',
 }
 
@@ -33,81 +33,101 @@ export const styles = {
     margin: '40px auto',
     padding: '0',
     maxWidth: '560px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)',
+    borderRadius: '16px',
+    boxShadow: '0 8px 30px rgba(59, 130, 246, 0.12)',
     overflow: 'hidden',
   },
   header: {
     background: `linear-gradient(135deg, ${brandColors.primary}, ${brandColors.accent})`,
-    padding: '32px 40px',
+    padding: '40px',
     textAlign: 'center' as const,
   },
   logo: {
     margin: '0 auto',
   },
-  logoText: {
-    color: brandColors.white,
-    fontSize: '28px',
-    fontWeight: '700',
-    margin: '0',
-    letterSpacing: '-0.5px',
-  },
   content: {
-    padding: '40px',
+    padding: '48px 40px',
   },
   heading: {
     color: brandColors.foreground,
-    fontSize: '24px',
-    fontWeight: '600',
+    fontSize: '26px',
+    fontWeight: '700',
     lineHeight: '1.3',
-    margin: '0 0 16px',
+    margin: '0 0 20px',
+    textAlign: 'center' as const,
   },
   text: {
     color: brandColors.foreground,
     fontSize: '16px',
-    lineHeight: '1.6',
-    margin: '0 0 24px',
+    lineHeight: '1.7',
+    margin: '0 0 28px',
+    textAlign: 'center' as const,
   },
   button: {
-    backgroundColor: brandColors.primary,
-    borderRadius: '8px',
+    background: `linear-gradient(135deg, ${brandColors.primary}, ${brandColors.accent})`,
+    borderRadius: '12px',
     color: brandColors.white,
     display: 'inline-block',
     fontSize: '16px',
     fontWeight: '600',
-    padding: '14px 32px',
+    padding: '16px 40px',
     textDecoration: 'none',
     textAlign: 'center' as const,
-    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+    boxShadow: '0 6px 20px rgba(59, 130, 246, 0.35)',
   },
   buttonContainer: {
     textAlign: 'center' as const,
-    margin: '32px 0',
+    margin: '36px 0',
   },
   secondaryText: {
     color: brandColors.muted,
     fontSize: '14px',
-    lineHeight: '1.5',
+    lineHeight: '1.6',
     margin: '24px 0 0',
+    textAlign: 'center' as const,
   },
   link: {
     color: brandColors.primary,
     textDecoration: 'underline',
     wordBreak: 'break-all' as const,
   },
-  hr: {
-    borderColor: brandColors.border,
-    margin: '24px 0',
+  codeBox: {
+    backgroundColor: brandColors.background,
+    padding: '16px 24px',
+    borderRadius: '10px',
+    fontFamily: 'monospace',
+    fontSize: '20px',
+    letterSpacing: '3px',
+    textAlign: 'center' as const,
+    marginTop: '12px',
+    color: brandColors.foreground,
+    border: `1px solid ${brandColors.border}`,
+  },
+  divider: {
+    height: '1px',
+    backgroundColor: brandColors.border,
+    margin: '32px 0',
+    border: 'none',
   },
   footer: {
-    backgroundColor: brandColors.background,
-    padding: '24px 40px',
+    backgroundColor: brandColors.beige,
+    padding: '32px 40px',
     textAlign: 'center' as const,
+  },
+  socialContainer: {
+    marginBottom: '20px',
+  },
+  socialLink: {
+    display: 'inline-block',
+    margin: '0 12px',
+    color: brandColors.muted,
+    textDecoration: 'none',
+    fontSize: '14px',
   },
   footerText: {
     color: brandColors.muted,
     fontSize: '12px',
-    lineHeight: '1.5',
+    lineHeight: '1.6',
     margin: '0',
   },
   footerLink: {
@@ -129,7 +149,13 @@ export const BaseEmail = ({ preview, children }: BaseEmailProps) => (
       <Container style={styles.container}>
         {/* Header with gradient and logo */}
         <Section style={styles.header}>
-          <Text style={styles.logoText}>🏃 Run-Lap</Text>
+          <Img
+            src="https://run-lap.com/logo.png"
+            width="180"
+            height="auto"
+            alt="Run-Lap"
+            style={styles.logo}
+          />
         </Section>
 
         {/* Main content */}
@@ -137,8 +163,22 @@ export const BaseEmail = ({ preview, children }: BaseEmailProps) => (
           {children}
         </Section>
 
-        {/* Footer */}
+        {/* Footer with social links */}
         <Section style={styles.footer}>
+          <div style={styles.socialContainer}>
+            <Link 
+              href="https://www.instagram.com/run.lap/" 
+              style={styles.socialLink}
+            >
+              Instagram
+            </Link>
+            <Link 
+              href="mailto:Contact@run-lap.com" 
+              style={styles.socialLink}
+            >
+              Contact Us
+            </Link>
+          </div>
           <Text style={styles.footerText}>
             © {new Date().getFullYear()} Run-Lap. All rights reserved.
           </Text>
