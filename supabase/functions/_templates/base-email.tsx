@@ -202,7 +202,7 @@ export const BaseEmail = ({ preview, children }: BaseEmailProps) => (
         {/* Header with gradient and logo */}
         <Section style={styles.header}>
           <Img
-            src="https://run-lap.com/logo.png"
+            src="https://run-lap.com/logo.png?v=2"
             width="180"
             height="auto"
             alt="Run-Lap"
