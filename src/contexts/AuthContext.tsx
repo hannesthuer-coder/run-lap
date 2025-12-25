@@ -68,6 +68,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Send welcome email to new users (only once per user)
+  const sendWelcomeEmail = async (userId: string) => {
+    const welcomeSentKey = `welcome_email_sent_${userId}`;
+    
+    // Check if we've already sent the welcome email
+    if (localStorage.getItem(welcomeSentKey)) {
+      return;
+    }
+
+    try {
+      console.log('[AUTH] Sending welcome email for new user');
+      const { error } = await supabase.functions.invoke('send-welcome-email', {
+        body: {}
+      });
+      
+      if (!error) {
+        // Mark as sent to prevent duplicate emails
+        localStorage.setItem(welcomeSentKey, 'true');
+        console.log('[AUTH] Welcome email sent successfully');
+      } else {
+        console.error('[AUTH] Failed to send welcome email:', error);
+      }
+    } catch (err) {
+      console.error('[AUTH] Error sending welcome email:', err);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -79,6 +106,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeout(() => {
           checkSubscriptionStatus(session.user);
         }, 0);
+
+        // Send welcome email for new signups (SIGNED_IN after email confirmation)
+        if (event === 'SIGNED_IN') {
+          // Check if this is a new user (created within last 5 minutes)
+          const createdAt = new Date(session.user.created_at);
+          const now = new Date();
+          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+          
+          if (createdAt > fiveMinutesAgo) {
+            setTimeout(() => {
+              sendWelcomeEmail(session.user.id);
+            }, 1000);
+          }
+        }
       } else {
         setIsPremium(false);
         setSubscriptionEnd(null);
