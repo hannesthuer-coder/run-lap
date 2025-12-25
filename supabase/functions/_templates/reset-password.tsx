@@ -1,7 +1,6 @@
 import {
   Text,
   Link,
-  Hr,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 import { BaseEmail, styles } from './base-email.tsx'
@@ -14,12 +13,12 @@ interface ResetPasswordEmailProps {
 export const ResetPasswordEmail = ({ resetUrl, token }: ResetPasswordEmailProps) => (
   <BaseEmail preview="Reset your Run-Lap password">
     <Text style={styles.heading}>
-      Reset Your Password 🔐
+      Reset Your Password
     </Text>
     
     <Text style={styles.text}>
-      We received a request to reset your password for your Run-Lap account. 
-      Click the button below to create a new password.
+      No worries! Click below to create a new password and get back to your routes. 
+      This link expires in 24 hours.
     </Text>
 
     <div style={styles.buttonContainer}>
@@ -28,10 +27,10 @@ export const ResetPasswordEmail = ({ resetUrl, token }: ResetPasswordEmailProps)
       </Link>
     </div>
 
-    <Hr style={styles.hr} />
+    <div style={styles.divider} />
 
     <Text style={styles.secondaryText}>
-      If the button above doesn't work, copy and paste this link into your browser:
+      If the button doesn't work, copy and paste this link:
     </Text>
     <Text style={{ ...styles.secondaryText, marginTop: '8px' }}>
       <Link href={resetUrl} style={styles.link}>
@@ -41,28 +40,17 @@ export const ResetPasswordEmail = ({ resetUrl, token }: ResetPasswordEmailProps)
 
     {token && (
       <>
-        <Text style={{ ...styles.secondaryText, marginTop: '16px' }}>
-          Or use this reset code:
+        <Text style={{ ...styles.secondaryText, marginTop: '20px' }}>
+          Or enter this reset code:
         </Text>
-        <Text style={{
-          ...styles.text,
-          backgroundColor: '#f1f5f9',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          fontFamily: 'monospace',
-          fontSize: '18px',
-          letterSpacing: '2px',
-          textAlign: 'center' as const,
-          marginTop: '8px',
-        }}>
+        <Text style={styles.codeBox}>
           {token}
         </Text>
       </>
     )}
 
-    <Text style={{ ...styles.secondaryText, marginTop: '24px' }}>
-      This link will expire in 24 hours. If you didn't request a password reset, 
-      you can safely ignore this email — your password will remain unchanged.
+    <Text style={{ ...styles.secondaryText, marginTop: '28px' }}>
+      Didn't request this? Your password is still safe — just ignore this email.
     </Text>
   </BaseEmail>
 )
