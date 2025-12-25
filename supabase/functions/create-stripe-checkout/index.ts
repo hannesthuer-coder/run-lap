@@ -13,19 +13,101 @@ const PRICE_IDS = {
   annual: 'price_1SbNQRAzbZd33OOHQpxXXCYL',  // $30/year
 };
 
+// Rate limit: 10 calls per hour per IP (stricter for checkout)
+const RATE_LIMIT = 10;
+const RATE_WINDOW_SECONDS = 3600;
+
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
+
+async function checkRateLimit(supabase: any, ipAddress: string, endpoint: string): Promise<{ allowed: boolean; remaining: number }> {
+  const windowStart = new Date(Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000)) * (RATE_WINDOW_SECONDS * 1000)).toISOString();
+  
+  try {
+    // Try to get existing rate limit record
+    const { data: existing, error: selectError } = await supabase
+      .from('rate_limits')
+      .select('call_count')
+      .eq('ip_address', ipAddress)
+      .eq('endpoint', endpoint)
+      .eq('window_start', windowStart)
+      .single();
+    
+    if (selectError && selectError.code !== 'PGRST116') {
+      console.error('Rate limit check error:', selectError);
+      return { allowed: true, remaining: RATE_LIMIT };
+    }
+    
+    if (existing) {
+      if (existing.call_count >= RATE_LIMIT) {
+        return { allowed: false, remaining: 0 };
+      }
+      
+      await supabase
+        .from('rate_limits')
+        .update({ call_count: existing.call_count + 1 })
+        .eq('ip_address', ipAddress)
+        .eq('endpoint', endpoint)
+        .eq('window_start', windowStart);
+      
+      return { allowed: true, remaining: RATE_LIMIT - existing.call_count - 1 };
+    } else {
+      await supabase
+        .from('rate_limits')
+        .insert({
+          ip_address: ipAddress,
+          endpoint: endpoint,
+          call_count: 1,
+          window_start: windowStart
+        });
+      
+      return { allowed: true, remaining: RATE_LIMIT - 1 };
+    }
+  } catch (error) {
+    console.error('Rate limit error:', error);
+    return { allowed: true, remaining: RATE_LIMIT };
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                    req.headers.get('x-real-ip') || 
+                    'unknown';
+
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Use service role for rate limiting
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Check rate limit
+    const { allowed, remaining } = await checkRateLimit(supabaseAdmin, ipAddress, 'create-stripe-checkout');
+    
+    if (!allowed) {
+      logStep("Rate limit exceeded", { ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'X-RateLimit-Remaining': '0',
+            'Retry-After': String(RATE_WINDOW_SECONDS)
+          } 
+        }
+      );
+    }
+
     const { email, plan = 'monthly' } = await req.json();
-    logStep("Request received", { email, plan });
+    logStep("Request received", { email: email ? '[redacted]' : null, plan });
     
     // Validate email input
     if (!email || typeof email !== 'string') {
@@ -84,11 +166,17 @@ serve(async (req) => {
       },
     });
     
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created", { sessionId: session.id });
     
     return new Response(
       JSON.stringify({ sessionUrl: session.url }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-RateLimit-Remaining': String(remaining)
+        } 
+      }
     );
     
   } catch (error) {
