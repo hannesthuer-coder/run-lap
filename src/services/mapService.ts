@@ -2,12 +2,14 @@ import { toast } from "sonner";
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 let mapboxgl: any = null;
+let currentToken: string | null = null;
 
-// Use direct token like in working MapTest
-export const initializeMapbox = async (): Promise<any> => {
+// Initialize mapbox with a token passed from authenticated fetch
+export const initializeMapbox = async (token?: string): Promise<any> => {
   console.log('mapService: initializeMapbox called');
   
-  if (mapboxgl) {
+  // If we already have mapbox initialized with the same token, return it
+  if (mapboxgl && currentToken === token) {
     console.log('mapService: returning cached mapboxgl');
     return mapboxgl;
   }
@@ -16,8 +18,13 @@ export const initializeMapbox = async (): Promise<any> => {
     console.log('mapService: importing mapbox-gl...');
     mapboxgl = (await import('mapbox-gl')).default;
     
+    if (!token) {
+      throw new Error('Mapbox token is required');
+    }
+    
     console.log('mapService: setting access token...');
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFubmVzdGh1cjEyMyIsImEiOiJjbWV2cTk2Y2kwY3J4MmpzN2N3YWFpdXRtIn0.HMwsWwD4VsglAlp3kjultg';
+    mapboxgl.accessToken = token;
+    currentToken = token;
     
     console.log('mapService: mapbox initialized successfully');
     return mapboxgl;
@@ -28,8 +35,8 @@ export const initializeMapbox = async (): Promise<any> => {
 };
 
 // Create a basic map instance
-export const createMap = async (container: HTMLElement, options: any) => {
-  const mapboxglLib = await initializeMapbox();
+export const createMap = async (container: HTMLElement, options: any, token?: string) => {
+  const mapboxglLib = await initializeMapbox(token);
   
   const map = new mapboxglLib.Map({
     container,
