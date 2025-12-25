@@ -143,7 +143,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    // Use production URL to avoid localhost redirect issues
+    const redirectUrl = import.meta.env.PROD 
+      ? 'https://run-lap.com/' 
+      : `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
       email,
