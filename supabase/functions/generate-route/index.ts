@@ -256,7 +256,7 @@ serve(async (req) => {
     // Simple function to get walking route between two points
     const getWalkingRoute = async (fromLng, fromLat, toLng, toLat) => {
       const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${fromLng},${fromLat};${toLng},${toLat}?` + 
-        `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
+        `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true&exclude=ferry`
       
       try {
         const response = await fetch(url)

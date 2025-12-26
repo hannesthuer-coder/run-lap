@@ -292,6 +292,9 @@ STRICT Requirements:
 - NO SHORTER than ${targetDistanceMeters - 500}m
 - Use 4-6 waypoints in sequence (no backtracking)
 - Only walkable streets/paths
+- NEVER place waypoints across water bodies (rivers, lakes, seas, channels, bays)
+- All waypoints must be connected by walkable land routes only
+- Do NOT create routes that would require crossing water or using ferries
 
 Respond with ONLY this exact JSON format:
 {
@@ -400,7 +403,7 @@ Important: Return ONLY valid JSON, no other text.`
     const coordinatesString = allPoints.map(p => `${p.lng},${p.lat}`).join(';')
     
     const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinatesString}?` + 
-      `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true`
+      `geometries=geojson&access_token=${MAPBOX_TOKEN}&overview=full&steps=true&exclude=ferry`
     
     console.log('🗺️ Fetching route from Mapbox...')
     
