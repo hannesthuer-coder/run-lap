@@ -192,7 +192,7 @@ const Profile = () => {
       if (error) throw error;
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (error) {
       console.error('Error opening customer portal:', error);
@@ -201,7 +201,6 @@ const Profile = () => {
         description: "failed to open payment settings. you may not have an active subscription.",
         variant: "destructive",
       });
-    } finally {
       setPortalLoading(false);
     }
   };
