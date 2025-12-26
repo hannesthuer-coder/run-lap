@@ -49,9 +49,7 @@ const Preferences = () => {
     
     const status = await RouteLimitService.checkRouteLimit();
     setRouteLimitStatus(status);
-    if (status.needsUpgrade) {
-      setShowUpgradeModal(true);
-    }
+    // Don't show upgrade modal on page load - only when user tries to generate
   };
 
   // Handle location selection from map
