@@ -158,6 +158,9 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
+      subscription_data: {
+        trial_period_days: 14,
+      },
       success_url: `${req.headers.get('origin')}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get('origin')}/?canceled=true`,
       metadata: {
