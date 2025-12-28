@@ -9,6 +9,8 @@ interface AuthContextType {
   loading: boolean;
   isPremium: boolean;
   subscriptionEnd: string | null;
+  isTrialing: boolean;
+  trialEndsAt: string | null;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -23,6 +25,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
+  const [isTrialing, setIsTrialing] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const checkSubscriptionStatus = async (userOverride?: User | null) => {
     const currentUser = userOverride ?? user;
@@ -30,6 +34,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser) {
       setIsPremium(false);
       setSubscriptionEnd(null);
+      setIsTrialing(false);
+      setTrialEndsAt(null);
       return;
     }
 
@@ -41,30 +47,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error checking subscription:', error);
         setIsPremium(false);
         setSubscriptionEnd(null);
+        setIsTrialing(false);
+        setTrialEndsAt(null);
         return;
       }
 
-      // Check if subscribed - subscription_end may be null even with active subscription
+      // Check if subscribed (includes trialing status)
       const hasActiveSub = data?.subscribed === true;
+      const isTrial = data?.is_trialing === true;
+      
       if (hasActiveSub) {
-        // If we have a subscription end date, verify it's still valid
-        if (data?.subscription_end) {
-          const isActive = new Date(data.subscription_end) > new Date();
-          setIsPremium(isActive);
-          setSubscriptionEnd(isActive ? data.subscription_end : null);
-        } else {
-          // No end date but subscription is active
-          setIsPremium(true);
-          setSubscriptionEnd(null);
-        }
+        setIsPremium(true);
+        setIsTrialing(isTrial);
+        setTrialEndsAt(isTrial ? data?.trial_ends_at : null);
+        setSubscriptionEnd(data?.subscription_end || null);
       } else {
         setIsPremium(false);
         setSubscriptionEnd(null);
+        setIsTrialing(false);
+        setTrialEndsAt(null);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
       setIsPremium(false);
       setSubscriptionEnd(null);
+      setIsTrialing(false);
+      setTrialEndsAt(null);
     }
   };
 
@@ -123,6 +131,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsPremium(false);
         setSubscriptionEnd(null);
+        setIsTrialing(false);
+        setTrialEndsAt(null);
       }
     });
 
@@ -200,6 +210,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setIsPremium(false);
       setSubscriptionEnd(null);
+      setIsTrialing(false);
+      setTrialEndsAt(null);
       toast({
         title: "Signed out",
         description: "You've been successfully signed out.",
@@ -215,6 +227,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isPremium,
         subscriptionEnd,
+        isTrialing,
+        trialEndsAt,
         signUp,
         signIn,
         signOut,

@@ -59,10 +59,10 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <Crown className="h-6 w-6 text-primary" />
-            <DialogTitle className="text-2xl">Upgrade to Premium</DialogTitle>
+            <DialogTitle className="text-2xl">Start Your Free Trial</DialogTitle>
           </div>
           <DialogDescription>
-            You've generated {routesGenerated} free routes. Upgrade to unlock unlimited routes!
+            You've used your {routesGenerated} free routes. Try Premium free for 14 days!
           </DialogDescription>
         </DialogHeader>
 
@@ -133,7 +133,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
               <p className="text-sm text-muted-foreground">/year</p>
             </button>
           </div>
-          <p className="text-xs text-center text-muted-foreground">Cancel anytime</p>
+          <p className="text-xs text-center text-muted-foreground">14-day free trial • Cancel anytime</p>
         </div>
 
         <div className="space-y-4 mt-4">
@@ -164,11 +164,11 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             className="w-full h-12 text-lg bg-beige hover:bg-beige-hover text-beige-foreground rounded-full disabled:opacity-50"
             size="lg"
           >
-            {isLoading ? 'Processing...' : user ? 'Upgrade Now' : 'Sign In to Upgrade'}
+            {isLoading ? 'Processing...' : user ? 'Start 14-Day Free Trial' : 'Sign In to Start Trial'}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            By upgrading, you agree to our Terms of Service and Privacy Policy
+            No charge today. You'll be billed after your trial ends unless you cancel.
           </p>
         </div>
       </DialogContent>

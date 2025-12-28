@@ -68,19 +68,38 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    // Check for both active and trialing subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
-    const hasActiveSub = subscriptions.data.length > 0;
+    
+    // Find active or trialing subscription
+    const activeSubscription = subscriptions.data.find(
+      sub => sub.status === "active" || sub.status === "trialing"
+    );
+    
+    const hasActiveSub = !!activeSubscription;
     let productId = null;
     let subscriptionEnd = null;
     let stripeSubscriptionId = null;
+    let isTrialing = false;
+    let trialEndsAt = null;
 
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
+    if (hasActiveSub && activeSubscription) {
+      const subscription = activeSubscription;
       stripeSubscriptionId = subscription.id;
+      isTrialing = subscription.status === "trialing";
+      
+      // Handle trial end date
+      if (isTrialing && subscription.trial_end) {
+        try {
+          trialEndsAt = new Date(subscription.trial_end * 1000).toISOString();
+        } catch (e) {
+          logStep("Warning: Could not parse trial end date", { raw: subscription.trial_end });
+        }
+      }
+      
       // Safely handle subscription end date - current_period_end is a Unix timestamp
       if (subscription.current_period_end) {
         try {
@@ -89,18 +108,26 @@ serve(async (req) => {
           logStep("Warning: Could not parse subscription end date", { raw: subscription.current_period_end });
         }
       }
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      
+      logStep("Subscription found", { 
+        subscriptionId: subscription.id, 
+        status: subscription.status,
+        isTrialing,
+        trialEndsAt,
+        endDate: subscriptionEnd 
+      });
+      
       productId = subscription.items.data[0].price.product as string;
       logStep("Determined subscription tier", { productId });
       
-      // Sync profiles table with premium status
+      // Sync profiles table with premium status (trialing counts as premium)
       const { error: updateError } = await supabaseClient
         .from('profiles')
         .update({
           subscription_status: 'premium',
           stripe_customer_id: customerId,
           stripe_subscription_id: stripeSubscriptionId,
-          subscription_expires_at: subscriptionEnd,
+          subscription_expires_at: isTrialing ? trialEndsAt : subscriptionEnd,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -128,7 +155,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       product_id: productId,
-      subscription_end: subscriptionEnd
+      subscription_end: subscriptionEnd,
+      is_trialing: isTrialing,
+      trial_ends_at: trialEndsAt
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
