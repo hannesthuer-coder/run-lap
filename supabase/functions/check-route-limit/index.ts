@@ -140,8 +140,8 @@ serve(async (req) => {
     const count = data || 0
     return new Response(
       JSON.stringify({ 
-        canGenerate: count < 3,
-        limitReached: count >= 3
+        canGenerate: count < 5,
+        limitReached: count >= 5
       }),
       { 
         headers: { 
