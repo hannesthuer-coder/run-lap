@@ -62,7 +62,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             <DialogTitle className="text-2xl">Start Your Free Trial</DialogTitle>
           </div>
           <DialogDescription>
-            You've used your {routesGenerated} free routes. Try Premium free for 14 days!
+            You've used all 5 of your free routes. Try Premium free for 14 days!
           </DialogDescription>
         </DialogHeader>
 

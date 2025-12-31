@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FingerprintService } from './fingerprint.service';
 import type { RouteLimitStatus } from '@/types';
 
-const FREE_ROUTE_LIMIT = 3;
+const FREE_ROUTE_LIMIT = 5;
 const STORAGE_KEY = 'runlap_route_count';
 const SESSION_KEY = 'runlap_session_id';
 
