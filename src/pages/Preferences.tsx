@@ -196,10 +196,17 @@ const Preferences = () => {
         </div>
 
         {/* Generate Button */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">
             {isGenerating ? "generating..." : "generate running laps"}
           </Button>
+          
+          {/* Remaining routes counter - only show for non-premium users */}
+          {routeLimitStatus && !routeLimitStatus.isPremium && routeLimitStatus.remainingRoutes > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {routeLimitStatus.remainingRoutes} free route{routeLimitStatus.remainingRoutes !== 1 ? 's' : ''} remaining
+            </p>
+          )}
         </div>
       </div>
       <Footer />
