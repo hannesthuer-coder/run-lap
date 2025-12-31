@@ -55,39 +55,39 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <Crown className="h-6 w-6 text-primary" />
-            <DialogTitle className="text-2xl">Start Your Free Trial</DialogTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <Crown className="h-5 w-5 text-primary" />
+            <DialogTitle className="text-xl">Start Your Free Trial</DialogTitle>
           </div>
           <DialogDescription>
             You've used all 5 of your free routes. Try Premium free for 14 days!
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 my-6">
-          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
-            <Infinity className="h-5 w-5 text-beige-foreground mt-0.5" />
+        <div className="space-y-3 my-4">
+          <div className="flex items-start gap-3 p-2.5 bg-beige/30 rounded-lg">
+            <Infinity className="h-4 w-4 text-beige-foreground mt-0.5" />
             <div>
-              <p className="font-medium">Unlimited Routes</p>
-              <p className="text-sm text-muted-foreground">Generate as many routes as you want</p>
+              <p className="font-medium text-sm">Unlimited Routes</p>
+              <p className="text-xs text-muted-foreground">Generate as many routes as you want</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
-            <Zap className="h-5 w-5 text-beige-foreground mt-0.5" />
+          <div className="flex items-start gap-3 p-2.5 bg-beige/30 rounded-lg">
+            <Zap className="h-4 w-4 text-beige-foreground mt-0.5" />
             <div>
-              <p className="font-medium">Priority AI Generation</p>
-              <p className="text-sm text-muted-foreground">Faster route generation with advanced AI</p>
+              <p className="font-medium text-sm">Priority AI Generation</p>
+              <p className="text-xs text-muted-foreground">Faster route generation with advanced AI</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-beige/30 rounded-lg">
-            <BookmarkCheck className="h-5 w-5 text-beige-foreground mt-0.5" />
+          <div className="flex items-start gap-3 p-2.5 bg-beige/30 rounded-lg">
+            <BookmarkCheck className="h-4 w-4 text-beige-foreground mt-0.5" />
             <div>
-              <p className="font-medium">Save Your Routes</p>
-              <p className="text-sm text-muted-foreground">Access your favorite routes anytime</p>
+              <p className="font-medium text-sm">Save Your Routes</p>
+              <p className="text-xs text-muted-foreground">Access your favorite routes anytime</p>
             </div>
           </div>
         </div>
@@ -161,8 +161,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
           <Button 
             onClick={handleUpgrade}
             disabled={isLoading || !consentChecked}
-            className="w-full h-12 text-lg bg-beige hover:bg-beige-hover text-beige-foreground rounded-full disabled:opacity-50"
-            size="lg"
+            className="w-full h-10 text-base bg-beige hover:bg-beige-hover text-beige-foreground rounded-full disabled:opacity-50"
           >
             {isLoading ? 'Processing...' : user ? 'Start 14-Day Free Trial' : 'Sign In to Start Trial'}
           </Button>
