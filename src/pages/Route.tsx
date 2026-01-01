@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2, Maximize2, X } from "lucide-react";
+import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2, Maximize2, X, Play } from "lucide-react";
+import { RunningMode } from "@/components/RunningMode";
 import MapComponent from "@/components/MapComponent";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -53,6 +54,7 @@ const Route = () => {
   const [generatedRoute, setGeneratedRoute] = useState<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [resizeTrigger, setResizeTrigger] = useState(0);
+  const [showRunningMode, setShowRunningMode] = useState(false);
   
   // Normalize route state from various possible navigation sources
   const rawState = location.state || {};
@@ -274,6 +276,26 @@ const Route = () => {
       {/* Not Satisfied Section - Only show for newly generated routes */}
       {!isViewingSavedRoute && (
         <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
+          {/* Start Run Button - Premium Feature */}
+          {generatedRoute && (
+            <div className={`flex justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+              <Button
+                onClick={() => {
+                  if (isPremium) {
+                    setShowRunningMode(true);
+                  } else {
+                    setShowUpgradeModal(true);
+                  }
+                }}
+                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-success hover:bg-success/90 text-success-foreground text-base shadow-lg"
+                size="lg"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                start run
+              </Button>
+            </div>
+          )}
+
           <div className={`text-center transition-all duration-500 ${showNotSatisfied ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
             <h2 className="text-base sm:text-lg font-bold text-foreground tracking-wide">
               not satisfied?
@@ -333,33 +355,55 @@ const Route = () => {
 
       {/* Saved Route Options - Only show for saved routes */}
       {isViewingSavedRoute && (
-        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 pb-6 sm:pb-8 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
-          <Button
-            onClick={() => navigate('/profile')}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            back to saved routes
-          </Button>
+        <div className={`space-y-4 px-4 pb-6 sm:pb-8 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+          {/* Start Run Button for saved routes */}
+          {preloadedRoute && (
+            <div className="flex justify-center">
+              <Button
+                onClick={() => {
+                  if (isPremium) {
+                    setShowRunningMode(true);
+                  } else {
+                    setShowUpgradeModal(true);
+                  }
+                }}
+                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-success hover:bg-success/90 text-success-foreground text-base shadow-lg"
+                size="lg"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                start run
+              </Button>
+            </div>
+          )}
 
-          <Button
-            onClick={() => setShowShareDialog(true)}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            share route
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Button
+              onClick={() => navigate('/profile')}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              back to saved routes
+            </Button>
 
-          <Button
-            onClick={() => setShowDeleteDialog(true)}
-            variant="outline"
-            className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            delete route
-          </Button>
+            <Button
+              onClick={() => setShowShareDialog(true)}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              share route
+            </Button>
+
+            <Button
+              onClick={() => setShowDeleteDialog(true)}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              delete route
+            </Button>
+          </div>
         </div>
       )}
 
@@ -441,6 +485,16 @@ const Route = () => {
           route_geometry: generatedRoute.geometry || {},
         } : null}
       />
+
+      {/* GPS Running Mode */}
+      {showRunningMode && generatedRoute?.geometry?.coordinates && (
+        <RunningMode
+          routeCoordinates={generatedRoute.geometry.coordinates}
+          distance={routeData.distance}
+          unit={routeData.unit as 'km' | 'miles'}
+          onClose={() => setShowRunningMode(false)}
+        />
+      )}
 
       <Footer />
     </div>
