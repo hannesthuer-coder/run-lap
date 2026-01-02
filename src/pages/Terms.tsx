@@ -1,7 +1,13 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 export default function Terms() {
   return <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Terms and Conditions | Run-Lap</title>
+        <meta name="description" content="Read the Run-Lap terms and conditions. Learn about our service, subscriptions, user accounts, and legal information." />
+        <link rel="canonical" href="https://run-lap.com/terms" />
+      </Helmet>
       <Header />
       
       <main className="flex-1 max-w-4xl mx-auto px-4 py-12 my-[100px]">

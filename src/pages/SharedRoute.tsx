@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -107,6 +108,13 @@ const SharedRoute = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>{route.route_name || `${route.distance} ${route.unit} Running Route`} | Run-Lap</title>
+        <meta name="description" content={`Check out this ${route.distance} ${route.unit} running route shared via Run-Lap. View the route on the map and generate your own custom running laps.`} />
+        <meta property="og:title" content={`${route.route_name || `${route.distance} ${route.unit} Running Route`} | Run-Lap`} />
+        <meta property="og:description" content={`Check out this ${route.distance} ${route.unit} running route. Generate your own custom running laps with Run-Lap.`} />
+        <meta property="og:type" content="article" />
+      </Helmet>
       <Header />
       
       <div className="text-center py-4 sm:py-6 md:py-8 pt-28 sm:pt-32">

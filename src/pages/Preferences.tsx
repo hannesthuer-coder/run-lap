@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,6 +147,14 @@ const Preferences = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col pt-[100px]">
+      <Helmet>
+        <title>Run-Lap: Generate Your Perfect Running Route | AI Route Planner</title>
+        <meta name="description" content="Create your perfect running lap in seconds. Set your distance, choose your starting location, and let AI generate a custom running route just for you." />
+        <link rel="canonical" href="https://run-lap.com/start" />
+        <meta property="og:title" content="Run-Lap: Generate Your Perfect Running Route" />
+        <meta property="og:description" content="Create your perfect running lap in seconds. Set your distance and starting location." />
+        <meta property="og:url" content="https://run-lap.com/start" />
+      </Helmet>
       <Header />
       <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 pt-28 sm:pt-32 sm:py-[200px]">
         {/* Main Title */}
