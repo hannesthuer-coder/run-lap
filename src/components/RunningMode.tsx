@@ -151,11 +151,16 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     };
   }, [routeCoordinates]);
 
-  // Start GPS tracking on mount
+  // Start GPS tracking on mount (only once)
+  const hasStartedTrackingRef = useRef(false);
   useEffect(() => {
-    startTracking();
+    if (!hasStartedTrackingRef.current) {
+      hasStartedTrackingRef.current = true;
+      startTracking();
+    }
     return () => stopTracking();
-  }, [startTracking, stopTracking]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Update runner marker position
   useEffect(() => {

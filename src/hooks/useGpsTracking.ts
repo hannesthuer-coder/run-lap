@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 export interface GpsPosition {
   lat: number;
@@ -33,7 +33,12 @@ const DEFAULT_OPTIONS: UseGpsTrackingOptions = {
 };
 
 export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }), [
+    options.enableHighAccuracy,
+    options.maxAge,
+    options.timeout,
+    options.historyLimit,
+  ]);
   
   const [state, setState] = useState<GpsTrackingState>({
     position: null,
@@ -46,6 +51,8 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
 
   const watchIdRef = useRef<number | null>(null);
   const positionHistoryRef = useRef<GpsPosition[]>([]);
+  const handlePositionUpdateRef = useRef<(position: GeolocationPosition) => void>(() => {});
+  const handleErrorRef = useRef<(error: GeolocationPositionError) => void>(() => {});
 
   const getAccuracyLevel = (accuracy: number): 'high' | 'medium' | 'low' => {
     if (accuracy <= 10) return 'high';
@@ -76,7 +83,7 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
       accuracy: getAccuracyLevel(newPosition.accuracy),
       error: null,
     }));
-  }, [opts.historyLimit]);
+  }, [opts]);
 
   const handleError = useCallback((error: GeolocationPositionError) => {
     let errorMessage: string;
@@ -104,6 +111,15 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
       permissionStatus,
     }));
   }, []);
+
+  // Keep refs updated
+  useEffect(() => {
+    handlePositionUpdateRef.current = handlePositionUpdate;
+  }, [handlePositionUpdate]);
+
+  useEffect(() => {
+    handleErrorRef.current = handleError;
+  }, [handleError]);
 
   const startTracking = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -135,8 +151,8 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
     setState(prev => ({ ...prev, isTracking: true, error: null }));
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      handlePositionUpdate,
-      handleError,
+      (pos) => handlePositionUpdateRef.current(pos),
+      (err) => handleErrorRef.current(err),
       {
         enableHighAccuracy: opts.enableHighAccuracy,
         maximumAge: opts.maxAge,
@@ -146,7 +162,7 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
 
     setState(prev => ({ ...prev, permissionStatus: 'granted' }));
     return true;
-  }, [handlePositionUpdate, handleError, opts]);
+  }, [opts]);
 
   const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
