@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -167,6 +168,11 @@ const Auth = () => {
   if (showForgotPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Helmet>
+          <title>Reset Password | Run-Lap</title>
+          <meta name="description" content="Reset your Run-Lap password to regain access to your account and saved running routes." />
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center">
@@ -214,6 +220,14 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Helmet>
+        <title>Sign In or Create Account | Run-Lap</title>
+        <meta name="description" content="Sign in or create a Run-Lap account to save your favorite running routes, access premium features, and track your progress." />
+        <link rel="canonical" href="https://run-lap.com/auth" />
+        <meta property="og:title" content="Sign In or Create Account | Run-Lap" />
+        <meta property="og:description" content="Join Run-Lap to save routes, unlock premium features, and get unlimited AI-generated running laps." />
+        <meta property="og:url" content="https://run-lap.com/auth" />
+      </Helmet>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center">

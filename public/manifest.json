@@ -1,0 +1,25 @@
+{
+  "name": "Run-Lap: AI Running Route Generator",
+  "short_name": "Run-Lap",
+  "description": "Create custom running laps based on your distance preferences and starting location. Generate personalized running routes instantly with AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d4a574",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["fitness", "health", "sports", "navigation"]
+}

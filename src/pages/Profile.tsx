@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -290,6 +291,11 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Your Profile | Run-Lap</title>
+        <meta name="description" content="Manage your Run-Lap profile, view saved routes, update your subscription, and customize your settings." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Header />
       <div className="container mx-auto px-4 pt-28 sm:pt-32 pb-12 max-w-2xl">
         {/* Profile Header */}

@@ -1,7 +1,13 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 export default function Privacy() {
   return <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Privacy Policy | Run-Lap</title>
+        <meta name="description" content="Read the Run-Lap privacy policy. Learn how we collect, use, and protect your personal data when using our running route generator." />
+        <link rel="canonical" href="https://run-lap.com/privacy" />
+      </Helmet>
       <Header />
       
       <main className="flex-1 max-w-4xl mx-auto px-4 py-12 my-[95px]">

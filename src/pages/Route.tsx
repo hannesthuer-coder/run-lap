@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCw, Settings, MapPin, Timer, Route as RouteIcon, Loader2, BookmarkPlus, BookmarkCheck, Share2, ArrowLeft, Trash2, Maximize2, X, Play } from "lucide-react";
@@ -211,6 +212,11 @@ const Route = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>{isViewingSavedRoute ? `${routeData.savedRouteName || 'Saved Route'} | Run-Lap` : `Your ${routeData.distance} ${routeData.unit} Running Route | Run-Lap`}</title>
+        <meta name="description" content={`View your ${routeData.distance} ${routeData.unit} AI-generated running route. Start your run, save for later, or generate a new route.`} />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Header />
       {/* Loading Screen */}
       {isLoading && (
