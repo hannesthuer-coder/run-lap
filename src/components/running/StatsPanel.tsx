@@ -1,5 +1,3 @@
-import { Timer, MapPin, TrendingUp } from 'lucide-react';
-
 interface StatsPanelProps {
   distanceCompleted: number; // meters
   distanceRemaining: number; // meters
@@ -40,70 +38,21 @@ export const StatsPanel = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Estimate remaining time based on current pace
-  const estimatedTimeRemaining = (): string => {
-    if (!currentPace || !isFinite(currentPace) || currentPace <= 0) return '--:--';
-    const remainingKm = distanceRemaining / 1000;
-    const remainingMinutes = remainingKm * currentPace;
-    const remainingSeconds = remainingMinutes * 60;
-    return formatTime(remainingSeconds);
-  };
-
   return (
-    <div className="bg-card/95 backdrop-blur-md rounded-2xl shadow-medium border p-4">
-      <div className="grid grid-cols-2 gap-4">
-        {/* Distance */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-primary/10">
-            <MapPin className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-foreground">
-              {formatDistance(distanceCompleted)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              / {formatDistance(distanceCompleted + distanceRemaining)} {unit}
-            </p>
-          </div>
+    <div className="bg-background/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-sm border border-border/50">
+      <div className="flex items-center justify-center gap-4 text-sm">
+        <div className="text-center">
+          <span className="font-semibold text-foreground">{formatDistance(distanceCompleted)}</span>
+          <span className="text-muted-foreground ml-1">/ {formatDistance(distanceCompleted + distanceRemaining)} {unit}</span>
         </div>
-
-        {/* Elapsed Time */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-accent/10">
-            <Timer className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-foreground">
-              {formatTime(elapsedTime)}
-            </p>
-            <p className="text-xs text-muted-foreground">elapsed</p>
-          </div>
+        <span className="text-muted-foreground/50">•</span>
+        <div className="text-center">
+          <span className="font-semibold text-foreground">{formatTime(elapsedTime)}</span>
         </div>
-
-        {/* Pace */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-success/10">
-            <TrendingUp className="h-5 w-5 text-success" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-foreground">
-              {formatPace(currentPace)}
-            </p>
-            <p className="text-xs text-muted-foreground">min/{unit === 'km' ? 'km' : 'mi'}</p>
-          </div>
-        </div>
-
-        {/* ETA */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-info/10">
-            <Timer className="h-5 w-5 text-info" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-foreground">
-              {estimatedTimeRemaining()}
-            </p>
-            <p className="text-xs text-muted-foreground">remaining</p>
-          </div>
+        <span className="text-muted-foreground/50">•</span>
+        <div className="text-center">
+          <span className="font-semibold text-foreground">{formatPace(currentPace)}</span>
+          <span className="text-muted-foreground ml-1">/{unit === 'km' ? 'km' : 'mi'}</span>
         </div>
       </div>
     </div>

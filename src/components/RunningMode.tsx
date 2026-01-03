@@ -37,11 +37,10 @@ interface RunningModeProps {
   onClose: () => void;
 }
 
-type RunState = 'preparing' | 'countdown' | 'running' | 'paused' | 'completed';
+type RunState = 'preparing' | 'running' | 'paused' | 'completed';
 
 export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: RunningModeProps) => {
   const [runState, setRunState] = useState<RunState>('preparing');
-  const [countdown, setCountdown] = useState(3);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [navState, setNavState] = useState<NavigationState | null>(null);
@@ -257,24 +256,6 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     };
   }, [runState]);
 
-  // Countdown effect
-  useEffect(() => {
-    if (runState !== 'countdown') return;
-
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setRunState('running');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [runState]);
-
   const handleStartRun = () => {
     if (permissionStatus === 'denied') {
       toast.error('Please enable location access in your browser settings');
@@ -283,7 +264,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     if (accuracy === 'low') {
       toast.warning('GPS accuracy is low. Try moving to an open area.');
     }
-    setRunState('countdown');
+    setRunState('running');
   };
 
   const handlePause = () => {
@@ -360,7 +341,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                   <p className="text-muted-foreground mb-4">
                     Please enable location access in your browser settings to use GPS navigation.
                   </p>
-                  <Button onClick={onClose}>Go Back</Button>
+                  <Button onClick={onClose} className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full">Go Back</Button>
                 </>
               ) : !position ? (
                 <>
@@ -387,7 +368,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                   </p>
                   <Button 
                     size="lg" 
-                    className="bg-success hover:bg-success/90 text-success-foreground rounded-full px-8"
+                    className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
                     onClick={handleStartRun}
                   >
                     Start Run
@@ -398,17 +379,6 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
           </div>
         )}
 
-        {/* Countdown */}
-        {runState === 'countdown' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/90 pointer-events-auto">
-            <div className="text-center">
-              <p className="text-8xl font-bold text-primary animate-pulse">
-                {countdown}
-              </p>
-              <p className="text-xl text-muted-foreground mt-4">Get ready...</p>
-            </div>
-          </div>
-        )}
 
         {/* Completed state */}
         {runState === 'completed' && (
@@ -431,7 +401,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
               </div>
               <Button 
                 size="lg" 
-                className="rounded-full px-8"
+                className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
                 onClick={onClose}
               >
                 Finish
@@ -485,7 +455,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                 ) : (
                   <Button
                     size="lg"
-                    className="bg-success hover:bg-success/90 text-success-foreground rounded-full px-8"
+                    className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
                     onClick={handleResume}
                   >
                     <Play className="h-5 w-5 mr-2" />
