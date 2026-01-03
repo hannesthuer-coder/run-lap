@@ -24,6 +24,8 @@ const OFF_ROUTE_THRESHOLD = 50; // meters
 const TURN_DETECTION_ANGLE = 20; // degrees
 const WAYPOINT_REACHED_DISTANCE = 15; // meters
 const TURN_ALERT_DISTANCES = [100, 50, 20]; // meters
+const MIN_PROGRESS_FOR_COMPLETION = 0.8; // 80% of route must be completed
+const MIN_SEGMENT_PROGRESS = 0.7; // Must pass 70% of route waypoints
 
 /**
  * Calculate bearing between two points (in degrees)
@@ -233,10 +235,14 @@ export const calculateNavigationState = (
   // Check if off-route
   const isOffRoute = distanceToRoute > OFF_ROUTE_THRESHOLD;
 
-  // Check if complete (within 20m of finish)
+  // Check if complete - must be near finish AND have completed most of the route
+  // This prevents false completion on loop routes where start = finish
   const [finishLng, finishLat] = routeCoordinates[routeCoordinates.length - 1];
   const distanceToFinish = haversineDistance(currentLat, currentLng, finishLat, finishLng);
-  const isComplete = distanceToFinish < WAYPOINT_REACHED_DISTANCE;
+  const isNearFinish = distanceToFinish < WAYPOINT_REACHED_DISTANCE;
+  const hasAdvancedThroughRoute = currentSegmentIndex > routeCoordinates.length * MIN_SEGMENT_PROGRESS;
+  const hasCompletedMinimumDistance = distanceCompleted >= totalDistance * MIN_PROGRESS_FOR_COMPLETION;
+  const isComplete = isNearFinish && hasAdvancedThroughRoute && hasCompletedMinimumDistance;
 
   // Find next instruction
   let nextInstruction: NavigationInstruction | null = null;
