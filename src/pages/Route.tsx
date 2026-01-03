@@ -39,12 +39,10 @@ const Route = () => {
   const { isPremium, user } = useAuth();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateKey, setRegenerateKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showHeader, setShowHeader] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-  const [showNotSatisfied, setShowNotSatisfied] = useState(false);
-  const [showButtons, setShowButtons] = useState(false);
-  const [dots, setDots] = useState('');
+  const [showHeader, setShowHeader] = useState(true);
+  const [showMap, setShowMap] = useState(true);
+  const [showNotSatisfied, setShowNotSatisfied] = useState(true);
+  const [showButtons, setShowButtons] = useState(true);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -71,34 +69,11 @@ const Route = () => {
   const preloadedRoute = routeData.isPreloaded ? (routeData.route?.geometry || rawState.route_geometry) : undefined;
   const isViewingSavedRoute = routeData.isPreloaded === true;
 
-  // Animate dots
-  useEffect(() => {
-    if (!isLoading) return;
-    
-    const interval = setInterval(() => {
-      setDots(prev => {
-        if (prev === '') return '.';
-        if (prev === '.') return '..';
-        if (prev === '..') return '...';
-        return '';
-      });
-    }, 500);
-    
-    return () => clearInterval(interval);
-  }, [isLoading]);
-
   const handleRouteGenerated = (route?: any) => {
-    setIsLoading(false);
     setIsRegenerating(false);
     if (route) {
       setGeneratedRoute(route);
     }
-    
-    // Sequential fade-in animations
-    setTimeout(() => setShowHeader(true), 100);
-    setTimeout(() => setShowMap(true), 400);
-    setTimeout(() => setShowNotSatisfied(true), 700);
-    setTimeout(() => setShowButtons(true), 1000);
   };
 
   const handleSaveRoute = async () => {
@@ -156,18 +131,10 @@ const Route = () => {
 
   const handleRegenerateRoute = async () => {
     setIsRegenerating(true);
-    setIsLoading(true);
-    setShowHeader(false);
-    setShowMap(false);
-    setShowNotSatisfied(false);
-    setShowButtons(false);
-    
-    // Trigger route regeneration by incrementing the key
     setRegenerateKey(prev => prev + 1);
   };
 
   const handleRouteError = () => {
-    setIsLoading(false);
     setIsRegenerating(false);
     navigate("/");
   };
@@ -218,17 +185,6 @@ const Route = () => {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <Header />
-      {/* Loading Screen */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center justify-center">
-            <h2 className="text-xs font-light text-foreground tracking-wider leading-relaxed text-left">
-              generating your<br />
-              perfect running route<span className="inline-block w-6 text-left">{dots}</span>
-            </h2>
-          </div>
-        </div>
-      )}
 
       {/* Page Header */}
       <div className={`text-center py-4 sm:py-6 md:py-8 pt-28 sm:pt-32 transition-all duration-500 ${showHeader ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
