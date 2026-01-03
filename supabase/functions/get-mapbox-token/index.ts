@@ -44,7 +44,7 @@ serve(async (req) => {
     
     if (!MAPBOX_TOKEN) {
       console.error('Mapbox token not configured in environment')
-      throw new Error('Mapbox token not configured')
+      throw new Error('Service configuration error')
     }
     
     return new Response(
@@ -62,7 +62,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: 'An error occurred' 
       }),
       { 
         status: 500,

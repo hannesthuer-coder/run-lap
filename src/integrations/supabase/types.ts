@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      processed_webhook_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          processed_at: string
+          stripe_event_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          processed_at?: string
+          stripe_event_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          processed_at?: string
+          stripe_event_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -288,6 +312,7 @@ export type Database = {
     }
     Functions: {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      cleanup_old_webhook_events: { Args: never; Returns: undefined }
       count_routes_by_fingerprint: {
         Args: { _fingerprint: string; _ip_address: string; _since: string }
         Returns: number
