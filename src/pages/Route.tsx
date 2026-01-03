@@ -293,7 +293,7 @@ const Route = () => {
                     setShowUpgradeModal(true);
                   }
                 }}
-                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-success hover:bg-success/90 text-success-foreground text-base shadow-lg"
+                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
                 size="lg"
               >
                 <Play className="h-5 w-5 mr-2" />
@@ -373,7 +373,7 @@ const Route = () => {
                     setShowUpgradeModal(true);
                   }
                 }}
-                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-success hover:bg-success/90 text-success-foreground text-base shadow-lg"
+                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
                 size="lg"
               >
                 <Play className="h-5 w-5 mr-2" />
