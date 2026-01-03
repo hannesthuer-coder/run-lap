@@ -205,11 +205,14 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     }
 
     // Calculate navigation state
+    // Pass hasStartedRunning: true only when running AND user has progressed
+    const hasStartedRunning = runState === 'running' && previousSegmentIndexRef.current > 10;
     const newNavState = calculateNavigationState(
       position.lat,
       position.lng,
       routeCoordinates,
-      previousSegmentIndexRef.current
+      previousSegmentIndexRef.current,
+      hasStartedRunning
     );
     
     previousSegmentIndexRef.current = newNavState.currentSegmentIndex;
@@ -341,7 +344,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                   <p className="text-muted-foreground mb-4">
                     Please enable location access in your browser settings to use GPS navigation.
                   </p>
-                  <Button onClick={onClose} className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full">Go Back</Button>
+                  <Button onClick={onClose} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full">Go Back</Button>
                 </>
               ) : !position ? (
                 <>
@@ -368,7 +371,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                   </p>
                   <Button 
                     size="lg" 
-                    className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
                     onClick={handleStartRun}
                   >
                     Start Run
@@ -401,7 +404,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
               </div>
               <Button 
                 size="lg" 
-                className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
                 onClick={onClose}
               >
                 Finish
@@ -455,7 +458,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                 ) : (
                   <Button
                     size="lg"
-                    className="bg-beige hover:bg-beige-hover text-beige-foreground rounded-full px-8"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
                     onClick={handleResume}
                   >
                     <Play className="h-5 w-5 mr-2" />
