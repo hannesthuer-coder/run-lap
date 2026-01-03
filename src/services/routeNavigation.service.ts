@@ -202,7 +202,8 @@ export const calculateNavigationState = (
   currentLat: number,
   currentLng: number,
   routeCoordinates: [number, number][],
-  previousSegmentIndex: number = 0
+  previousSegmentIndex: number = 0,
+  hasStartedRunning: boolean = false
 ): NavigationState => {
   if (routeCoordinates.length < 2) {
     return {
@@ -242,7 +243,8 @@ export const calculateNavigationState = (
   const isNearFinish = distanceToFinish < WAYPOINT_REACHED_DISTANCE;
   const hasAdvancedThroughRoute = currentSegmentIndex > routeCoordinates.length * MIN_SEGMENT_PROGRESS;
   const hasCompletedMinimumDistance = distanceCompleted >= totalDistance * MIN_PROGRESS_FOR_COMPLETION;
-  const isComplete = isNearFinish && hasAdvancedThroughRoute && hasCompletedMinimumDistance;
+  // Must have actually started running AND moved away from start before completion can trigger
+  const isComplete = hasStartedRunning && isNearFinish && hasAdvancedThroughRoute && hasCompletedMinimumDistance;
 
   // Find next instruction
   let nextInstruction: NavigationInstruction | null = null;
