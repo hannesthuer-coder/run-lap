@@ -190,12 +190,19 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
       }
     }
 
-    // Center map on runner during run
+    // Center map on runner during run with heading rotation
     if (runState === 'running') {
-      map.easeTo({
+      const easeOptions: any = {
         center: [position.lng, position.lat],
         duration: 500,
-      });
+      };
+      
+      // Rotate map to match heading (movement always points up)
+      if (position.heading !== null) {
+        easeOptions.bearing = position.heading;
+      }
+      
+      map.easeTo(easeOptions);
     }
 
     // Calculate navigation state
