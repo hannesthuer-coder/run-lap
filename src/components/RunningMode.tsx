@@ -416,14 +416,9 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
         {/* Running/Paused UI */}
         {(runState === 'running' || runState === 'paused') && (
           <>
-            {/* Progress bar at top */}
-            <div className="absolute top-16 left-4 right-4 pointer-events-none">
-              <ProgressBar progress={navState?.progress || 0} />
-            </div>
-
             {/* Direction panel */}
             {navState?.nextInstruction && (
-              <div className="absolute top-20 left-4 right-4 pointer-events-auto">
+              <div className="absolute top-16 left-4 right-4 pointer-events-auto">
                 <DirectionPanel
                   turnType={navState.nextInstruction.turnType}
                   distanceToTurn={navState.nextInstruction.distanceToTurn}
@@ -442,6 +437,11 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                 currentPace={currentPace}
                 unit={unit}
               />
+
+              {/* Progress bar below stats */}
+              <div className="mt-2">
+                <ProgressBar progress={navState?.progress || 0} />
+              </div>
 
               {/* Pause/Resume button */}
               <div className="flex justify-center mt-4">
