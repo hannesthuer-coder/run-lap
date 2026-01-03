@@ -41,14 +41,15 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
       const sessionUrl = await StripeService.createCheckoutSession(user.email!, selectedPlan);
       
       if (sessionUrl) {
-        window.open(sessionUrl, '_blank');
+        toast.info('Redirecting to checkout...');
+        window.location.href = sessionUrl;
       } else {
         toast.error('Failed to start checkout. Please try again.');
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Upgrade error:', error);
       toast.error('Something went wrong. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
