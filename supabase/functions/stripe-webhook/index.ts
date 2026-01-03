@@ -16,6 +16,49 @@ serve(async (req) => {
     const body = await req.text();
     const event = await stripe.webhooks.constructEventAsync(body, signature!, webhookSecret);
     
+    // Check for duplicate event processing (replay protection)
+    const { data: existingEvent } = await supabase
+      .from('processed_webhook_events')
+      .select('id')
+      .eq('stripe_event_id', event.id)
+      .single();
+    
+    if (existingEvent) {
+      console.log(`Duplicate webhook event detected: ${event.id}`);
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Validate event timestamp (reject events older than 5 minutes)
+    const eventAge = Date.now() / 1000 - event.created;
+    if (eventAge > 300) {
+      console.warn(`Rejecting old webhook event: ${event.id} (age: ${eventAge}s)`);
+      return new Response(JSON.stringify({ received: true, rejected: 'event_too_old' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Record event as being processed
+    const { error: insertError } = await supabase
+      .from('processed_webhook_events')
+      .insert({ 
+        stripe_event_id: event.id, 
+        event_type: event.type,
+        processed_at: new Date().toISOString() 
+      });
+    
+    if (insertError) {
+      // If insert fails due to unique constraint, it's a race condition duplicate
+      if (insertError.code === '23505') {
+        console.log(`Race condition duplicate detected: ${event.id}`);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      console.error('Error recording webhook event:', insertError);
+    }
+    
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -79,7 +122,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Webhook error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Webhook processing failed' }),
       { status: 400 }
     );
   }

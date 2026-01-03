@@ -257,13 +257,15 @@ serve(async (req) => {
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
     
     if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY not configured')
       errorType = ErrorType.API_KEY_MISSING
-      throw new Error('OpenAI API key is required for route generation')
+      throw new Error('Service configuration error')
     }
     
     if (!MAPBOX_TOKEN) {
+      console.error('MAPBOX_ACCESS_TOKEN not configured')
       errorType = ErrorType.MAPBOX_ERROR
-      throw new Error('MAPBOX_ACCESS_TOKEN environment variable not configured')
+      throw new Error('Service configuration error')
     }
     
     // Convert distance to meters for consistency
@@ -479,31 +481,31 @@ Important: Return ONLY valid JSON, no other text.`
     
     switch (errorType) {
       case ErrorType.API_KEY_MISSING:
-        statusCode = 401
-        clientMessage = 'OpenAI API key is required - please configure your API key to generate routes'
+        statusCode = 503
+        clientMessage = 'AI route generation is temporarily unavailable'
         break
       case ErrorType.API_QUOTA_EXCEEDED:
-        statusCode = 402
-        clientMessage = 'OpenAI API quota exceeded - please upgrade your plan or try again later'
+        statusCode = 503
+        clientMessage = 'AI service temporarily unavailable - please try again later'
         break
       case ErrorType.API_RATE_LIMITED:
         statusCode = 429
-        clientMessage = 'OpenAI API rate limit exceeded - please try again in a moment'
+        clientMessage = 'Too many requests - please try again in a moment'
         break
       case ErrorType.MAPBOX_ERROR:
         statusCode = 503
-        clientMessage = 'Unable to calculate walkable route - please try a different location or distance'
+        clientMessage = 'Unable to calculate walkable route - please try a different location'
         break
       case ErrorType.NETWORK_ERROR:
         statusCode = 503
-        clientMessage = 'AI service unavailable - please check your connection and try again'
+        clientMessage = 'Service unavailable - please try again'
         break
       case ErrorType.AI_PARSING_ERROR:
-        statusCode = 502
-        clientMessage = 'AI service returned invalid route data - please try generating again'
+        statusCode = 500
+        clientMessage = 'Route generation failed - please try again'
         break
       default:
-        clientMessage = 'AI route generation failed - please try again'
+        clientMessage = 'Route generation failed - please try again'
     }
     
     // Log detailed error info server-side only

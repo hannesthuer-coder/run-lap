@@ -104,10 +104,11 @@ serve(async (req) => {
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
     
     if (!MAPBOX_TOKEN) {
-      throw new Error('Mapbox token not configured')
+      console.error('MAPBOX_ACCESS_TOKEN not configured')
+      throw new Error('Service configuration error')
     }
     
-    console.log(`Using Mapbox token: ${MAPBOX_TOKEN ? 'Available' : 'Missing'}`)
+    console.log('Mapbox token: Available')
     
     // Convert distance to meters
     const targetDistanceMeters = unit === 'km' ? distance * 1000 : distance * 1609.34
