@@ -43,12 +43,6 @@ const getTurnIcon = (turnType: TurnType) => {
   }
 };
 
-const getDistanceColor = (distance: number): string => {
-  if (distance <= 20) return 'text-destructive';
-  if (distance <= 50) return 'text-warning';
-  return 'text-foreground';
-};
-
 const formatDistance = (meters: number): string => {
   if (meters < 100) {
     return `${Math.round(meters)}m`;
@@ -66,39 +60,20 @@ export const DirectionPanel = ({
 
   if (isOffRoute) {
     return (
-      <div className="bg-destructive/95 backdrop-blur-md rounded-2xl shadow-medium p-4 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-full bg-destructive-foreground/20">
-            <RotateCcw className="h-10 w-10 text-destructive-foreground" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xl font-bold text-destructive-foreground">
-              Off Route
-            </p>
-            <p className="text-sm text-destructive-foreground/80">
-              Return to the blue route line
-            </p>
-          </div>
-        </div>
+      <div className="inline-flex items-center gap-2 bg-destructive/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm animate-pulse">
+        <RotateCcw className="h-4 w-4 text-destructive-foreground" />
+        <span className="text-sm font-medium text-destructive-foreground">Off route</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-card/95 backdrop-blur-md rounded-2xl shadow-medium border p-4">
-      <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-full ${turnType === 'finish' ? 'bg-success/20' : 'bg-primary/10'}`}>
-          <TurnIcon className={`h-10 w-10 ${turnType === 'finish' ? 'text-success' : 'text-primary'}`} />
-        </div>
-        <div className="flex-1">
-          <p className={`text-3xl font-bold ${getDistanceColor(distanceToTurn)}`}>
-            {formatDistance(distanceToTurn)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {turnType === 'finish' ? 'to finish' : description.split(' in ')[0].toLowerCase()}
-          </p>
-        </div>
-      </div>
+    <div className="inline-flex items-center gap-3 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm border border-border/50">
+      <TurnIcon className={`h-5 w-5 ${turnType === 'finish' ? 'text-primary' : 'text-foreground'}`} />
+      <span className="font-semibold text-foreground">{formatDistance(distanceToTurn)}</span>
+      <span className="text-sm text-muted-foreground">
+        {turnType === 'finish' ? 'to finish' : description.split(' in ')[0].toLowerCase()}
+      </span>
     </div>
   );
 };
