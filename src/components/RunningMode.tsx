@@ -116,22 +116,22 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
             paint: { 'line-color': '#3B82F6', 'line-width': 6, 'line-opacity': 0.9 }
           });
 
-          // Completed route (green)
+          // Completed route (accent blue - slightly different shade for visibility)
           mapInstance.addLayer({
             id: 'route-completed',
             type: 'line',
             source: 'route-completed',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#22C55E', 'line-width': 6, 'line-opacity': 0.9 }
+            paint: { 'line-color': '#0EA5E9', 'line-width': 6, 'line-opacity': 0.9 }
           });
 
-          // Start marker
-          new mapboxgl.Marker({ color: '#22C55E', scale: 0.8 })
+          // Start marker (primary blue)
+          new mapboxgl.Marker({ color: '#3B82F6', scale: 0.8 })
             .setLngLat(routeCoordinates[0])
             .addTo(mapInstance);
 
-          // Finish marker
-          new mapboxgl.Marker({ color: '#EF4444', scale: 0.8 })
+          // Finish marker (accent blue)
+          new mapboxgl.Marker({ color: '#0EA5E9', scale: 0.8 })
             .setLngLat(routeCoordinates[routeCoordinates.length - 1])
             .addTo(mapInstance);
         });
