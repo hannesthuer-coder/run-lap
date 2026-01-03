@@ -9,6 +9,7 @@ import { createRunnerMarkerElement } from './running/RunnerMarker';
 import { createMap, initializeMapbox } from '@/services/mapService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { voiceNavigationService } from '@/services/voiceNavigation.service';
 import { 
   X, 
   Pause, 
@@ -17,7 +18,9 @@ import {
   Navigation, 
   AlertTriangle,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,6 +47,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [navState, setNavState] = useState<NavigationState | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -51,6 +55,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
   const runnerMarkerRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const previousSegmentIndexRef = useRef(0);
+  const wasOffRouteRef = useRef(false);
 
   const {
     position,
@@ -218,6 +223,25 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     previousSegmentIndexRef.current = newNavState.currentSegmentIndex;
     setNavState(newNavState);
 
+    // Voice announcements (only when running)
+    if (runState === 'running') {
+      // Announce upcoming turns
+      if (newNavState.nextInstruction) {
+        voiceNavigationService.announceUpcomingTurn(
+          newNavState.nextInstruction.turnType,
+          newNavState.nextInstruction.distanceToTurn
+        );
+      }
+
+      // Off-route / back-on-route announcements
+      if (newNavState.isOffRoute && !wasOffRouteRef.current) {
+        voiceNavigationService.announceOffRoute();
+      } else if (!newNavState.isOffRoute && wasOffRouteRef.current) {
+        voiceNavigationService.announceBackOnRoute();
+      }
+      wasOffRouteRef.current = newNavState.isOffRoute;
+    }
+
     // Update route visualization (completed vs remaining)
     if (map.getSource('route-completed') && map.getSource('route-remaining')) {
       const completedCoords = routeCoordinates.slice(0, newNavState.currentSegmentIndex + 1);
@@ -267,6 +291,8 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     if (accuracy === 'low') {
       toast.warning('GPS accuracy is low. Try moving to an open area.');
     }
+    voiceNavigationService.resetCooldowns();
+    voiceNavigationService.announceStart();
     setRunState('running');
   };
 
@@ -280,10 +306,18 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
 
   const handleComplete = () => {
     setRunState('completed');
+    voiceNavigationService.announceCompletion();
     // Vibrate on completion if supported
     if ('vibrate' in navigator) {
       navigator.vibrate([200, 100, 200]);
     }
+  };
+
+  const toggleVoice = () => {
+    const newEnabled = !voiceEnabled;
+    setVoiceEnabled(newEnabled);
+    voiceNavigationService.setEnabled(newEnabled);
+    toast.success(newEnabled ? 'Voice navigation enabled' : 'Voice navigation disabled');
   };
 
   const handleExitConfirm = () => {
@@ -322,14 +356,24 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
               <X className="h-5 w-5" />
             </Button>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full bg-background/80 backdrop-blur-sm"
-              onClick={handleRecenter}
-            >
-              <Navigation className="h-5 w-5" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full bg-background/80 backdrop-blur-sm"
+                onClick={toggleVoice}
+              >
+                {voiceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full bg-background/80 backdrop-blur-sm"
+                onClick={handleRecenter}
+              >
+                <Navigation className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
 
