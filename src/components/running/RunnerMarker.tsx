@@ -92,11 +92,16 @@ export const RunnerMarker = ({ accuracy, heading }: RunnerMarkerProps) => {
 };
 
 // Create marker element for Mapbox
-export const createRunnerMarkerElement = (accuracy: 'high' | 'medium' | 'low' | 'unknown'): HTMLDivElement => {
+export const createRunnerMarkerElement = (
+  accuracy: 'high' | 'medium' | 'low' | 'unknown',
+  heading: number | null = null
+): HTMLDivElement => {
   const el = document.createElement('div');
   el.className = 'runner-marker';
   
   const size = accuracy === 'high' ? 30 : accuracy === 'medium' ? 40 : 50;
+  const showArrow = heading !== null;
+  const rotation = heading ?? 0;
   
   el.innerHTML = `
     <div style="position: relative; width: ${size + 20}px; height: ${size + 20}px;">
@@ -122,6 +127,20 @@ export const createRunnerMarkerElement = (accuracy: 'high' | 'medium' | 'low' | 
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+      "></div>
+      <div class="runner-heading-arrow" style="
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 16px solid #3B82F6;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -150%) rotate(${rotation}deg);
+        transform-origin: center bottom;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+        display: ${showArrow ? 'block' : 'none'};
       "></div>
     </div>
   `;

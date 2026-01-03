@@ -171,12 +171,23 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
 
     // Create or update runner marker
     if (!runnerMarkerRef.current) {
-      const markerEl = createRunnerMarkerElement(accuracy);
+      const markerEl = createRunnerMarkerElement(accuracy, position.heading);
       runnerMarkerRef.current = new mapboxgl.Marker({ element: markerEl })
         .setLngLat([position.lng, position.lat])
         .addTo(map);
     } else {
       runnerMarkerRef.current.setLngLat([position.lng, position.lat]);
+      
+      // Update heading arrow rotation
+      const arrow = runnerMarkerRef.current.getElement().querySelector('.runner-heading-arrow') as HTMLElement;
+      if (arrow) {
+        if (position.heading !== null) {
+          arrow.style.transform = `translate(-50%, -150%) rotate(${position.heading}deg)`;
+          arrow.style.display = 'block';
+        } else {
+          arrow.style.display = 'none';
+        }
+      }
     }
 
     // Center map on runner during run
