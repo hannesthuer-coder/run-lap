@@ -151,7 +151,7 @@ serve(async (req) => {
       return diff
     }
 
-    // Function to remove spikes from route coordinates
+    // Function to remove spikes from route coordinates (lowered thresholds)
     const removeSpikesFromRoute = (coordinates: [number, number][]) => {
       let cleanedCoords = [...coordinates]
       let totalSpikesRemoved = 0
@@ -174,8 +174,8 @@ serve(async (req) => {
           const pointBefore = cleanedCoords[i - 1]
           const currentPoint = cleanedCoords[i]
           
-          // Look ahead up to 5 points to find potential spike end
-          let maxLookAhead = Math.min(i + 5, cleanedCoords.length - 1)
+          // Look ahead up to 8 points to find potential spike end (increased from 5)
+          let maxLookAhead = Math.min(i + 8, cleanedCoords.length - 1)
           
           for (let j = i + 1; j <= maxLookAhead; j++) {
             const pointAfter = cleanedCoords[j]
@@ -190,10 +190,10 @@ serve(async (req) => {
               pointAfter[1], pointAfter[0]
             )
             
-            // Check for ~180° reversal (spike indicator)
+            // Check for ~180° reversal (spike indicator) - widened from 150-210 to 140-220
             const angleDiff = angleDifference(bearingIn, bearingOut)
             
-            if (angleDiff > 150 && angleDiff < 210) {
+            if (angleDiff > 140 && angleDiff < 220) {
               // Potential spike detected - verify with distance ratio
               const straightLineDist = calculateDistance(
                 pointBefore[1], pointBefore[0],
@@ -209,10 +209,10 @@ serve(async (req) => {
                 )
               }
               
-              // If path is much longer than straight line, it's a spike
+              // If path is much longer than straight line, it's a spike (lowered from 2.5 to 2.0)
               const ratio = straightLineDist > 0 ? pathDist / straightLineDist : 0
               
-              if (ratio > 2.5) {
+              if (ratio > 2.0) {
                 // Remove spike points (from i to j-1)
                 console.log(`  Spike detected at index ${i}: angle=${angleDiff.toFixed(1)}°, ratio=${ratio.toFixed(2)}, removing ${j - i} points`)
                 cleanedCoords.splice(i, j - i)
@@ -251,6 +251,118 @@ serve(async (req) => {
         totalDistance: newDistance,
         spikesRemoved: totalSpikesRemoved,
         distanceSaved: originalDistance - newDistance
+      }
+    }
+
+    // Function to detect and remove "lollipop" detour patterns
+    const removeDetoursFromRoute = (coordinates: [number, number][]) => {
+      let cleanedCoords = [...coordinates]
+      let detoursRemoved = 0
+      
+      let i = 0
+      while (i < cleanedCoords.length - 10) {
+        const basePoint = cleanedCoords[i]
+        
+        // Check if any point 5-25 positions ahead is very close to this point
+        for (let j = i + 5; j < Math.min(i + 25, cleanedCoords.length); j++) {
+          const checkPoint = cleanedCoords[j]
+          const directDistance = calculateDistance(
+            basePoint[1], basePoint[0],
+            checkPoint[1], checkPoint[0]
+          )
+          
+          // If points are within 60m, this might be a detour loop
+          if (directDistance < 60) {
+            // Calculate path distance between these points
+            let pathDistance = 0
+            for (let k = i; k < j; k++) {
+              pathDistance += calculateDistance(
+                cleanedCoords[k][1], cleanedCoords[k][0],
+                cleanedCoords[k + 1][1], cleanedCoords[k + 1][0]
+              )
+            }
+            
+            // If the path distance is much longer than the proximity, it's a detour
+            // Path must be >80m and ratio >3 to be considered a detour
+            if (pathDistance > 80 && directDistance > 0 && pathDistance / directDistance > 3) {
+              console.log(`  Detour detected at index ${i}-${j}: path=${pathDistance.toFixed(0)}m, direct=${directDistance.toFixed(0)}m, ratio=${(pathDistance/directDistance).toFixed(1)}`)
+              // Remove the detour segment (keep the endpoints close together)
+              cleanedCoords.splice(i + 1, j - i - 1)
+              detoursRemoved++
+              break
+            }
+          }
+        }
+        i++
+      }
+      
+      // Calculate final distance
+      let totalDistance = 0
+      for (let i = 0; i < cleanedCoords.length - 1; i++) {
+        totalDistance += calculateDistance(
+          cleanedCoords[i][1], cleanedCoords[i][0],
+          cleanedCoords[i + 1][1], cleanedCoords[i + 1][0]
+        )
+      }
+      
+      return {
+        coordinates: cleanedCoords,
+        totalDistance,
+        detoursRemoved
+      }
+    }
+
+    // Calculate route quality score (lower is better)
+    const calculateRouteQuality = (coordinates: [number, number][]) => {
+      let sharpTurns = 0
+      
+      // Count sharp direction reversals
+      for (let i = 2; i < coordinates.length - 2; i++) {
+        const bearingIn = calculateBearing(
+          coordinates[i - 2][1], coordinates[i - 2][0],
+          coordinates[i][1], coordinates[i][0]
+        )
+        const bearingOut = calculateBearing(
+          coordinates[i][1], coordinates[i][0],
+          coordinates[i + 2][1], coordinates[i + 2][0]
+        )
+        
+        const turn = angleDifference(bearingIn, bearingOut)
+        if (turn > 120) {
+          sharpTurns++
+        }
+      }
+      
+      // Calculate path efficiency (straight-line start-to-farthest vs total path)
+      let maxDistFromStart = 0
+      for (const coord of coordinates) {
+        const dist = calculateDistance(
+          coordinates[0][1], coordinates[0][0],
+          coord[1], coord[0]
+        )
+        if (dist > maxDistFromStart) maxDistFromStart = dist
+      }
+      
+      let totalPathDistance = 0
+      for (let i = 0; i < coordinates.length - 1; i++) {
+        totalPathDistance += calculateDistance(
+          coordinates[i][1], coordinates[i][0],
+          coordinates[i + 1][1], coordinates[i + 1][0]
+        )
+      }
+      
+      // For a loop, ideal efficiency is around 0.25-0.4 (farthest point is 1/4 to 1/3 of total path)
+      const efficiency = maxDistFromStart / totalPathDistance
+      
+      // Penalize excessive sharp turns (more than 1 per 500m is suspicious)
+      const turnsPerKm = (sharpTurns / totalPathDistance) * 1000
+      
+      return {
+        sharpTurns,
+        efficiency,
+        turnsPerKm,
+        // Quality score: lower is better
+        score: turnsPerKm * 10 + (efficiency < 0.15 ? 50 : 0)
       }
     }
 
@@ -317,12 +429,16 @@ serve(async (req) => {
       let currentLat = startLat
       let currentBearing = baseDirection
       
-      // Vary segment count based on attempt - simpler shapes for later attempts
-      const segments = Math.max(3, 6 - Math.floor(attempt / 2)); // 5,5,4,4,3,3...
+      // Vary segment count based on attempt and target distance
+      // Use fewer segments for shorter routes to reduce complexity and detours
+      let baseSegments = targetDistance < 5000 ? 4 : 6; // Fewer segments for short routes
+      if (targetDistance < 3000) baseSegments = 3; // Even fewer for very short routes
+      
+      const segments = Math.max(3, baseSegments - Math.floor(attempt / 3)); // Reduce on later attempts
       const segmentDistance = compensatedTarget / segments
       const turnAngle = 360 / segments
       
-      console.log(`Creating ${segments} segments of ~${segmentDistance.toFixed(0)}m each with ${turnAngle.toFixed(1)}° turns`)
+      console.log(`Creating ${segments} segments of ~${segmentDistance.toFixed(0)}m each with ${turnAngle.toFixed(1)}° turns (distance: ${targetDistance}m)`)
       
       for (let i = 0; i < segments; i++) {
         // Reduce variation for later attempts to be more predictable
@@ -454,15 +570,23 @@ serve(async (req) => {
     const cleanedResult = removeSpikesFromRoute(bestRoute.coordinates)
     console.log(`🔧 Spike removal: ${cleanedResult.spikesRemoved} spikes removed, ${cleanedResult.distanceSaved.toFixed(0)}m saved`)
     
+    // Remove detour loops
+    const detourResult = removeDetoursFromRoute(cleanedResult.coordinates)
+    console.log(`🔧 Detour removal: ${detourResult.detoursRemoved} detours removed`)
+    
+    // Calculate route quality
+    const quality = calculateRouteQuality(detourResult.coordinates)
+    console.log(`📊 Route quality: ${quality.sharpTurns} sharp turns, efficiency=${quality.efficiency.toFixed(2)}, turnsPerKm=${quality.turnsPerKm.toFixed(1)}, score=${quality.score.toFixed(1)}`)
+    
     return new Response(
       JSON.stringify({
         success: true,
         route: {
           geometry: {
             type: 'LineString',
-            coordinates: cleanedResult.coordinates
+            coordinates: detourResult.coordinates
           },
-          distance: cleanedResult.totalDistance,
+          distance: detourResult.totalDistance,
           duration: bestRoute.duration,
           waypoints: []
         }
