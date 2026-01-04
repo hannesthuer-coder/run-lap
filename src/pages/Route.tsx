@@ -67,7 +67,7 @@ const Route = () => {
     savedRouteName: rawState.savedRouteName,
   };
   const preloadedRoute = routeData.isPreloaded ? (routeData.route?.geometry || rawState.route_geometry) : undefined;
-  const isViewingSavedRoute = routeData.isPreloaded === true;
+  const isViewingSavedRoute = !!routeData.savedRouteId;
 
   const handleRouteGenerated = (route?: any) => {
     setIsRegenerating(false);
