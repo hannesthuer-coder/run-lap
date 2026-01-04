@@ -65,7 +65,6 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     permissionStatus,
     startTracking,
     stopTracking,
-    calculatePace,
   } = useGpsTracking({ enableHighAccuracy: true });
 
   // Initialize map
@@ -335,7 +334,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     }
   };
 
-  const currentPace = calculatePace();
+  
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -434,17 +433,29 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
               <CheckCircle2 className="h-20 w-20 text-success mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-2">Run Complete! 🎉</h2>
               <div className="space-y-2 mb-6">
-                <p className="text-lg">
-                  Distance: <span className="font-bold">{(navState?.distanceCompleted || 0) / 1000} km</span>
-                </p>
-                <p className="text-lg">
-                  Time: <span className="font-bold">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
-                </p>
-                {currentPace && (
-                  <p className="text-lg">
-                    Avg Pace: <span className="font-bold">{Math.floor(currentPace)}:{Math.round((currentPace % 1) * 60).toString().padStart(2, '0')} min/km</span>
-                  </p>
-                )}
+                {(() => {
+                  const distanceKm = (navState?.distanceCompleted || 0) / 1000;
+                  const distanceMiles = distanceKm / 1.60934;
+                  const displayDistance = unit === 'km' ? distanceKm : distanceMiles;
+                  const elapsedMinutes = elapsedTime / 60;
+                  const avgPace = displayDistance > 0.01 ? elapsedMinutes / displayDistance : null;
+                  
+                  return (
+                    <>
+                      <p className="text-lg">
+                        Distance: <span className="font-bold">{displayDistance.toFixed(2)} {unit}</span>
+                      </p>
+                      <p className="text-lg">
+                        Time: <span className="font-bold">{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                      </p>
+                      {avgPace && (
+                        <p className="text-lg">
+                          Avg Pace: <span className="font-bold">{Math.floor(avgPace)}:{Math.round((avgPace % 1) * 60).toString().padStart(2, '0')} /{unit === 'km' ? 'km' : 'mi'}</span>
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <Button 
                 size="lg" 
@@ -478,7 +489,6 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                 distanceCompleted={navState?.distanceCompleted || 0}
                 distanceRemaining={navState?.distanceRemaining || 0}
                 elapsedTime={elapsedTime}
-                currentPace={currentPace}
                 unit={unit}
               />
 
