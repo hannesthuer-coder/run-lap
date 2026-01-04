@@ -3,16 +3,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { MapPin, Play, Locate } from "lucide-react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { RouteLimitService } from "@/services/routeLimit.service";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { supabase } from "@/integrations/supabase/client";
 import type { RouteLimitStatus } from "@/types";
 
 const Preferences = () => {
@@ -133,16 +130,58 @@ const Preferences = () => {
       location: selectedLocation
     });
 
-    // Simulate route generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsGenerating(false);
-    navigate("/route", {
-      state: {
-        distance: parseFloat(distance),
-        unit: isKm ? "km" : "miles",
-        location: selectedLocation
+    try {
+      // Parse coordinates from selectedLocation
+      const [lat, lng] = selectedLocation.split(',').map(coord => parseFloat(coord.trim()));
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        throw new Error('Invalid coordinates');
       }
-    });
+
+      // Generate route before navigating
+      const { data, error } = await supabase.functions.invoke('generate-route', {
+        body: {
+          startLng: lng,
+          startLat: lat,
+          distance: parseFloat(distance),
+          unit: isKm ? 'km' : 'miles'
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate route');
+      }
+
+      setIsGenerating(false);
+      
+      // Navigate with the preloaded route
+      navigate("/route", {
+        state: {
+          distance: parseFloat(distance),
+          unit: isKm ? "km" : "miles",
+          location: selectedLocation,
+          route_geometry: data.route.geometry,
+          isPreloaded: true
+        }
+      });
+    } catch (error: any) {
+      console.error('Route generation error:', error);
+      setIsGenerating(false);
+      
+      if (error.message?.includes('quota')) {
+        toast.error("Service quota exceeded. Please try again later.");
+      } else if (error.message?.includes('rate limit')) {
+        toast.error("Service temporarily busy. Please wait and try again.");
+      } else if (error.message?.includes('tolerance')) {
+        toast.error("Could not generate a suitable route. Try a different location or distance.");
+      } else {
+        toast.error("Failed to generate route. Please try again.");
+      }
+    }
   };
 
   return (
