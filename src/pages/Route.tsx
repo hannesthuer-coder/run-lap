@@ -298,13 +298,7 @@ const Route = () => {
             </Button>
 
             <Button
-              onClick={() => {
-                if (isPremium) {
-                  setShowShareDialog(true);
-                } else {
-                  setShowUpgradeModal(true);
-                }
-              }}
+              onClick={() => setShowShareDialog(true)}
               variant="outline"
               className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
