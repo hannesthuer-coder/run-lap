@@ -228,8 +228,8 @@ const Preferences = () => {
             </h2>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant={locationMethod === "current" ? "selected" : "outline"} onClick={handleUseCurrentLocation} className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
+          <div className="flex flex-row gap-4 justify-center items-center">
+            <Button variant={locationMethod === "current" ? "selected" : "outline"} onClick={handleUseCurrentLocation} className="w-36 sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
               current location
             </Button>
             
@@ -237,7 +237,7 @@ const Preferences = () => {
               <span className="text-xs text-muted-foreground tracking-wider font-light">or</span>
             </div>
             
-            <Button variant={locationMethod === "map" ? "selected" : "outline"} onClick={handleChooseOnMap} className="w-full sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
+            <Button variant={locationMethod === "map" ? "selected" : "outline"} onClick={handleChooseOnMap} className="w-36 sm:w-44 px-4 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm" disabled={isGenerating}>
               choose on map
             </Button>
           </div>
@@ -245,7 +245,7 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex flex-col items-center gap-2">
-          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-full sm:w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">
+          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">
             {isGenerating ? "generating..." : "generate running laps"}
           </Button>
           
