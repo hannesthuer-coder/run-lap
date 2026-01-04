@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { createMap, initializeMapbox } from '@/services/mapService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MapSelectorProps {
   onLocationSelect: (coords: [number, number]) => void;
@@ -9,11 +10,26 @@ interface MapSelectorProps {
 const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const markerRef = useRef<any>(null);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
 
   const initializeMap = async () => {
     if (!mapContainer.current) return;
     
     try {
+      // Fetch Mapbox token from secure edge function
+      let token = mapboxToken;
+      if (!token) {
+        console.log('MapSelector: Fetching Mapbox token...');
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (error || !data?.success || !data?.token) {
+          console.error('Failed to fetch Mapbox token:', error || data?.error);
+          toast.error("Failed to load map. Please try again.");
+          return;
+        }
+        token = data.token;
+        setMapboxToken(token);
+      }
+
       // Get user location in background
       const getUserLocation = (): Promise<[number, number]> => {
         return new Promise((resolve) => {
@@ -32,9 +48,9 @@ const MapSelector = ({ onLocationSelect }: MapSelectorProps) => {
       const mapInstance = await createMap(mapContainer.current, {
         center: userLocation,
         zoom: 14
-      });
+      }, token);
 
-      const mapboxgl = await initializeMapbox();
+      const mapboxgl = await initializeMapbox(token);
 
       mapInstance.on('click', (e: any) => {
         const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
