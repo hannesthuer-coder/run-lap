@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Copy, Check, Loader2, Share2 } from 'lucide-react';
+import { Copy, Check, Loader2, Share2, ExternalLink } from 'lucide-react';
+
+const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
 interface RouteData {
   id?: string;
@@ -100,6 +102,23 @@ export const ShareRouteDialog = ({ open, onClose, route }: ShareRouteDialogProps
     }
   };
 
+  const handleNativeShare = async () => {
+    if (!shareUrl) return;
+    
+    try {
+      await navigator.share({
+        title: route?.route_name || `${route?.distance} ${route?.unit} lap`,
+        text: `Check out this running route!`,
+        url: shareUrl,
+      });
+    } catch (error) {
+      // User cancelled share - this is normal, don't show error
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share failed:', error);
+      }
+    }
+  };
+
   const handleClose = () => {
     setShareUrl(null);
     setCopied(false);
@@ -141,10 +160,21 @@ export const ShareRouteDialog = ({ open, onClose, route }: ShareRouteDialogProps
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 your share link is ready:
               </p>
+              
+              {canNativeShare && (
+                <Button
+                  onClick={handleNativeShare}
+                  className="w-full bg-beige hover:bg-beige-hover text-beige-foreground"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  share
+                </Button>
+              )}
+              
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -163,6 +193,7 @@ export const ShareRouteDialog = ({ open, onClose, route }: ShareRouteDialogProps
                   )}
                 </Button>
               </div>
+              
               <p className="text-xs text-muted-foreground">
                 this link will expire in 30 days
               </p>
