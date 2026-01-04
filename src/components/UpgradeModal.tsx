@@ -95,7 +95,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
 
         {/* Plan Selection */}
         <div className="space-y-3">
-          <p className="text-sm font-medium text-center">Choose your plan</p>
+          <p className="text-sm font-medium text-center">Select plan for after your trial</p>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setSelectedPlan('monthly')}
@@ -110,8 +110,8 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
                   <Check className="h-3 w-3 text-primary-foreground" />
                 </div>
               )}
-              <p className="text-xl font-bold">$3</p>
-              <p className="text-sm text-muted-foreground">/month</p>
+              <p className="text-lg font-semibold">14 days free</p>
+              <p className="text-sm text-muted-foreground">then $3/month</p>
             </button>
 
             <button
@@ -130,11 +130,11 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-success text-success-foreground text-[10px] px-2 py-0.5 rounded-full font-medium">
                 Save $6
               </div>
-              <p className="text-xl font-bold">$30</p>
-              <p className="text-sm text-muted-foreground">/year</p>
+              <p className="text-lg font-semibold">14 days free</p>
+              <p className="text-sm text-muted-foreground">then $30/year</p>
             </button>
           </div>
-          <p className="text-xs text-center text-muted-foreground">14-day free trial • Cancel anytime</p>
+          <p className="text-xs text-center text-muted-foreground">Cancel anytime during your trial</p>
         </div>
 
         <div className="space-y-4 mt-4">
@@ -167,7 +167,7 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
             {isLoading ? 'Processing...' : user ? 'Start 14-Day Free Trial' : 'Sign In to Start Trial'}
           </Button>
 
-          <p className="text-xs text-center text-muted-foreground">
+          <p className="text-xs text-center text-foreground/70">
             No charge today. You'll be billed after your trial ends unless you cancel.
           </p>
         </div>
