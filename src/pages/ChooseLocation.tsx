@@ -34,15 +34,19 @@ const ChooseLocation = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      {/* Page Header */}
-      <div className="relative flex items-center justify-center py-8 pt-28 sm:pt-32">
+      {/* Back Button */}
+      <div className="pt-24 sm:pt-28 px-4">
         <button
           onClick={handleBack}
-          className="absolute left-4 flex items-center gap-2 text-foreground hover:text-foreground/80 transition-colors"
+          className="flex items-center gap-2 text-foreground hover:text-foreground/80 transition-colors"
         >
           <ArrowLeft size={20} />
           <span className="font-medium">Back</span>
         </button>
+      </div>
+
+      {/* Page Header */}
+      <div className="flex items-center justify-center py-6">
         <h1 className="text-2xl font-bold text-foreground tracking-wide">
           select your starting point
         </h1>
