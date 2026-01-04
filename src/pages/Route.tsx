@@ -249,7 +249,7 @@ const Route = () => {
                     setShowUpgradeModal(true);
                   }
                 }}
-                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
+                className="w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
                 size="lg"
               >
                 <Play className="h-5 w-5 mr-2" />
@@ -264,12 +264,12 @@ const Route = () => {
             </h2>
           </div>
 
-          <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
+          <div className={`flex flex-row flex-wrap gap-3 sm:gap-4 justify-center px-4 transition-all duration-500 ${showButtons ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}>
             <Button
               onClick={handleRegenerateRoute}
               disabled={isRegenerating}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               {isRegenerating ? "generating..." : "generate new route"}
             </Button>
@@ -277,7 +277,7 @@ const Route = () => {
             <Button
               onClick={handleChangePreferences}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               change preferences
             </Button>
@@ -291,7 +291,7 @@ const Route = () => {
                 }
               }}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               <BookmarkPlus className="h-4 w-4 mr-2" />
               save route
@@ -306,7 +306,7 @@ const Route = () => {
                 }
               }}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               <Share2 className="h-4 w-4 mr-2" />
               share route
@@ -329,7 +329,7 @@ const Route = () => {
                     setShowUpgradeModal(true);
                   }
                 }}
-                className="w-full sm:w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
+                className="w-auto px-8 py-4 h-14 rounded-full font-semibold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-lg"
                 size="lg"
               >
                 <Play className="h-5 w-5 mr-2" />
@@ -338,11 +338,11 @@ const Route = () => {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+          <div className="flex flex-row flex-wrap gap-3 sm:gap-4 justify-center">
             <Button
               onClick={() => navigate('/profile')}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               back to saved routes
@@ -351,7 +351,7 @@ const Route = () => {
             <Button
               onClick={() => setShowShareDialog(true)}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm"
             >
               <Share2 className="h-4 w-4 mr-2" />
               share route
@@ -360,7 +360,7 @@ const Route = () => {
             <Button
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm text-destructive hover:text-destructive"
+              className="w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 h-10 sm:h-12 rounded-full border-2 font-semibold tracking-wide text-xs sm:text-sm text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               delete route
