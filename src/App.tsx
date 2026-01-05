@@ -38,8 +38,8 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/shared/:shareCode" element={<SharedRoute />} />
-            <Route path="/route" element={<ProtectedRoute><RoutePage /></ProtectedRoute>} />
-            <Route path="/choose-location" element={<ProtectedRoute><ChooseLocation /></ProtectedRoute>} />
+            <Route path="/route" element={<RoutePage />} />
+            <Route path="/choose-location" element={<ChooseLocation />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/saved-routes" element={<ProtectedRoute><SavedRoutes /></ProtectedRoute>} />
             <Route path="/subscription-success" element={<SubscriptionSuccess />} />

@@ -4,7 +4,7 @@ project_id = "rxzubvqznmvvarmfsioe"
 verify_jwt = true
 
 [functions.get-mapbox-token]
-verify_jwt = true
+verify_jwt = false
 
 [functions.test-mapbox-token]
 verify_jwt = false
@@ -13,13 +13,13 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.generate-route]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-route-limit]
 verify_jwt = false
 
 [functions.record-route-generation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-stripe-checkout]
 verify_jwt = false

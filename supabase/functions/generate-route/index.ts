@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { startLng, startLat, distance, unit } = await req.json()
+    const { startLng, startLat, distance, unit, fingerprint } = await req.json()
     
     // Validate inputs
     if (!startLng || !startLat || !distance || !unit) {
@@ -33,72 +33,113 @@ serve(async (req) => {
       throw new Error('Invalid parameters')
     }
     
-    // Get auth token from request header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
-    // Verify JWT and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Try to get authenticated user (optional for anonymous users)
+    const authHeader = req.headers.get('Authorization')
+    let userId: string | null = null
+    let isPremium = false
     
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid authentication' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (authHeader) {
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (!authError && user) {
+        userId = user.id
+        console.log('Authenticated user:', userId)
+        
+        // Check subscription status for authenticated users
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status, subscription_expires_at')
+          .eq('id', user.id)
+          .single()
+        
+        isPremium = profile?.subscription_status === 'premium' && 
+          (profile?.subscription_expires_at === null || 
+           !profile?.subscription_expires_at ||
+           new Date(profile.subscription_expires_at) > new Date())
+        
+        if (isPremium) {
+          console.log('Premium user - no route limit')
+        }
+      }
     }
     
-    // Check route limit - query last 30 days
-    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    const { data: routeGenerations, error: countError } = await supabase
-      .from('route_generations')
-      .select('id', { count: 'exact', head: false })
-      .eq('user_id', user.id)
-      .gte('created_at', last30Days)
+    // Use service role for database queries that bypass RLS
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
     
-    if (countError) {
-      console.error('Error checking route limit:', countError)
-    }
-    
-    const routeCount = routeGenerations?.length || 0
-    
-    // Check subscription status
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status, subscription_expires_at')
-      .eq('id', user.id)
-      .single()
-    
-    // Premium is valid if status is 'premium' AND either:
-    // 1. No expiration date set (indefinite subscription), OR
-    // 2. Expiration date is in the future
-    const hasActiveSubscription = profile?.subscription_status === 'premium' && 
-      (profile?.subscription_expires_at === null || 
-       !profile?.subscription_expires_at ||
-       new Date(profile.subscription_expires_at) > new Date())
-    
-    // Enforce 3 route limit for free users
-    if (!hasActiveSubscription && routeCount >= 3) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Route limit reached',
-          limit: 3,
-          used: routeCount,
-          requiresUpgrade: true
-        }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Check route limit based on user type
+    if (!isPremium) {
+      const FREE_ROUTE_LIMIT = 5
+      const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      
+      if (userId) {
+        // Authenticated free user - check by user_id
+        const { data: routeGenerations } = await supabaseAdmin
+          .from('route_generations')
+          .select('id', { count: 'exact', head: false })
+          .eq('user_id', userId)
+          .gte('created_at', last30Days)
+        
+        const routeCount = routeGenerations?.length || 0
+        console.log(`Authenticated user route count: ${routeCount}/${FREE_ROUTE_LIMIT}`)
+        
+        if (routeCount >= FREE_ROUTE_LIMIT) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Route limit reached',
+              limit: FREE_ROUTE_LIMIT,
+              used: routeCount,
+              requiresUpgrade: true
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      } else {
+        // Anonymous user - check by fingerprint
+        if (!fingerprint || typeof fingerprint !== 'string' || fingerprint.length < 10) {
+          console.error('Missing or invalid fingerprint for anonymous user')
+          return new Response(
+            JSON.stringify({ success: false, error: 'Fingerprint required for anonymous users' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || ''
+        
+        const { data: count, error: countError } = await supabaseAdmin.rpc('count_routes_by_fingerprint', {
+          _fingerprint: fingerprint,
+          _ip_address: ipAddress,
+          _since: last30Days
+        })
+        
+        if (countError) {
+          console.error('Error counting routes:', countError)
+        }
+        
+        const routeCount = count || 0
+        console.log(`Anonymous user route count: ${routeCount}/${FREE_ROUTE_LIMIT}`)
+        
+        if (routeCount >= FREE_ROUTE_LIMIT) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Route limit reached',
+              limit: FREE_ROUTE_LIMIT,
+              used: routeCount,
+              requiresUpgrade: true
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
     }
     
     const MAPBOX_TOKEN = Deno.env.get('MAPBOX_ACCESS_TOKEN')
