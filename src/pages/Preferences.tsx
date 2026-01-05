@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RouteLimitService } from "@/services/routeLimit.service";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
+import { FingerprintService } from "@/services/fingerprint.service";
 import type { RouteLimitStatus } from "@/types";
 
 const Preferences = () => {
@@ -138,13 +139,20 @@ const Preferences = () => {
         throw new Error('Invalid coordinates');
       }
 
+      // Get fingerprint for anonymous users
+      let fingerprint: string | undefined;
+      if (!user) {
+        fingerprint = await FingerprintService.getFingerprint();
+      }
+
       // Generate route before navigating
       const { data, error } = await supabase.functions.invoke('generate-route', {
         body: {
           startLng: lng,
           startLat: lat,
           distance: parseFloat(distance),
-          unit: isKm ? 'km' : 'miles'
+          unit: isKm ? 'km' : 'miles',
+          fingerprint // Include for anonymous users
         }
       });
 
