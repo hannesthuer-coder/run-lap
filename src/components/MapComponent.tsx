@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { createMap, initializeMapbox } from '@/services/mapService';
 import { supabase } from '@/integrations/supabase/client';
+import { FingerprintService } from '@/services/fingerprint.service';
 
 interface MapComponentProps {
   startLocation: string;
@@ -21,6 +22,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
   const [actualDistance, setActualDistance] = useState<number | null>(null);
   const [routeInsights, setRouteInsights] = useState<any>(null);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const fingerprintRef = useRef<string | null>(null);
 
   // Parse startLocation coordinates from string format "lat,lng"
   const parseLocation = (locationStr: string | undefined | null): [number, number] => {
@@ -55,6 +57,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
     try {
       const [lng, lat] = parseLocation(startLocation);
       
+      // Get fingerprint for anonymous users (cache it)
+      if (!fingerprintRef.current) {
+        fingerprintRef.current = await FingerprintService.getFingerprint();
+      }
+      
       // Generate AI-powered running route with retry logic
       const generateAIRoute = async (center: [number, number], distance: number, retryCount = 0): Promise<any> => {
         const maxRetries = 2;
@@ -69,7 +76,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
               startLng: center[0],
               startLat: center[1],
               distance: distance,
-              unit: unit
+              unit: unit,
+              fingerprint: fingerprintRef.current
             }
           });
           
@@ -202,7 +210,7 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
         if (error || !data?.success || !data?.token) {
           console.error('Failed to fetch Mapbox token:', error || data?.error);
-          toast.error("Failed to load map. Please sign in and try again.");
+          toast.error("Failed to load map. Please try again.");
           onError?.();
           return;
         }
@@ -222,6 +230,11 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
       const mapboxgl = await initializeMapbox(token);
       mapboxglRef.current = mapboxgl;
 
+      // Get fingerprint for anonymous users (cache it)
+      if (!fingerprintRef.current) {
+        fingerprintRef.current = await FingerprintService.getFingerprint();
+      }
+      
       // Generate initial AI route with enhanced error handling
       const generateAIRoute = async (center: [number, number], distance: number, retryCount = 0): Promise<any> => {
         const maxRetries = 1; // Fewer retries on initial load
@@ -236,7 +249,8 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
               startLng: center[0],
               startLat: center[1],
               distance: distance,
-              unit: unit
+              unit: unit,
+              fingerprint: fingerprintRef.current
             }
           });
           

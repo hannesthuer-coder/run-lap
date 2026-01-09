@@ -9,6 +9,7 @@ const corsHeaders = {
 // Rate limit: 60 calls per hour per IP
 const RATE_LIMIT = 60;
 const RATE_WINDOW_SECONDS = 3600;
+const FREE_ROUTE_LIMIT = 5;
 
 async function checkRateLimit(supabase: any, ipAddress: string, endpoint: string): Promise<{ allowed: boolean; remaining: number }> {
   const windowStart = new Date(Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000)) * (RATE_WINDOW_SECONDS * 1000)).toISOString();
@@ -110,22 +111,22 @@ serve(async (req) => {
       throw new Error('Invalid session ID')
     }
     
-    // Use anon key for the actual query
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Use DAILY limit - start of today UTC
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayStartISO = todayStart.toISOString();
     
-    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .rpc('count_routes_by_fingerprint', {
         _fingerprint: fingerprint,
         _ip_address: ipAddress,
-        _since: last30Days
+        _since: todayStartISO
       });
     
     if (error) {
       console.error('Database error:', error);
       return new Response(
-        JSON.stringify({ canGenerate: true, limitReached: false }),
+        JSON.stringify({ canGenerate: true, limitReached: false, used: 0, remaining: FREE_ROUTE_LIMIT }),
         { 
           headers: { 
             ...corsHeaders, 
@@ -136,12 +137,15 @@ serve(async (req) => {
       );
     }
     
-    // Only return whether user can generate, not exact counts
-    const count = data || 0
+    const count = data || 0;
+    const routesRemaining = Math.max(0, FREE_ROUTE_LIMIT - count);
+    
     return new Response(
       JSON.stringify({ 
-        canGenerate: count < 5,
-        limitReached: count >= 5
+        canGenerate: count < FREE_ROUTE_LIMIT,
+        limitReached: count >= FREE_ROUTE_LIMIT,
+        used: count,
+        remaining: routesRemaining
       }),
       { 
         headers: { 
@@ -155,7 +159,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ canGenerate: true, limitReached: false }),
+      JSON.stringify({ canGenerate: true, limitReached: false, used: 0, remaining: FREE_ROUTE_LIMIT }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
