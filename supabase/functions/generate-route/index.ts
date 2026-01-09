@@ -74,36 +74,45 @@ serve(async (req) => {
     // Use service role for database queries that bypass RLS
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
     
-    // Check route limit based on user type
+    // Get IP address and user agent for recording
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                      req.headers.get('x-real-ip') || ''
+    const userAgent = req.headers.get('user-agent') || ''
+    
+    // Check route limit based on user type - using DAILY limit (start of today UTC)
+    const FREE_ROUTE_LIMIT = 5
+    const todayStart = new Date()
+    todayStart.setUTCHours(0, 0, 0, 0)
+    const todayStartISO = todayStart.toISOString()
+    
+    let currentRouteCount = 0
+    
     if (!isPremium) {
-      const FREE_ROUTE_LIMIT = 5
-      const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      
       if (userId) {
-        // Authenticated free user - check by user_id
+        // Authenticated free user - check by user_id for TODAY
         const { data: routeGenerations } = await supabaseAdmin
           .from('route_generations')
           .select('id', { count: 'exact', head: false })
           .eq('user_id', userId)
-          .gte('created_at', last30Days)
+          .gte('created_at', todayStartISO)
         
-        const routeCount = routeGenerations?.length || 0
-        console.log(`Authenticated user route count: ${routeCount}/${FREE_ROUTE_LIMIT}`)
+        currentRouteCount = routeGenerations?.length || 0
+        console.log(`Authenticated user route count today: ${currentRouteCount}/${FREE_ROUTE_LIMIT}`)
         
-        if (routeCount >= FREE_ROUTE_LIMIT) {
+        if (currentRouteCount >= FREE_ROUTE_LIMIT) {
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Route limit reached',
               limit: FREE_ROUTE_LIMIT,
-              used: routeCount,
+              used: currentRouteCount,
               requiresUpgrade: true
             }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           )
         }
       } else {
-        // Anonymous user - check by fingerprint
+        // Anonymous user - check by fingerprint for TODAY
         if (!fingerprint || typeof fingerprint !== 'string' || fingerprint.length < 10) {
           console.error('Missing or invalid fingerprint for anonymous user')
           return new Response(
@@ -112,28 +121,26 @@ serve(async (req) => {
           )
         }
         
-        const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || ''
-        
         const { data: count, error: countError } = await supabaseAdmin.rpc('count_routes_by_fingerprint', {
           _fingerprint: fingerprint,
           _ip_address: ipAddress,
-          _since: last30Days
+          _since: todayStartISO
         })
         
         if (countError) {
           console.error('Error counting routes:', countError)
         }
         
-        const routeCount = count || 0
-        console.log(`Anonymous user route count: ${routeCount}/${FREE_ROUTE_LIMIT}`)
+        currentRouteCount = count || 0
+        console.log(`Anonymous user route count today: ${currentRouteCount}/${FREE_ROUTE_LIMIT}`)
         
-        if (routeCount >= FREE_ROUTE_LIMIT) {
+        if (currentRouteCount >= FREE_ROUTE_LIMIT) {
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Route limit reached',
               limit: FREE_ROUTE_LIMIT,
-              used: routeCount,
+              used: currentRouteCount,
               requiresUpgrade: true
             }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -618,6 +625,37 @@ serve(async (req) => {
     // Calculate route quality
     const quality = calculateRouteQuality(detourResult.coordinates)
     console.log(`📊 Route quality: ${quality.sharpTurns} sharp turns, efficiency=${quality.efficiency.toFixed(2)}, turnsPerKm=${quality.turnsPerKm.toFixed(1)}, score=${quality.score.toFixed(1)}`)
+    
+    // ===== RECORD SUCCESSFUL ROUTE GENERATION =====
+    // Only record AFTER route is successfully generated
+    try {
+      const insertData: Record<string, any> = {
+        device_fingerprint: fingerprint || (userId ? `user_${userId}` : 'unknown'),
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        route_distance: distance,
+        route_unit: unit,
+        start_location: `${startLat},${startLng}`,
+      }
+      
+      if (userId) {
+        insertData.user_id = userId
+      }
+      
+      const { error: insertError } = await supabaseAdmin
+        .from('route_generations')
+        .insert(insertData)
+      
+      if (insertError) {
+        console.error('Failed to record route generation:', insertError)
+        // Don't fail the request if recording fails - just log it
+      } else {
+        console.log('✓ Route generation recorded successfully')
+      }
+    } catch (recordError) {
+      console.error('Error recording route generation:', recordError)
+      // Don't fail the request if recording fails
+    }
     
     return new Response(
       JSON.stringify({

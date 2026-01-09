@@ -6,6 +6,17 @@ const FREE_ROUTE_LIMIT = 5;
 const STORAGE_KEY = 'runlap_route_count';
 const SESSION_KEY = 'runlap_session_id';
 
+interface DailyCount {
+  date: string; // YYYY-MM-DD in UTC
+  count: number;
+}
+
+// Get today's date in YYYY-MM-DD format (UTC)
+function getTodayUTC(): string {
+  const now = new Date();
+  return now.toISOString().split('T')[0];
+}
+
 export class RouteLimitService {
   
   static async checkRouteLimit(): Promise<RouteLimitStatus> {
@@ -43,6 +54,8 @@ export class RouteLimitService {
       const { data: dbResult, error } = await supabase.functions.invoke<{
         canGenerate: boolean;
         limitReached: boolean;
+        used: number;
+        remaining: number;
       }>('check-route-limit', {
         body: {
           fingerprint,
@@ -54,15 +67,17 @@ export class RouteLimitService {
         console.error('Error checking route limit:', error);
       }
       
-      // Use server response combined with local count for defense in depth
+      // Use server response for remaining count, fallback to local
+      const serverRemaining = dbResult?.remaining ?? (FREE_ROUTE_LIMIT - localCount);
+      const serverUsed = dbResult?.used ?? localCount;
       const serverLimitReached = dbResult?.limitReached || false;
       const localLimitReached = localCount >= FREE_ROUTE_LIMIT;
       const limitReached = serverLimitReached || localLimitReached;
       
       return {
         canGenerate: !limitReached,
-        remainingRoutes: limitReached ? 0 : Math.max(0, FREE_ROUTE_LIMIT - localCount),
-        totalGenerated: localCount,
+        remainingRoutes: limitReached ? 0 : Math.max(0, serverRemaining),
+        totalGenerated: serverUsed,
         isPremium: false,
         needsUpgrade: limitReached,
       };
@@ -79,36 +94,36 @@ export class RouteLimitService {
     }
   }
   
+  // Only increment local count - server records on successful generation
+  static incrementLocalCount(): void {
+    this.incrementLocalStorageCount();
+  }
+  
+  // Legacy method - now only updates local storage (server records in generate-route)
   static async recordRouteGeneration(routeData: {
     distance: number;
     unit: string;
     location: string;
   }): Promise<void> {
-    try {
-      const fingerprint = await FingerprintService.getFingerprint();
-      const sessionId = this.getOrCreateSessionId();
-      
-      this.incrementLocalStorageCount();
-      
-      await supabase.functions.invoke('record-route-generation', {
-        body: {
-          fingerprint,
-          sessionId,
-          routeDistance: routeData.distance,
-          routeUnit: routeData.unit,
-          startLocation: routeData.location,
-        }
-      });
-      
-    } catch (error) {
-      console.error('Error recording route generation:', error);
-    }
+    // Only increment local storage - server handles the actual recording
+    this.incrementLocalStorageCount();
   }
   
   private static getLocalStorageCount(): number {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? parseInt(stored, 10) : 0;
+      if (!stored) return 0;
+      
+      const data: DailyCount = JSON.parse(stored);
+      const today = getTodayUTC();
+      
+      // Reset count if it's a new day
+      if (data.date !== today) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+        return 0;
+      }
+      
+      return data.count;
     } catch {
       return 0;
     }
@@ -116,8 +131,9 @@ export class RouteLimitService {
   
   private static incrementLocalStorageCount(): void {
     try {
+      const today = getTodayUTC();
       const current = this.getLocalStorageCount();
-      localStorage.setItem(STORAGE_KEY, (current + 1).toString());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: today, count: current + 1 }));
     } catch (error) {
       console.error('Error updating localStorage:', error);
     }
