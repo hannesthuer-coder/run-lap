@@ -113,19 +113,22 @@ serve(async (req) => {
     // Use anon key for the actual query
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
-    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    // Use start of today (UTC) for daily limit
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayStartISO = todayStart.toISOString();
     
     const { data, error } = await supabase
       .rpc('count_routes_by_fingerprint', {
         _fingerprint: fingerprint,
         _ip_address: ipAddress,
-        _since: last30Days
+        _since: todayStartISO
       });
     
     if (error) {
       console.error('Database error:', error);
       return new Response(
-        JSON.stringify({ canGenerate: true, limitReached: false }),
+        JSON.stringify({ canGenerate: true, limitReached: false, used: 0, remaining: 5 }),
         { 
           headers: { 
             ...corsHeaders, 
@@ -136,12 +139,15 @@ serve(async (req) => {
       );
     }
     
-    // Only return whether user can generate, not exact counts
-    const count = data || 0
+    // Return whether user can generate and counts for UI
+    const count = data || 0;
+    const FREE_LIMIT = 5;
     return new Response(
       JSON.stringify({ 
-        canGenerate: count < 5,
-        limitReached: count >= 5
+        canGenerate: count < FREE_LIMIT,
+        limitReached: count >= FREE_LIMIT,
+        used: count,
+        remaining: Math.max(0, FREE_LIMIT - count)
       }),
       { 
         headers: { 

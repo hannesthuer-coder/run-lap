@@ -77,7 +77,10 @@ serve(async (req) => {
     // Check route limit based on user type
     if (!isPremium) {
       const FREE_ROUTE_LIMIT = 5
-      const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      // Use start of today (UTC) for daily limit
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const todayStartISO = todayStart.toISOString();
       
       if (userId) {
         // Authenticated free user - check by user_id
@@ -85,7 +88,7 @@ serve(async (req) => {
           .from('route_generations')
           .select('id', { count: 'exact', head: false })
           .eq('user_id', userId)
-          .gte('created_at', last30Days)
+          .gte('created_at', todayStartISO)
         
         const routeCount = routeGenerations?.length || 0
         console.log(`Authenticated user route count: ${routeCount}/${FREE_ROUTE_LIMIT}`)
@@ -117,7 +120,7 @@ serve(async (req) => {
         const { data: count, error: countError } = await supabaseAdmin.rpc('count_routes_by_fingerprint', {
           _fingerprint: fingerprint,
           _ip_address: ipAddress,
-          _since: last30Days
+          _since: todayStartISO
         })
         
         if (countError) {
@@ -618,6 +621,27 @@ serve(async (req) => {
     // Calculate route quality
     const quality = calculateRouteQuality(detourResult.coordinates)
     console.log(`📊 Route quality: ${quality.sharpTurns} sharp turns, efficiency=${quality.efficiency.toFixed(2)}, turnsPerKm=${quality.turnsPerKm.toFixed(1)}, score=${quality.score.toFixed(1)}`)
+    
+    // Record successful route generation (only after success)
+    try {
+      const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                        req.headers.get('x-real-ip') || null;
+      const userAgent = req.headers.get('user-agent') || null;
+      
+      await supabaseAdmin.from('route_generations').insert({
+        device_fingerprint: fingerprint || userId || 'authenticated',
+        user_id: userId,
+        ip_address: ipAddress,
+        route_distance: detourResult.totalDistance,
+        route_unit: unit,
+        start_location: `${startLat},${startLng}`,
+        user_agent: userAgent
+      });
+      console.log('✅ Route generation recorded successfully');
+    } catch (recordError) {
+      console.error('Failed to record route generation:', recordError);
+      // Still return the route even if recording fails
+    }
     
     return new Response(
       JSON.stringify({
