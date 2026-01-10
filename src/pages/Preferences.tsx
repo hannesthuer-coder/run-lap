@@ -12,7 +12,6 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { FingerprintService } from "@/services/fingerprint.service";
 import type { RouteLimitStatus } from "@/types";
-
 const Preferences = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,7 +31,6 @@ const Preferences = () => {
   useEffect(() => {
     checkRouteLimit();
   }, [isPremium]);
-  
   const checkRouteLimit = async () => {
     // If AuthContext already knows user is premium, skip the limit check
     if (isPremium) {
@@ -41,11 +39,10 @@ const Preferences = () => {
         remainingRoutes: Infinity,
         totalGenerated: 0,
         isPremium: true,
-        needsUpgrade: false,
+        needsUpgrade: false
       });
       return;
     }
-    
     const status = await RouteLimitService.checkRouteLimit();
     setRouteLimitStatus(status);
     // Don't show upgrade modal on page load - only when user tries to generate
@@ -67,7 +64,6 @@ const Preferences = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
-
   const handleUseCurrentLocation = () => {
     // Toggle selection state
     if (locationMethod === "current") {
@@ -89,7 +85,6 @@ const Preferences = () => {
       setLocationMethod(null);
     }
   };
-
   const handleChooseOnMap = () => {
     // Toggle selection state
     if (locationMethod === "map") {
@@ -105,7 +100,6 @@ const Preferences = () => {
       }
     });
   };
-
   const handleGenerate = async () => {
     if (!distance || parseFloat(distance) <= 0) {
       toast.error("Please enter a valid distance.");
@@ -123,11 +117,9 @@ const Preferences = () => {
       return;
     }
     setIsGenerating(true);
-
     try {
       // Parse coordinates from selectedLocation
       const [lat, lng] = selectedLocation.split(',').map(coord => parseFloat(coord.trim()));
-      
       if (isNaN(lat) || isNaN(lng)) {
         throw new Error('Invalid coordinates');
       }
@@ -139,7 +131,10 @@ const Preferences = () => {
       }
 
       // Generate route before navigating
-      const { data, error } = await supabase.functions.invoke('generate-route', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-route', {
         body: {
           startLng: lng,
           startLat: lat,
@@ -148,20 +143,17 @@ const Preferences = () => {
           fingerprint // Include for anonymous users
         }
       });
-
       if (error) {
         throw error;
       }
-
       if (!data.success) {
         throw new Error(data.error || 'Failed to generate route');
       }
 
       // Only increment local count after successful generation
       RouteLimitService.incrementLocalCount();
-      
       setIsGenerating(false);
-      
+
       // Navigate with the preloaded route
       navigate("/route", {
         state: {
@@ -175,7 +167,6 @@ const Preferences = () => {
     } catch (error: any) {
       console.error('Route generation error:', error);
       setIsGenerating(false);
-      
       if (error.message?.includes('quota')) {
         toast.error("Service quota exceeded. Please try again later.");
       } else if (error.message?.includes('rate limit')) {
@@ -187,9 +178,7 @@ const Preferences = () => {
       }
     }
   };
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col pt-[100px]">
+  return <div className="min-h-screen bg-background flex flex-col pt-[100px]">
       <Helmet>
         <title>Run-Lap: Generate Your Perfect Running Route | AI Route Planner</title>
         <meta name="description" content="Create your perfect running lap in seconds. Set your distance, choose your starting location, and let AI generate a custom running route just for you." />
@@ -202,9 +191,7 @@ const Preferences = () => {
       <div className="w-full max-w-lg mx-auto space-y-8 flex-1 flex flex-col justify-center px-4 py-6 pt-28 sm:pt-32 sm:py-[200px]">
         {/* Main Title */}
         <div className="text-center">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground tracking-wide leading-tight">
-            what distance do you want to run today?
-          </h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground tracking-wide leading-tight">what distance do you want to run?</h1>
         </div>
 
         {/* Distance Input */}
@@ -227,9 +214,7 @@ const Preferences = () => {
         {/* Location Section */}
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground tracking-wide">
-              where from?
-            </h2>
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground tracking-wide">select your starting point</h2>
           </div>
 
           <div className="flex flex-row gap-4 justify-center items-center">
@@ -249,24 +234,19 @@ const Preferences = () => {
 
         {/* Generate Button */}
         <div className="flex flex-col items-center gap-2">
-          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">
-            {isGenerating ? "generating..." : "generate running laps"}
+          <Button onClick={handleGenerate} disabled={isGenerating || !distance || !selectedLocation} className="w-auto px-8 py-3 h-12 sm:h-14 rounded-full font-semibold tracking-wide bg-beige hover:bg-beige-hover text-beige-foreground text-sm sm:text-base" size="lg">gene{isGenerating ? "generating..." : "generate running laps"}
           </Button>
           
           {/* Remaining routes counter - only show for non-premium users */}
-          {routeLimitStatus && !routeLimitStatus.isPremium && (
-            <p className="text-xs text-muted-foreground">
+          {routeLimitStatus && !routeLimitStatus.isPremium && <p className="text-xs text-muted-foreground">
               You have {routeLimitStatus.remainingRoutes} free lap{routeLimitStatus.remainingRoutes !== 1 ? 's' : ''} left today
-            </p>
-          )}
+            </p>}
         </div>
       </div>
       <Footer />
 
       {/* Upgrade Modal */}
       <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} routesGenerated={routeLimitStatus?.totalGenerated || 0} />
-    </div>
-  );
+    </div>;
 };
-
 export default Preferences;
