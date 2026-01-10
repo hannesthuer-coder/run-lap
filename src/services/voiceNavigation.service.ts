@@ -17,7 +17,7 @@ class VoiceNavigationService {
   private speaking: boolean = false;
   private queue: QueuedAnnouncement[] = [];
   private lastAnnouncements: Map<string, number> = new Map();
-  private cooldownMs: number = 5000;
+  private cooldownMs: number = 8000; // Increased from 5000 for less frequent announcements
   private settings: VoiceSettings = {
     rate: 1.0,
     pitch: 1.0,
@@ -136,11 +136,18 @@ class VoiceNavigationService {
   }
 
   announceUpcomingTurn(turnType: TurnType, distanceToTurn: number): void {
-    // Define thresholds for announcements
-    const thresholds = [100, 50, 20];
+    // Skip "continue straight" announcements entirely - they're just noise
+    if (turnType === 'straight') {
+      return;
+    }
+
+    // Reduced thresholds: only announce at 50m and 15m
+    // This gives 2 announcements per turn instead of 3
+    const thresholds = [50, 15];
     
     for (const threshold of thresholds) {
-      if (distanceToTurn <= threshold && distanceToTurn > threshold - 15) {
+      // Wider window for detection (threshold - 20 instead of threshold - 15)
+      if (distanceToTurn <= threshold && distanceToTurn > threshold - 20) {
         const key = `turn-${threshold}`;
         if (this.canAnnounce(key)) {
           this.markAnnounced(key);
@@ -148,8 +155,6 @@ class VoiceNavigationService {
           const turnName = this.getTurnName(turnType);
           if (turnType === 'finish') {
             this.speak(`Finish line in ${this.formatDistance(distanceToTurn)}`);
-          } else if (turnType === 'straight') {
-            this.speak(`Continue straight for ${this.formatDistance(distanceToTurn)}`);
           } else {
             this.speak(`Turn ${turnName} in ${this.formatDistance(distanceToTurn)}`);
           }
