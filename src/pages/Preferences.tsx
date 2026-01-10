@@ -124,13 +124,6 @@ const Preferences = () => {
     }
     setIsGenerating(true);
 
-    // Record the generation
-    await RouteLimitService.recordRouteGeneration({
-      distance: parseFloat(distance),
-      unit: isKm ? 'km' : 'miles',
-      location: selectedLocation
-    });
-
     try {
       // Parse coordinates from selectedLocation
       const [lat, lng] = selectedLocation.split(',').map(coord => parseFloat(coord.trim()));
@@ -164,6 +157,9 @@ const Preferences = () => {
         throw new Error(data.error || 'Failed to generate route');
       }
 
+      // Only increment local count after successful generation
+      RouteLimitService.incrementLocalCount();
+      
       setIsGenerating(false);
       
       // Navigate with the preloaded route
@@ -258,9 +254,9 @@ const Preferences = () => {
           </Button>
           
           {/* Remaining routes counter - only show for non-premium users */}
-          {routeLimitStatus && !routeLimitStatus.isPremium && routeLimitStatus.remainingRoutes > 0 && (
+          {routeLimitStatus && !routeLimitStatus.isPremium && (
             <p className="text-xs text-muted-foreground">
-              {routeLimitStatus.remainingRoutes} free route{routeLimitStatus.remainingRoutes !== 1 ? 's' : ''} remaining
+              You have {routeLimitStatus.remainingRoutes} free lap{routeLimitStatus.remainingRoutes !== 1 ? 's' : ''} left today
             </p>
           )}
         </div>

@@ -3,8 +3,18 @@ import { FingerprintService } from './fingerprint.service';
 import type { RouteLimitStatus } from '@/types';
 
 const FREE_ROUTE_LIMIT = 5;
-const STORAGE_KEY = 'runlap_route_count';
+const STORAGE_KEY = 'runlap_daily_count';
 const SESSION_KEY = 'runlap_session_id';
+
+interface DailyCount {
+  date: string; // 'YYYY-MM-DD' in UTC
+  count: number;
+}
+
+const getTodayUTC = (): string => {
+  const now = new Date();
+  return now.toISOString().split('T')[0];
+};
 
 export class RouteLimitService {
   
@@ -108,7 +118,17 @@ export class RouteLimitService {
   private static getLocalStorageCount(): number {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? parseInt(stored, 10) : 0;
+      if (!stored) return 0;
+      
+      const dailyCount: DailyCount = JSON.parse(stored);
+      const today = getTodayUTC();
+      
+      // Reset count if it's a new day
+      if (dailyCount.date !== today) {
+        return 0;
+      }
+      
+      return dailyCount.count;
     } catch {
       return 0;
     }
@@ -116,11 +136,21 @@ export class RouteLimitService {
   
   private static incrementLocalStorageCount(): void {
     try {
+      const today = getTodayUTC();
       const current = this.getLocalStorageCount();
-      localStorage.setItem(STORAGE_KEY, (current + 1).toString());
+      const newCount: DailyCount = {
+        date: today,
+        count: current + 1
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newCount));
     } catch (error) {
       console.error('Error updating localStorage:', error);
     }
+  }
+  
+  // Public method to increment local count after successful generation
+  static incrementLocalCount(): void {
+    this.incrementLocalStorageCount();
   }
   
   private static getOrCreateSessionId(): string {
