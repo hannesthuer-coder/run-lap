@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CookieBanner } from "./components/CookieBanner";
+import { PageTracker } from "./components/PageTracker";
 import Preferences from "./pages/Preferences";
 import RoutePage from "./pages/Route";
 import ChooseLocation from "./pages/ChooseLocation";
@@ -29,6 +30,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <PageTracker />
           <Routes>
             <Route path="/" element={<Preferences />} />
             <Route path="/start" element={<Preferences />} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,6 +7,7 @@ import { StripeService } from '@/services/stripe.service';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { analyticsService } from '@/services/analytics.service';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -23,6 +24,13 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
   const [consentChecked, setConsentChecked] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
 
+  // Track when modal is opened
+  useEffect(() => {
+    if (open) {
+      analyticsService.trackUpgradeModalOpened('route_limit');
+    }
+  }, [open]);
+
   const handleUpgrade = async () => {
     if (!user) {
       toast.error('Please sign in first');
@@ -36,6 +44,8 @@ export function UpgradeModal({ open, onClose, routesGenerated }: UpgradeModalPro
     }
 
     setIsLoading(true);
+    // Track upgrade clicked
+    analyticsService.trackUpgradeClicked();
     
     try {
       const sessionUrl = await StripeService.createCheckoutSession(user.email!, selectedPlan);

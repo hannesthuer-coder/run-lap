@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ShareRouteDialog } from "@/components/profile/ShareRouteDialog";
+import { analyticsService } from "@/services/analytics.service";
+
 
 const Route = () => {
   const location = useLocation();
@@ -73,6 +75,8 @@ const Route = () => {
     setIsRegenerating(false);
     if (route) {
       setGeneratedRoute(route);
+      // Track route generation
+      analyticsService.trackRouteGenerated(routeData.distance, routeData.unit, routeData.location);
     }
   };
 
@@ -114,6 +118,8 @@ const Route = () => {
           title: "Success!",
           description: "Route saved successfully.",
         });
+        // Track route saved
+        analyticsService.trackRouteSaved(routeName, routeData.distance, routeData.unit);
         setShowSaveDialog(false);
         setRouteName('');
       }
@@ -132,6 +138,8 @@ const Route = () => {
   const handleRegenerateRoute = async () => {
     setIsRegenerating(true);
     setRegenerateKey(prev => prev + 1);
+    // Track route regeneration
+    analyticsService.trackRouteRegenerated(routeData.distance, routeData.unit);
   };
 
   const handleRouteError = () => {
@@ -155,6 +163,8 @@ const Route = () => {
 
       if (error) throw error;
 
+      // Track route deleted
+      analyticsService.trackRouteDeleted();
       toast({
         title: "success",
         description: "route deleted successfully.",
