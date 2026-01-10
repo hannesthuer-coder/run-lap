@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(PAYWALLS_DISABLED);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [isTrialing, setIsTrialing] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -142,7 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } else {
-        setIsPremium(false);
+        // If paywalls disabled, everyone is premium (including anonymous users)
+        setIsPremium(PAYWALLS_DISABLED);
         setSubscriptionEnd(null);
         setIsTrialing(false);
         setTrialEndsAt(null);
@@ -221,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setUser(null);
       setSession(null);
-      setIsPremium(false);
+      setIsPremium(PAYWALLS_DISABLED);
       setSubscriptionEnd(null);
       setIsTrialing(false);
       setTrialEndsAt(null);
