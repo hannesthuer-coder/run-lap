@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { analyticsService } from '@/services/analytics.service';
 
 export default function SubscriptionSuccess() {
   const [searchParams] = useSearchParams();
@@ -19,6 +20,8 @@ export default function SubscriptionSuccess() {
     
     setTimeout(() => {
       setIsLoading(false);
+      // Track subscription started
+      analyticsService.trackSubscriptionStarted();
       toast.success('Welcome to Premium! 🎉');
     }, 2000);
   }, [searchParams, navigate]);

@@ -10,6 +10,7 @@ import { createMap, initializeMapbox } from '@/services/mapService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { voiceNavigationService } from '@/services/voiceNavigation.service';
+import { analyticsService } from '@/services/analytics.service';
 import { 
   X, 
   Pause, 
@@ -348,19 +349,25 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     offRouteCountRef.current = 0;
     wasOffRouteRef.current = false;
     setRunState('running');
+    // Track run started
+    analyticsService.trackRunStarted(distance, unit);
   };
 
   const handlePause = () => {
     setRunState('paused');
+    analyticsService.trackRunPaused();
   };
 
   const handleResume = () => {
     setRunState('running');
+    analyticsService.trackRunResumed();
   };
 
   const handleComplete = () => {
     setRunState('completed');
     voiceNavigationService.announceCompletion();
+    // Track run completed
+    analyticsService.trackRunCompleted(distance, unit, elapsedTime);
     // Vibrate on completion if supported
     if ('vibrate' in navigator) {
       navigator.vibrate([200, 100, 200]);
@@ -375,6 +382,9 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
   };
 
   const handleExitConfirm = () => {
+    // Track run exited with completion percentage
+    const completionPercentage = navState?.progress || 0;
+    analyticsService.trackRunExited(completionPercentage);
     stopTracking();
     onClose();
   };
