@@ -42,12 +42,16 @@ interface RunningModeProps {
 
 type RunState = 'preparing' | 'running' | 'paused' | 'completed';
 
+// Number of consecutive off-route readings required to trigger off-route warning
+const OFF_ROUTE_CONFIRM_COUNT = 3;
+
 export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: RunningModeProps) => {
   const [runState, setRunState] = useState<RunState>('preparing');
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [navState, setNavState] = useState<NavigationState | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [currentPace, setCurrentPace] = useState<number | null>(null);
   
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -56,16 +60,52 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const previousSegmentIndexRef = useRef(0);
   const wasOffRouteRef = useRef(false);
+  const offRouteCountRef = useRef(0);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const {
     position,
+    smoothedPosition,
     isTracking,
     error: gpsError,
     accuracy,
     permissionStatus,
     startTracking,
     stopTracking,
-  } = useGpsTracking({ enableHighAccuracy: true });
+    calculatePace,
+  } = useGpsTracking({ enableHighAccuracy: true, smoothingWindow: 5 });
+
+  // Wake Lock - prevent screen from sleeping during run
+  useEffect(() => {
+    const acquireWakeLock = async () => {
+      if ('wakeLock' in navigator && runState === 'running') {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          console.log('Wake lock acquired');
+        } catch (err) {
+          console.log('Wake lock failed:', err);
+        }
+      }
+    };
+
+    if (runState === 'running') {
+      acquireWakeLock();
+    } else {
+      // Release wake lock when not running
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+        wakeLockRef.current = null;
+        console.log('Wake lock released');
+      }
+    }
+
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    };
+  }, [runState]);
 
   // Initialize map
   useEffect(() => {
@@ -165,27 +205,29 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update runner marker position
+  // Update runner marker position - USE SMOOTHED POSITION
   useEffect(() => {
-    if (!position || !mapRef.current || !mapboxglRef.current) return;
+    // Use smoothed position for map and navigation, fall back to raw position
+    const displayPosition = smoothedPosition || position;
+    if (!displayPosition || !mapRef.current || !mapboxglRef.current) return;
 
     const map = mapRef.current;
     const mapboxgl = mapboxglRef.current;
 
     // Create or update runner marker
     if (!runnerMarkerRef.current) {
-      const markerEl = createRunnerMarkerElement(accuracy, position.heading);
+      const markerEl = createRunnerMarkerElement(accuracy, displayPosition.heading);
       runnerMarkerRef.current = new mapboxgl.Marker({ element: markerEl })
-        .setLngLat([position.lng, position.lat])
+        .setLngLat([displayPosition.lng, displayPosition.lat])
         .addTo(map);
     } else {
-      runnerMarkerRef.current.setLngLat([position.lng, position.lat]);
+      runnerMarkerRef.current.setLngLat([displayPosition.lng, displayPosition.lat]);
       
       // Update heading arrow rotation
       const arrow = runnerMarkerRef.current.getElement().querySelector('.runner-heading-arrow') as HTMLElement;
       if (arrow) {
-        if (position.heading !== null) {
-          arrow.style.transform = `translate(-50%, -150%) rotate(${position.heading}deg)`;
+        if (displayPosition.heading !== null) {
+          arrow.style.transform = `translate(-50%, -150%) rotate(${displayPosition.heading}deg)`;
           arrow.style.display = 'block';
         } else {
           arrow.style.display = 'none';
@@ -193,27 +235,22 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
       }
     }
 
-    // Center map on runner during run with heading rotation
+    // Center map on runner during run - SMOOTHER ANIMATION, NO ROTATION
     if (runState === 'running') {
-      const easeOptions: any = {
-        center: [position.lng, position.lat],
-        duration: 500,
-      };
-      
-      // Rotate map to match heading (movement always points up)
-      if (position.heading !== null) {
-        easeOptions.bearing = position.heading;
-      }
-      
-      map.easeTo(easeOptions);
+      map.easeTo({
+        center: [displayPosition.lng, displayPosition.lat],
+        duration: 1000, // Increased from 500 for smoother movement
+        easing: (t: number) => t * (2 - t), // Smooth ease-out curve
+        // NOTE: Removed bearing/heading rotation - keeps map north-up for stability
+      });
     }
 
     // Calculate navigation state
     // Pass hasStartedRunning: true only when running AND user has progressed
     const hasStartedRunning = runState === 'running' && previousSegmentIndexRef.current > 10;
     const newNavState = calculateNavigationState(
-      position.lat,
-      position.lng,
+      displayPosition.lat,
+      displayPosition.lng,
       routeCoordinates,
       previousSegmentIndexRef.current,
       hasStartedRunning
@@ -221,6 +258,12 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     
     previousSegmentIndexRef.current = newNavState.currentSegmentIndex;
     setNavState(newNavState);
+
+    // Update current pace
+    if (runState === 'running') {
+      const pace = calculatePace();
+      setCurrentPace(pace);
+    }
 
     // Voice announcements (only when running)
     if (runState === 'running') {
@@ -232,13 +275,23 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
         );
       }
 
-      // Off-route / back-on-route announcements
-      if (newNavState.isOffRoute && !wasOffRouteRef.current) {
+      // Off-route detection with CONFIRMATION (prevents false alerts from GPS blips)
+      if (newNavState.isOffRoute) {
+        offRouteCountRef.current++;
+      } else {
+        offRouteCountRef.current = 0;
+      }
+
+      const confirmedOffRoute = offRouteCountRef.current >= OFF_ROUTE_CONFIRM_COUNT;
+
+      // Only announce if confirmed off-route for multiple readings
+      if (confirmedOffRoute && !wasOffRouteRef.current) {
         voiceNavigationService.announceOffRoute();
+        wasOffRouteRef.current = true;
       } else if (!newNavState.isOffRoute && wasOffRouteRef.current) {
         voiceNavigationService.announceBackOnRoute();
+        wasOffRouteRef.current = false;
       }
-      wasOffRouteRef.current = newNavState.isOffRoute;
     }
 
     // Update route visualization (completed vs remaining)
@@ -263,7 +316,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     if (newNavState.isComplete && runState === 'running') {
       handleComplete();
     }
-  }, [position, accuracy, routeCoordinates, runState]);
+  }, [position, smoothedPosition, accuracy, routeCoordinates, runState, calculatePace]);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -292,6 +345,8 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
     }
     voiceNavigationService.resetCooldowns();
     voiceNavigationService.announceStart();
+    offRouteCountRef.current = 0;
+    wasOffRouteRef.current = false;
     setRunState('running');
   };
 
@@ -325,9 +380,10 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
   };
 
   const handleRecenter = () => {
-    if (position && mapRef.current) {
+    const displayPosition = smoothedPosition || position;
+    if (displayPosition && mapRef.current) {
       mapRef.current.easeTo({
-        center: [position.lng, position.lat],
+        center: [displayPosition.lng, displayPosition.lat],
         zoom: 16,
         duration: 500,
       });
@@ -478,7 +534,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                   turnType={navState.nextInstruction.turnType}
                   distanceToTurn={navState.nextInstruction.distanceToTurn}
                   description={navState.nextInstruction.description}
-                  isOffRoute={navState.isOffRoute}
+                  isOffRoute={offRouteCountRef.current >= OFF_ROUTE_CONFIRM_COUNT}
                 />
               </div>
             )}
@@ -490,6 +546,7 @@ export const RunningMode = ({ routeCoordinates, distance, unit, onClose }: Runni
                 distanceRemaining={navState?.distanceRemaining || 0}
                 elapsedTime={elapsedTime}
                 unit={unit}
+                currentPace={currentPace}
               />
 
               {/* Progress bar below stats */}

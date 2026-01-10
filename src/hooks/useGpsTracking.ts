@@ -11,6 +11,7 @@ export interface GpsPosition {
 
 export interface GpsTrackingState {
   position: GpsPosition | null;
+  smoothedPosition: GpsPosition | null;
   positionHistory: GpsPosition[];
   isTracking: boolean;
   error: string | null;
@@ -23,6 +24,7 @@ interface UseGpsTrackingOptions {
   maxAge?: number;
   timeout?: number;
   historyLimit?: number;
+  smoothingWindow?: number;
 }
 
 const DEFAULT_OPTIONS: UseGpsTrackingOptions = {
@@ -30,6 +32,46 @@ const DEFAULT_OPTIONS: UseGpsTrackingOptions = {
   maxAge: 0,
   timeout: 10000,
   historyLimit: 100,
+  smoothingWindow: 5,
+};
+
+/**
+ * Calculate weighted average for GPS smoothing
+ * More recent positions have higher weight
+ */
+const calculateSmoothedPosition = (
+  history: GpsPosition[],
+  windowSize: number
+): GpsPosition | null => {
+  if (history.length === 0) return null;
+  if (history.length === 1) return history[0];
+
+  const recent = history.slice(-windowSize);
+  
+  // Weighted average - more recent positions have higher weight
+  // Also weight by accuracy - more accurate positions have higher weight
+  const weights = recent.map((pos, i) => {
+    const recencyWeight = i + 1; // 1, 2, 3, 4, 5 for last 5 positions
+    const accuracyWeight = Math.max(0.1, 1 / (pos.accuracy / 10)); // Better accuracy = higher weight
+    return recencyWeight * accuracyWeight;
+  });
+  
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  
+  const smoothedLat = recent.reduce((sum, pos, i) => sum + pos.lat * weights[i], 0) / totalWeight;
+  const smoothedLng = recent.reduce((sum, pos, i) => sum + pos.lng * weights[i], 0) / totalWeight;
+  
+  // Use latest values for non-position data
+  const latest = recent[recent.length - 1];
+  
+  return {
+    lat: smoothedLat,
+    lng: smoothedLng,
+    accuracy: latest.accuracy,
+    heading: latest.heading,
+    speed: latest.speed,
+    timestamp: latest.timestamp,
+  };
 };
 
 export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
@@ -38,10 +80,12 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
     options.maxAge,
     options.timeout,
     options.historyLimit,
+    options.smoothingWindow,
   ]);
   
   const [state, setState] = useState<GpsTrackingState>({
     position: null,
+    smoothedPosition: null,
     positionHistory: [],
     isTracking: false,
     error: null,
@@ -76,9 +120,16 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
       newPosition,
     ];
 
+    // Calculate smoothed position
+    const smoothedPosition = calculateSmoothedPosition(
+      positionHistoryRef.current,
+      opts.smoothingWindow!
+    );
+
     setState(prev => ({
       ...prev,
       position: newPosition,
+      smoothedPosition,
       positionHistory: positionHistoryRef.current,
       accuracy: getAccuracyLevel(newPosition.accuracy),
       error: null,
@@ -174,7 +225,7 @@ export const useGpsTracking = (options: UseGpsTrackingOptions = {}) => {
 
   const clearHistory = useCallback(() => {
     positionHistoryRef.current = [];
-    setState(prev => ({ ...prev, positionHistory: [] }));
+    setState(prev => ({ ...prev, positionHistory: [], smoothedPosition: null }));
   }, []);
 
   // Calculate current pace from recent positions (minutes per km)

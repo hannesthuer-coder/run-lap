@@ -19,11 +19,11 @@ export interface NavigationState {
   isComplete: boolean;
 }
 
-// Configuration
-const OFF_ROUTE_THRESHOLD = 50; // meters
-const TURN_DETECTION_ANGLE = 20; // degrees
+// Configuration - TUNED FOR SMOOTH EXPERIENCE
+const OFF_ROUTE_THRESHOLD = 75; // meters (increased from 50 for GPS drift tolerance)
+const TURN_DETECTION_ANGLE = 40; // degrees (increased from 20 to filter minor curves)
+const MIN_DISTANCE_BETWEEN_TURNS = 50; // meters - don't announce turns closer than this
 const WAYPOINT_REACHED_DISTANCE = 15; // meters
-const TURN_ALERT_DISTANCES = [100, 50, 20]; // meters
 const MIN_PROGRESS_FOR_COMPLETION = 0.8; // 80% of route must be completed
 const MIN_SEGMENT_PROGRESS = 0.7; // Must pass 70% of route waypoints
 
@@ -153,6 +153,7 @@ export const calculateDistanceToIndex = (
 
 /**
  * Find the next significant turn in the route
+ * Now respects MIN_DISTANCE_BETWEEN_TURNS to avoid announcing too many turns
  */
 export const findNextTurn = (
   routeCoordinates: [number, number][],
@@ -168,6 +169,7 @@ export const findNextTurn = (
   }
 
   let accumulatedDistance = 0;
+  let lastSignificantTurnDistance = 0;
 
   for (let i = currentIndex; i < routeCoordinates.length - 2; i++) {
     const [lng1, lat1] = routeCoordinates[i];
@@ -182,8 +184,17 @@ export const findNextTurn = (
 
     const turnType = getTurnType(angleDifference);
 
+    // Only report turn if it's significant AND far enough from the last turn
     if (turnType !== 'straight') {
-      return { index: i + 1, turnType, distance: accumulatedDistance };
+      const distanceSinceLastTurn = accumulatedDistance - lastSignificantTurnDistance;
+      
+      // Return this turn only if it's the first one OR far enough from last
+      if (lastSignificantTurnDistance === 0 || distanceSinceLastTurn >= MIN_DISTANCE_BETWEEN_TURNS) {
+        return { index: i + 1, turnType, distance: accumulatedDistance };
+      }
+      
+      // Track this turn position for spacing calculation
+      lastSignificantTurnDistance = accumulatedDistance;
     }
   }
 
@@ -233,7 +244,7 @@ export const calculateNavigationState = (
   const distanceCompleted = calculateDistanceToIndex(routeCoordinates, currentSegmentIndex);
   const distanceRemaining = totalDistance - distanceCompleted;
 
-  // Check if off-route
+  // Check if off-route (using increased threshold)
   const isOffRoute = distanceToRoute > OFF_ROUTE_THRESHOLD;
 
   // Check if complete - must be near finish AND have completed most of the route
