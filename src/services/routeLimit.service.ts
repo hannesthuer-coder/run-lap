@@ -2,6 +2,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { FingerprintService } from './fingerprint.service';
 import type { RouteLimitStatus } from '@/types';
 
+// FEATURE FLAG: Set to true to disable all paywalls and give everyone premium access
+// Change this to false when ready to reactivate paid subscriptions
+const PAYWALLS_DISABLED = true;
+
 const FREE_ROUTE_LIMIT = 5;
 const STORAGE_KEY = 'runlap_daily_count';
 const SESSION_KEY = 'runlap_session_id';
@@ -19,6 +23,17 @@ const getTodayUTC = (): string => {
 export class RouteLimitService {
   
   static async checkRouteLimit(): Promise<RouteLimitStatus> {
+    // If paywalls disabled, everyone gets unlimited routes
+    if (PAYWALLS_DISABLED) {
+      return {
+        canGenerate: true,
+        remainingRoutes: Infinity,
+        totalGenerated: 0,
+        isPremium: true,
+        needsUpgrade: false,
+      };
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       

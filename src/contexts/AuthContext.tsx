@@ -3,6 +3,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// FEATURE FLAG: Set to true to disable all paywalls and give everyone premium access
+// Change this to false when ready to reactivate paid subscriptions
+const PAYWALLS_DISABLED = true;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -29,6 +33,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const checkSubscriptionStatus = async (userOverride?: User | null) => {
+    // If paywalls disabled, everyone is premium - skip Stripe check entirely
+    if (PAYWALLS_DISABLED) {
+      setIsPremium(true);
+      setSubscriptionEnd(null);
+      setIsTrialing(false);
+      setTrialEndsAt(null);
+      return;
+    }
+
     const currentUser = userOverride ?? user;
     
     if (!currentUser) {
