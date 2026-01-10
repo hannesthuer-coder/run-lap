@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from "sonner";
 import { createMap, initializeMapbox } from '@/services/mapService';
 import { supabase } from '@/integrations/supabase/client';
+import { FingerprintService } from '@/services/fingerprint.service';
 
 interface MapComponentProps {
   startLocation: string;
@@ -64,15 +65,19 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           
           console.log(`Attempting route generation (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
+          // Get fingerprint for anonymous user rate limiting
+          const fingerprint = await FingerprintService.getFingerprint();
+          
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
               distance: distance,
-              unit: unit
+              unit: unit,
+              fingerprint: fingerprint
             }
           });
-          
+
           if (error) {
             console.error('Supabase function error:', error);
             throw error;
@@ -231,15 +236,19 @@ const MapComponent = ({ startLocation, distance, unit, regenerateKey, onRouteGen
           
           console.log(`Loading initial route (attempt ${retryCount + 1}/${maxRetries + 1})`);
           
+          // Get fingerprint for anonymous user rate limiting
+          const fingerprint = await FingerprintService.getFingerprint();
+          
           const { data, error } = await supabase.functions.invoke('generate-route', {
             body: {
               startLng: center[0],
               startLat: center[1],
               distance: distance,
-              unit: unit
+              unit: unit,
+              fingerprint: fingerprint
             }
           });
-          
+
           if (error) {
             console.error('Supabase function error:', error);
             throw error;
