@@ -5,13 +5,9 @@ import App from './App.tsx'
 import './index.css'
 import { analyticsService } from './services/analytics.service'
 
-// Initialize Google Analytics - Replace with your GA4 Measurement ID
-// You can get this from Google Analytics > Admin > Data Streams > Web
-const GA_MEASUREMENT_ID = 'G-XXXXXXXXXX'; // Replace with your actual GA4 ID
-
-if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== 'G-XXXXXXXXXX') {
-  analyticsService.initialize(GA_MEASUREMENT_ID);
-}
+// Initialize Google Analytics
+const GA_MEASUREMENT_ID = 'G-06NS1Z3C16';
+analyticsService.initialize(GA_MEASUREMENT_ID);
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
