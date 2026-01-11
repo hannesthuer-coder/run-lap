@@ -3,9 +3,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-// FEATURE FLAG: Set to true to disable all paywalls and give everyone premium access
-// Change this to false when ready to reactivate paid subscriptions
-const PAYWALLS_DISABLED = true;
+// FEATURE FLAG: Set to false to enable paywalls and subscription checks
+const PAYWALLS_DISABLED = false;
 
 interface AuthContextType {
   user: User | null;
