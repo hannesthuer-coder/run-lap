@@ -82,7 +82,7 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(origin);
 
   // Verify origin is allowed
-  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     console.warn(`Rejected request from unauthorized origin: ${origin}`);
     return new Response(
       JSON.stringify({ success: false, error: 'Forbidden' }),
